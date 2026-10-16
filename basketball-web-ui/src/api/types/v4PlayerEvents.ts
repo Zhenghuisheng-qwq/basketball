@@ -61,6 +61,7 @@ export interface V4RegistrationDivisionContext extends V4AvailableDivision {
   currentEventRosterCount?: number
   eventEligibilityStatus?: string
   rosterChangeAllowed?: boolean
+  rosterLocked?: boolean
   eligiblePlayers?: V4RegistrationRosterPlayer[]
   ineligiblePlayers?: V4RegistrationRosterPlayer[]
 }
@@ -77,6 +78,7 @@ export interface V4MyRegistration {
   registrationStatus?: string
   participationRole?: string
   lineupCount?: number
+  currentEligibleCount?: number
   submitTime?: string
   approveTime?: string
   rejectReason?: string

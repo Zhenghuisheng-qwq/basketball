@@ -76,6 +76,13 @@ public class BasketV4TeamRosterController extends BaseController {
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_EDIT + "')")
     @Log(title = "V4 TeamRoster", businessType = BusinessType.UPDATE)
+    @PostMapping("/sync")
+    public AjaxResult sync(@PathVariable Long divisionId) {
+        return success(lockApplicationService.syncOpenRosters(divisionId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.DIVISION_EDIT + "')")
+    @Log(title = "V4 TeamRoster", businessType = BusinessType.UPDATE)
     @PostMapping("/lock")
     public AjaxResult lock(@PathVariable Long divisionId) {
         return success(lockApplicationService.lock(divisionId, SecurityUtils.getUserId()));

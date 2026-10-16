@@ -16,6 +16,7 @@ public class V4MyRegistrationResp {
     private String registrationStatus;
     private String participationRole;
     private Integer lineupCount;
+    private Integer currentEligibleCount;
     private Date submitTime;
     private Date approveTime;
     private String rejectReason;

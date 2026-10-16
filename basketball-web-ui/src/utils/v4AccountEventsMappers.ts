@@ -356,7 +356,7 @@ export function mapV4RegistrationToApplication(item: V4MyRegistration): MyApplic
     pending,
     showAction,
     platformGroupLabel: item.divisionName,
-    confirmedCount: item.lineupCount,
+    confirmedCount: item.currentEligibleCount ?? item.lineupCount,
   }
 }
 

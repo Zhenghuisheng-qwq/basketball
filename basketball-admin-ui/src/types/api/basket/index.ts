@@ -391,6 +391,7 @@ export interface TeamAuditMemberItem {
   playerId?: number
   nickname?: string
   playerNo?: string
+  gameId?: string
   roleType?: string
   roleTypeName?: string
 }

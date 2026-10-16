@@ -19,6 +19,7 @@ import com.zhs.basket.req.BatchAuditOperationReq;
 import com.zhs.basket.req.TeamAuditApproveReq;
 import com.zhs.basket.req.TeamAuditRejectReq;
 import com.zhs.basket.support.BatchAuditSupport;
+import com.zhs.basket.support.PlatformGameIdDisplay;
 import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketTeamAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
@@ -51,6 +52,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
     @Autowired private BasketTeamMapper teamMapper;
     @Autowired private BasketTeamAuditRecordMapper auditRecordMapper;
     @Autowired private BasketTeamMemberMapper teamMemberMapper;
+    @Autowired private BasketPlayerPlatformAccountMapper platformAccountMapper;
     @Autowired private BasketPlayerProfileMapper profileMapper;
     @Autowired private BasketCaptainGrantMapper captainGrantMapper;
     @Autowired private BasketMemberAccountMapper memberAccountMapper;
@@ -358,12 +360,30 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
                 member.setRoleTypeName(member.getRoleType());
             }
         }
+        fillGameIds(members, vo.getPlatformCode());
         vo.setMembers(members);
         int memberCount = teamMemberMapper.countCurrentMembers(teamId);
         Integer cachedCount = vo.getCurrentMemberCount();
         vo.setCurrentMemberCount(memberCount);
         if (!Objects.equals(cachedCount, memberCount)) {
             teamMapper.updateMemberCount(teamId, memberCount);
+        }
+    }
+
+    private void fillGameIds(List<TeamAuditMemberVo> members, String divisionPlatform) {
+        List<Long> playerIds = members.stream()
+                .map(TeamAuditMemberVo::getPlayerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (playerIds.isEmpty()) {
+            return;
+        }
+        Map<Long, List<BasketPlayerPlatformAccount>> byPlayer = platformAccountMapper.selectActiveByPlayerIds(playerIds)
+                .stream()
+                .collect(Collectors.groupingBy(BasketPlayerPlatformAccount::getPlayerId));
+        for (TeamAuditMemberVo member : members) {
+            member.setGameId(PlatformGameIdDisplay.format(divisionPlatform, byPlayer.get(member.getPlayerId())));
         }
     }
 

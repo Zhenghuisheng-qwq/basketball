@@ -2,6 +2,7 @@ package com.zhs.basket.mapper.v4;
 
 import com.zhs.basket.domain.v4.BasketRegistrationPlayer;
 import com.zhs.basket.vo.v4.BasketRegistrationPlayerVo;
+import com.zhs.basket.vo.v4.RegistrationGapMemberVo;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
@@ -12,6 +13,9 @@ public interface BasketRegistrationPlayerMapper {
     List<BasketRegistrationPlayer> selectList(BasketRegistrationPlayer query);
 
     List<BasketRegistrationPlayerVo> selectVoByRegistrationId(@Param("registrationId") Long registrationId);
+
+    List<RegistrationGapMemberVo> selectCurrentMembersOutsideRoster(@Param("registrationId") Long registrationId,
+                                                                     @Param("teamId") Long teamId);
 
     List<BasketRegistrationPlayer> selectByRegistrationId(@Param("registrationId") Long registrationId);
 

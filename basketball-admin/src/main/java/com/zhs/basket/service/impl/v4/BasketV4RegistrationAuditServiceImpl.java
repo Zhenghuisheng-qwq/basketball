@@ -1,5 +1,6 @@
 package com.zhs.basket.service.impl.v4;
 
+import com.zhs.basket.domain.BasketPlayerPlatformAccount;
 import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.v4.BasketCaptainGrant;
 import com.zhs.basket.domain.v4.BasketDivision;
@@ -11,7 +12,9 @@ import com.zhs.basket.enums.v4.AuditResultEnum;
 import com.zhs.basket.enums.v4.ParticipationRoleEnum;
 import com.zhs.basket.enums.v4.RegistrationStatusEnum;
 import com.zhs.basket.support.v4.roster.TeamRosterSupport;
+import com.zhs.basket.mapper.BasketPlayerPlatformAccountMapper;
 import com.zhs.basket.mapper.BasketTeamMapper;
+import com.zhs.basket.mapper.BasketTeamMemberMapper;
 import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationAuditMapper;
@@ -22,11 +25,15 @@ import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
 import com.zhs.basket.service.v4.IBasketV4RegistrationAuditService;
 import com.zhs.basket.support.BasketAdminMessageService;
 import com.zhs.basket.support.NoticeParams;
+import com.zhs.basket.support.PlatformGameIdDisplay;
 import com.zhs.basket.support.v4.CaptainGrantRuntimeSupport;
 import com.zhs.basket.support.v4.CurrentRosterEligibility;
+import com.zhs.basket.support.v4.OpenRosterMembershipSync;
+import com.zhs.basket.support.v4.RosterEligibilityQueries;
 import com.zhs.basket.support.v4.TeamRegistrationEligibilitySpecification;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditDetailVo;
 import com.zhs.basket.vo.v4.BasketRegistrationAuditListVo;
+import com.zhs.basket.vo.v4.RegistrationGapMemberVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
@@ -36,6 +43,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Service
 public class BasketV4RegistrationAuditServiceImpl implements IBasketV4RegistrationAuditService {
@@ -64,6 +74,14 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
     private BasketAdminMessageService messageService;
     @Autowired
     private BasketTeamMapper teamMapper;
+    @Autowired
+    private BasketTeamMemberMapper teamMemberMapper;
+    @Autowired
+    private BasketPlayerPlatformAccountMapper platformAccountMapper;
+    @Autowired
+    private OpenRosterMembershipSync openRosterMembershipSync;
+    @Autowired
+    private RosterEligibilityQueries eligibilityQueries;
 
     @Override
     public List<BasketRegistrationAuditListVo> selectList(BasketRegistrationAuditQuery query) {
@@ -88,11 +106,22 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
         vo.setCaptainPlayerId(registration.getCaptainPlayerId());
         vo.setCaptainMemberId(registration.getCaptainMemberId());
         vo.setLineupCount(registration.getLineupCount());
+        vo.setCurrentEligibleCount(eligibilityQueries.eligibleCount(registration.getId(), registration.getDivisionId()));
+        vo.setCurrentTeamMemberCount(registration.getTeamId() == null ? 0 : teamMemberMapper.countCurrentMembers(registration.getTeamId()));
         vo.setRegistrationStatus(registration.getRegistrationStatus());
         vo.setSubmitTime(registration.getSubmitTime());
         vo.setApproveTime(registration.getApproveTime());
         vo.setRejectReason(registration.getRejectReason());
-        vo.setPlayers(registrationPlayerMapper.selectVoByRegistrationId(registrationId));
+        List<com.zhs.basket.vo.v4.BasketRegistrationPlayerVo> players = registrationPlayerMapper.selectVoByRegistrationId(registrationId);
+        vo.setPlayers(players);
+        vo.setSubmittedRosterCount(players.size());
+        BasketDivision division = registration.getDivisionId() == null ? null : divisionMapper.selectById(registration.getDivisionId());
+        List<RegistrationGapMemberVo> pending = registration.getTeamId() == null
+                ? java.util.Collections.emptyList()
+                : registrationPlayerMapper.selectCurrentMembersOutsideRoster(registrationId, registration.getTeamId());
+        explainPending(pending, division, registration);
+        fillPendingGameIds(pending, division == null ? null : division.getPlatformCode());
+        vo.setPendingMembers(pending);
         vo.setAudits(registrationAuditMapper.selectVoByRegistrationId(registrationId));
 
         BasketRegistrationAuditQuery query = new BasketRegistrationAuditQuery();
@@ -175,6 +204,43 @@ public class BasketV4RegistrationAuditServiceImpl implements IBasketV4Registrati
         writeAudit(registration, "REJECT", beforeStatus, RegistrationStatusEnum.REJECTED.getCode(),
                 AuditResultEnum.REJECTED.getCode(), req.getRejectReason());
         notifyTeamRegistrationRejected(registration, req.getRejectReason().trim());
+    }
+
+    private void explainPending(List<RegistrationGapMemberVo> pending, BasketDivision division, BasketRegistration registration) {
+        if (pending == null || pending.isEmpty() || division == null) {
+            return;
+        }
+        boolean open = openRosterMembershipSync.autoSyncOpen(division.getId());
+        for (RegistrationGapMemberVo member : pending) {
+            if (!open) {
+                member.setBlockReason(eligibilityQueries.frozen(division.getId())
+                        ? "赛事已开赛或已结束，不能自动同步"
+                        : "最终名单已锁定，需管理员审核名单变更");
+                continue;
+            }
+            String block = openRosterMembershipSync.blockReason(division, registration, member.getPlayerId());
+            member.setBlockReason(block == null ? "资格符合，可通过「同步球队成员」写入参赛名单" : block);
+        }
+    }
+
+    private void fillPendingGameIds(List<RegistrationGapMemberVo> pending, String divisionPlatform) {
+        if (pending == null || pending.isEmpty()) {
+            return;
+        }
+        List<Long> playerIds = pending.stream()
+                .map(RegistrationGapMemberVo::getPlayerId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        if (playerIds.isEmpty()) {
+            return;
+        }
+        Map<Long, List<BasketPlayerPlatformAccount>> byPlayer = platformAccountMapper.selectActiveByPlayerIds(playerIds)
+                .stream()
+                .collect(Collectors.groupingBy(BasketPlayerPlatformAccount::getPlayerId));
+        for (RegistrationGapMemberVo member : pending) {
+            member.setGameId(PlatformGameIdDisplay.format(divisionPlatform, byPlayer.get(member.getPlayerId())));
+        }
     }
 
     private void notifyTeamRegistrationRejected(BasketRegistration registration, String rejectReason) {

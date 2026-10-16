@@ -18,6 +18,7 @@ import com.zhs.basket.mapper.v4.BasketRegistrationRosterChangeMapper;
 import com.zhs.basket.mapper.v4.BasketMatchSubmissionPlayerStatMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchPlayerStatMapper;
+import com.zhs.basket.service.v4.IBasketV4RosterVersionService;
 import com.zhs.basket.support.v4.BasketV4ParticipationSupport;
 import com.zhs.basket.support.v4.PreMatchEventPlayerSync;
 import com.zhs.basket.support.v4.RosterChangeWindowSupport;
@@ -60,6 +61,8 @@ public class BasketV4RosterChangeAuditServiceImpl {
     private BasketV4ParticipationSupport participationSupport;
     @Autowired
     private PreMatchEventPlayerSync eventPlayerSync;
+    @Autowired
+    private IBasketV4RosterVersionService rosterVersionService;
 
     public List<BasketRosterChangeListVo> listPending(Long divisionId) {
         if (divisionId == null) {
@@ -95,6 +98,9 @@ public class BasketV4RosterChangeAuditServiceImpl {
             throw new ServiceException("原名单已变化，请让队长重新提交名单变更");
         }
         BasketDivision division = divisionMapper.selectById(change.getDivisionId());
+        if (rosterVersionService.getCurrentLockedVersion(change.getDivisionId()) == null) {
+            throw new ServiceException("最终名单尚未锁定，当前队员由系统自动同步，不能审核覆盖名单");
+        }
         RosterChangeWindowSupport.assertCanRequest(division, new Date(),
                 matchMapper.countStartedByDivisionId(change.getDivisionId()),
                 matchPlayerStatMapper.countByDivisionId(change.getDivisionId())

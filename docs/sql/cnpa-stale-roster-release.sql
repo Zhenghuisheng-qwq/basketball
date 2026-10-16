@@ -1,8 +1,11 @@
 -- 手动执行，不随应用启动。
--- 只失效「赛区未冻结，且球员已不是该队当前成员」的报名行。
--- 不修改已结束、已归档、已开赛或已有球员统计的报名。
+-- 只失效「赛区未冻结、最终名单未锁定，且球员已不是该队当前成员」的报名行。
+-- 不修改已锁定最终名单、已结束、已归档、已开赛或已有球员统计的报名。
+-- 已开赛包含比赛状态 PLAYING / FINISHED / FORFEITED。
+-- 已有统计同时覆盖正式球员统计和提交统计。
 -- 已重新入队、当前仍是队员的历史报名行无法判断是否曾经离队，本脚本不处理，需人工核实。
 -- 可重复执行。先看预览；确认后再执行事务。整段事务失败会回滚。
+-- 本脚本不更新 EventPlayer，也不改生产库中的比赛、统计和已锁定名单版本。
 
 -- 1. 预览
 SELECT r.id AS registration_id,
@@ -39,6 +42,11 @@ WHERE rp.is_delete = 0
   AND NOT EXISTS (
       SELECT 1 FROM basket_match_submission_player_stat ss
       WHERE ss.division_id = r.division_id AND ss.is_delete = 0
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM basket_division_roster_version v
+      WHERE v.division_id = r.division_id AND v.is_delete = 0
+        AND v.is_current = 1 AND v.status = 'LOCKED'
   );
 
 -- 2. 确认预览后执行
@@ -77,6 +85,11 @@ WHERE rp.is_delete = 0
   AND NOT EXISTS (
       SELECT 1 FROM basket_match_submission_player_stat ss
       WHERE ss.division_id = r.division_id AND ss.is_delete = 0
+  )
+  AND NOT EXISTS (
+      SELECT 1 FROM basket_division_roster_version v
+      WHERE v.division_id = r.division_id AND v.is_delete = 0
+        AND v.is_current = 1 AND v.status = 'LOCKED'
   );
 
 DROP TEMPORARY TABLE IF EXISTS tmp_stale_roster_reg;

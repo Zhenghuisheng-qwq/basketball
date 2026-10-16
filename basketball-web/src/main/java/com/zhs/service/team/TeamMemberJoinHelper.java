@@ -64,6 +64,8 @@ public class TeamMemberJoinHelper {
         if (team == null || team.getDivisionId() == null) {
             throw new ServiceException("历史球队不能加入新成员，请在当前赛事重新创建球队", 403);
         }
+        // 先锁 Division，再改球队行，避免和锁定名单/离队的 Division→球队顺序死锁。
+        eventRosterMembershipSync.lockDivision(team.getDivisionId());
         if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
             throw new ServiceException("当前球队不可加入", 403);
         }
@@ -92,6 +94,7 @@ public class TeamMemberJoinHelper {
         // current_team_id 仅作最近展示兼容字段
         updatePlayerCurrentTeam(playerId, team.getId());
         closePendingInvitesAndApplications(memberId, team.getId());
+        eventRosterMembershipSync.syncTeam(team.getId());
         businessMessageService.sendSiteMessage(memberId, "加入球队成功",
                 "您已成功加入球队「" + team.getTeamName() + "」",
                 BIZ_TYPE_TEAM_MEMBER, team.getId(), "TEAM", String.valueOf(team.getId()),

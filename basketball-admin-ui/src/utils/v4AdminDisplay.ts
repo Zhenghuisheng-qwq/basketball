@@ -262,6 +262,7 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   WITHDRAW: '撤回',
   RESUBMIT: '重新提交',
   MEMBER_LEFT: '队员离队',
+  ROSTER_SYNC: '锁定前自动同步',
   ROSTER_CHANGE: '名单变更'
 }
 

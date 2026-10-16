@@ -250,7 +250,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             throw new ServiceException("不能移除队长");
         }
         markMemberRemoved(target, "被队长移除");
-        eventRosterMembershipSync.releaseFromWritableRegistrations(teamPk, target.getPlayerId(), "队长移除球员，已从开赛前报名名单释放");
+        eventRosterMembershipSync.syncTeam(teamPk);
         teamMemberJoinHelper.clearActiveMemberSlot(target);
         clearPlayerCurrentTeam(target.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);
@@ -267,8 +267,14 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         if (TeamMemberRoleEnum.CAPTAIN.getCode().equals(membership.getRoleType())) {
             throw new ServiceException("队长不能直接离队");
         }
+        Long divisionId = membership.getDivisionId();
+        if (divisionId == null) {
+            BasketTeam team = teamDao.selectById(teamPk);
+            divisionId = team == null ? null : team.getDivisionId();
+        }
+        eventRosterMembershipSync.lockDivision(divisionId);
         markMemberLeft(membership, "主动离队");
-        eventRosterMembershipSync.releaseFromWritableRegistrations(teamPk, membership.getPlayerId(), "球员离队，已从开赛前报名名单释放");
+        eventRosterMembershipSync.syncTeam(teamPk);
         teamMemberJoinHelper.clearActiveMemberSlot(membership);
         clearPlayerCurrentTeam(membership.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);

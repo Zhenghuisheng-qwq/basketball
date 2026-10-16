@@ -21,6 +21,8 @@ public class TeamRosterWorkspaceVo {
     private Integer candidateCount;
     private Integer excludedCount;
     private Integer unallocatedCount;
+    private Integer shortTeamCount;
+    private Integer lineupMinCount;
     private Boolean canEdit;
     private Boolean canLock;
     private List<TeamRosterItemVo> approvedList = new ArrayList<>();

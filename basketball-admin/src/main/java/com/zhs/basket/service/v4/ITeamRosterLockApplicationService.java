@@ -1,11 +1,14 @@
 package com.zhs.basket.service.v4;
 
+import com.zhs.basket.vo.v4.RosterSyncResultVo;
 import com.zhs.basket.vo.v4.TeamRosterLockResultVo;
 import com.zhs.basket.vo.v4.TeamRosterVersionDetailVo;
 import com.zhs.basket.vo.v4.TeamRosterWorkspaceVo;
 
 public interface ITeamRosterLockApplicationService {
     TeamRosterWorkspaceVo getWorkspace(Long divisionId);
+
+    java.util.List<RosterSyncResultVo> syncOpenRosters(Long divisionId);
 
     TeamRosterLockResultVo lock(Long divisionId, Long operatorId);
 

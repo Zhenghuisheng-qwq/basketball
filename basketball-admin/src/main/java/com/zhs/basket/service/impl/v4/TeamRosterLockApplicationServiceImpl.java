@@ -14,6 +14,7 @@ import com.zhs.basket.mapper.v4.BasketDivisionRosterVersionMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationPlayerMapper;
 import com.zhs.basket.support.v4.CurrentRosterEligibility;
+import com.zhs.basket.support.v4.OpenRosterMembershipSync;
 import com.zhs.basket.support.v4.RosterEligibilityQueries;
 import com.zhs.basket.req.AuditFieldInput;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
@@ -55,6 +56,8 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
     @Autowired
     private RosterEligibilityQueries eligibilityQueries;
     @Autowired
+    private OpenRosterMembershipSync openRosterMembershipSync;
+    @Autowired
     private BasketTeamMapper teamMapper;
     @Autowired
     private BasketDivisionRosterEntryMapper rosterEntryMapper;
@@ -80,10 +83,32 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public java.util.List<com.zhs.basket.vo.v4.RosterSyncResultVo> syncOpenRosters(Long divisionId) {
+        BasketDivision division = rosterSupport.lockDivision(divisionId);
+        rosterSupport.requireTeamMode(division);
+        if (eligibilityQueries.frozen(divisionId)) {
+            throw new ServiceException("赛事已开赛或已结束，不能同步参赛名单");
+        }
+        if (rosterVersionService.getCurrentLockedVersion(divisionId) != null) {
+            throw new ServiceException("最终参赛名单已锁定，请使用名单变更审核");
+        }
+        java.util.List<com.zhs.basket.vo.v4.RosterSyncResultVo> results = openRosterMembershipSync.syncDivision(divisionId);
+        Map<Long, String> names = new HashMap<>();
+        for (com.zhs.basket.vo.v4.RosterSyncResultVo result : results) {
+            result.setTeamName(resolveTeamName(result.getTeamId(), names));
+        }
+        return results;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public TeamRosterLockResultVo lock(Long divisionId, Long operatorId) {
         BasketDivision division = rosterSupport.lockDivision(divisionId);
         rosterSupport.requireTeamMode(division);
         RuleVersionView ruleVersion = validateRule(division);
+        if (rosterVersionService.getCurrentLockedVersion(divisionId) == null) {
+            openRosterMembershipSync.syncDivision(divisionId);
+        }
         List<BasketRegistration> registrations = registrationMapper.selectByDivisionId(divisionId);
         validateCurrentEligibility(division, registrations);
         validateAllocation(division, registrations);
@@ -192,13 +217,22 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
         if (minimum <= 0) {
             return;
         }
+        List<String> problems = new ArrayList<>();
+        Map<Long, String> names = new HashMap<>();
         for (BasketRegistration row : registrations) {
             if (!rosterSupport.isApproved(row) || rosterSupport.roleOf(row) != ParticipationRoleEnum.FORMAL) {
                 continue;
             }
-            if (eligibilityQueries.eligibleCount(row.getId(), division.getId()) < minimum) {
-                throw new ServiceException("球队当前有效参赛人数不足，不能锁定正式名单");
+            int current = eligibilityQueries.eligibleCount(row.getId(), division.getId());
+            if (current < minimum) {
+                problems.add(resolveTeamName(row.getTeamId(), names)
+                        + "：当前合法参赛人数 " + current
+                        + "，赛区最低要求 " + minimum
+                        + "，还需补充 " + (minimum - current) + " 名合格球员");
             }
+        }
+        if (!problems.isEmpty()) {
+            throw new ServiceException(String.join("；", problems));
         }
     }
 
@@ -341,6 +375,7 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
         boolean ruleLocked = vo.getRuleVersion() != null && vo.getRuleVersion().isLocked();
         vo.setCanEdit(!locked);
         vo.setCanLock(!locked && ruleLocked);
+        vo.setLineupMinCount(CurrentRosterEligibility.minimum(division));
 
         Map<Long, String> teamNames = new HashMap<>();
         int approved = 0;
@@ -350,6 +385,14 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
         int unallocated = 0;
         for (BasketRegistration row : registrationMapper.selectByDivisionId(division.getId())) {
             TeamRosterItemVo item = toItem(row, teamNames);
+            int eligible = eligibilityQueries.eligibleCount(row.getId(), division.getId());
+            item.setCurrentEligibleCount(eligible);
+            if (rosterSupport.roleOf(row) == ParticipationRoleEnum.FORMAL
+                    && vo.getLineupMinCount() != null
+                    && eligible < vo.getLineupMinCount()) {
+                item.setEligibilityNote("人数不足 " + eligible + "/" + vo.getLineupMinCount());
+                vo.setShortTeamCount((vo.getShortTeamCount() == null ? 0 : vo.getShortTeamCount()) + 1);
+            }
             if (RegistrationStatusEnum.REJECTED.getCode().equals(row.getRegistrationStatus())) {
                 vo.getRejectedList().add(item);
                 continue;

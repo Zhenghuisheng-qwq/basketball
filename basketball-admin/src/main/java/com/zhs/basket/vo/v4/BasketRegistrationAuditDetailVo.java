@@ -19,10 +19,14 @@ public class BasketRegistrationAuditDetailVo {
     private String captainPlayerName;
     private Long captainMemberId;
     private Integer lineupCount;
+    private Integer currentEligibleCount;
+    private Integer currentTeamMemberCount;
+    private Integer submittedRosterCount;
     private String registrationStatus;
     private Date submitTime;
     private Date approveTime;
     private String rejectReason;
     private List<BasketRegistrationPlayerVo> players;
+    private List<RegistrationGapMemberVo> pendingMembers;
     private List<BasketRegistrationAuditLogVo> audits;
 }

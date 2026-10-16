@@ -191,8 +191,12 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         if ("INELIGIBLE".equals(resp.getEventEligibilityStatus())) {
             int min = resp.getLineupMinCount() != null ? resp.getLineupMinCount() : rosterMin(division);
             resp.setCannotRegisterReasonCode("ROSTER_BELOW_MINIMUM");
+            boolean rosterLocked = eventRosterMembershipSync.rosterOfficiallyLocked(division.getId());
+            String follow = rosterLocked
+                    ? "请通过名单变更审核补齐合格队员。"
+                    : "最终名单锁定前，补齐合格队员后会自动同步，不需要单独申请名单变更。";
             resp.setCannotRegisterReason("当前有效参赛人数 " + resp.getCurrentEventRosterCount()
-                    + "，低于赛区最低要求 " + min + "，请补充球员并提交名单变更审核");
+                    + "，低于赛区最低要求 " + min + "。" + follow);
         }
         return resp;
     }
@@ -356,6 +360,9 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             throw new ServiceException("已有待审核的名单变更，请等待审核完成");
         }
         BasketDivision division = requireDivision(registration.getDivisionId());
+        if (!eventRosterMembershipSync.rosterOfficiallyLocked(division.getId())) {
+            throw new ServiceException("最终名单锁定前，合法队员会自动进入参赛名单，无需单独申请变更");
+        }
         assertRosterChangeWindow(division, registration.getTeamId());
         List<BasketRegistrationPlayer> lineup = buildLineup(
                 division, registration.getTeamId(), registration.getCaptainPlayerId(), req.getPlayerIds(), true);
@@ -402,7 +409,11 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
 
     @Override
     public List<V4MyRegistrationResp> listMyRegistrations() {
-        return playerRegistrationMapper.selectMyRegistrations(UserContext.getRequiredMemberId());
+        List<V4MyRegistrationResp> rows = playerRegistrationMapper.selectMyRegistrations(UserContext.getRequiredMemberId());
+        for (V4MyRegistrationResp row : rows) {
+            row.setCurrentEligibleCount(eventRosterMembershipSync.countEffectiveRoster(row.getRegistrationId(), row.getTeamId()));
+        }
+        return rows;
     }
 
     @Override
@@ -512,7 +523,9 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             resp.setEventEligibilityStatus("NEEDS_REVIEW");
         }
         boolean approved = "APPROVED".equals(status);
-        resp.setRosterChangeAllowed(approved && eventRosterMembershipSync.divisionWritable(division.getId()));
+        boolean rosterLocked = eventRosterMembershipSync.rosterOfficiallyLocked(division.getId());
+        resp.setRosterLocked(rosterLocked);
+        resp.setRosterChangeAllowed(approved && rosterLocked && eventRosterMembershipSync.divisionWritable(division.getId()));
     }
 
     private void fillDivisionContextBase(V4RegistrationDivisionContextResp resp, BasketDivision division) {

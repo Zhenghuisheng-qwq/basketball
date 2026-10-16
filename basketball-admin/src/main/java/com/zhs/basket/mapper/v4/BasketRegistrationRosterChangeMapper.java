@@ -13,6 +13,8 @@ public interface BasketRegistrationRosterChangeMapper {
 
     List<BasketRosterChangeListVo> selectPendingByDivisionId(@Param("divisionId") Long divisionId);
 
+    List<Long> selectPendingIdsByRegistrationId(@Param("registrationId") Long registrationId);
+
     List<BasketRegistrationRosterChangePlayer> selectPlayers(@Param("changeId") Long changeId);
 
     int markApproved(@Param("id") Long id, @Param("auditUserId") Long auditUserId, @Param("auditTime") Date auditTime);

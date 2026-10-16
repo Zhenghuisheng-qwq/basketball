@@ -127,13 +127,17 @@
             </el-descriptions-item>
           </el-descriptions>
 
-          <el-divider content-position="left">成员信息</el-divider>
-          <el-table :data="detail.members || []" size="small" empty-text="暂无成员">
+          <el-divider content-position="left">当前球队成员</el-divider>
+          <el-table :data="detail.members || []" size="small" max-height="360" empty-text="暂无成员">
             <el-table-column label="昵称" prop="nickname" min-width="120" />
-            <el-table-column label="球员 ID" prop="playerId" min-width="180" show-overflow-tooltip />
             <el-table-column label="球员编号" prop="playerNo" min-width="130" />
+            <el-table-column label="Game ID" min-width="140" show-overflow-tooltip>
+              <template #default="scope">{{ scope.row.gameId || '未填写' }}</template>
+            </el-table-column>
+            <el-table-column label="球员 ID" prop="playerId" min-width="160" show-overflow-tooltip />
             <el-table-column label="角色" prop="roleTypeName" width="80" />
           </el-table>
+          <p class="detail-hint">Game ID 是该赛区平台下已认证的游戏身份，不是球员 ID。这里展示的是当前球队成员，不改写历史认证记录。</p>
 
           <el-divider content-position="left">审核信息</el-divider>
           <el-descriptions :column="2" border class="detail-desc">
@@ -474,6 +478,13 @@ getList()
 
 .detail-desc {
   margin-bottom: 8px;
+}
+
+.detail-hint {
+  margin: 8px 0 0;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.5;
 }
 
 .team-logo-preview-wrap {

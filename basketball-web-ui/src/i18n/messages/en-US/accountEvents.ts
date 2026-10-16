@@ -211,7 +211,7 @@ export default {
   applications: {
     type: 'Type: {type}',
     invitedTeam: 'Invited team: {code}',
-    confirmed: '{confirmed} / {max} confirmed',
+    confirmed: '{confirmed} currently eligible',
     submitTime: 'Submitted: {time}',
     platformGroup: '{platform} group',
   },
@@ -387,6 +387,9 @@ export default {
     emptyNoEligible: 'No teammate is eligible for {platform}. Complete platform identity verification first.',
     emptyNoPlayers: 'No eligible players to select',
     rosterBelowMinimum: 'Current eligible roster is {current}, below the minimum of {min}. Add players and submit a roster change.',
+    approvedEventRoster: 'Approved event roster: {count}',
+    pendingRosterMembers: '{count} eligible teammates are not on the roster, usually because the roster is full or the player is already registered in this division.',
+    autoSyncHint: 'Until the final roster is locked, eligible teammates are added automatically. A separate roster-change request is not required.',
     changeRoster: 'Request roster change',
     changeRosterHint: 'The current official roster stays in place until an admin approves this change.',
     changeRosterSubmitted: 'Roster change submitted and waiting for review',

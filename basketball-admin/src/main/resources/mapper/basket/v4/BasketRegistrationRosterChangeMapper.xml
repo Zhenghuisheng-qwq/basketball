@@ -33,6 +33,11 @@
         order by sort_order, id
     </select>
 
+    <select id="selectPendingIdsByRegistrationId" resultType="long">
+        select id from basket_registration_roster_change
+        where registration_id = #{registrationId} and change_status = 'PENDING' and is_delete = 0
+    </select>
+
     <update id="markApproved">
         update basket_registration_roster_change
         set change_status = 'APPROVED', audit_user_id = #{auditUserId}, audit_time = #{auditTime}, update_time = now()

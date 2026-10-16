@@ -2,6 +2,8 @@ package com.zhs.service.impl.v4;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.zhs.dao.BasketPlayerPlatformAccountDao;
+import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.dao.v4.BasketDivisionDao;
 import com.zhs.dao.v4.BasketEventPlayerDao;
@@ -14,7 +16,10 @@ import com.zhs.dao.v4.BasketRegistrationRosterChangeDao;
 import com.zhs.dao.v4.BasketRegistrationRosterChangePlayerDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.dao.v4.BasketV4MatchPlayerStatDao;
+import com.zhs.model.BasketPlayerPlatformAccount;
+import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeamMember;
+import com.zhs.support.GameTerminalSupport;
 import com.zhs.model.v4.BasketDivision;
 import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketEventTeam;
@@ -30,6 +35,7 @@ import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
@@ -71,6 +77,10 @@ public class EventRosterMembershipSync {
     private BasketEventTeamDao eventTeamDao;
     @Resource
     private BasketEventPlayerDao eventPlayerDao;
+    @Resource
+    private BasketPlayerProfileDao playerProfileDao;
+    @Resource
+    private BasketPlayerPlatformAccountDao platformAccountDao;
 
     @Transactional(rollbackFor = Exception.class)
     public int releaseFromWritableRegistrations(Long teamId, Long playerId, String reason) {
@@ -88,7 +98,7 @@ public class EventRosterMembershipSync {
                 divisionDao.selectOne(new LambdaQueryWrapper<BasketDivision>()
                         .eq(BasketDivision::getId, registration.getDivisionId())
                         .last("FOR UPDATE"));
-                if (locked(registration.getDivisionId())) {
+                if (!autoSyncOpen(registration.getDivisionId())) {
                     continue;
                 }
             }
@@ -117,6 +127,183 @@ public class EventRosterMembershipSync {
             released++;
         }
         return released;
+    }
+
+    public void lockDivision(Long divisionId) {
+        if (divisionId == null) {
+            return;
+        }
+        divisionDao.selectOne(new LambdaQueryWrapper<BasketDivision>()
+                .eq(BasketDivision::getId, divisionId)
+                .last("FOR UPDATE"));
+    }
+
+    public boolean rosterOfficiallyLocked(Long divisionId) {
+        if (divisionId == null) {
+            return false;
+        }
+        Integer count = divisionDao.countCurrentLockedRoster(divisionId);
+        return count != null && count > 0;
+    }
+
+    public boolean autoSyncOpen(Long divisionId) {
+        return divisionWritable(divisionId) && !rosterOfficiallyLocked(divisionId);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public int syncTeam(Long teamId) {
+        if (teamId == null) {
+            return 0;
+        }
+        List<BasketRegistration> registrations = registrationDao.selectList(new LambdaQueryWrapper<BasketRegistration>()
+                .eq(BasketRegistration::getTeamId, teamId)
+                .eq(BasketRegistration::getRegistrationStatus, "APPROVED")
+                .eq(BasketRegistration::getIsDelete, NOT_DELETED));
+        int changed = 0;
+        for (BasketRegistration registration : registrations) {
+            if (!autoSyncOpen(registration.getDivisionId())) {
+                continue;
+            }
+            changed += reconcile(registration);
+        }
+        return changed;
+    }
+
+    private int reconcile(BasketRegistration registration) {
+        divisionDao.selectOne(new LambdaQueryWrapper<BasketDivision>()
+                .eq(BasketDivision::getId, registration.getDivisionId())
+                .last("FOR UPDATE"));
+        if (!autoSyncOpen(registration.getDivisionId())) {
+            return 0;
+        }
+        BasketDivision division = divisionDao.selectById(registration.getDivisionId());
+        if (division == null) {
+            return 0;
+        }
+        List<BasketTeamMember> members = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getTeamId, registration.getTeamId())
+                .eq(BasketTeamMember::getIsCurrent, 1)
+                .eq(BasketTeamMember::getMembershipStatus, 1)
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED)
+                .orderByAsc(BasketTeamMember::getJoinTime));
+        List<BasketRegistrationPlayer> existing = registrationPlayerDao.selectList(new LambdaQueryWrapper<BasketRegistrationPlayer>()
+                .eq(BasketRegistrationPlayer::getRegistrationId, registration.getId())
+                .eq(BasketRegistrationPlayer::getIsDelete, NOT_DELETED));
+        Set<Long> present = new HashSet<>();
+        for (BasketRegistrationPlayer player : existing) {
+            present.add(player.getPlayerId());
+        }
+        int max = division.getLineupMaxCount() == null || division.getLineupMaxCount() <= 0
+                ? Integer.MAX_VALUE : division.getLineupMaxCount();
+        Set<Long> desired = new HashSet<>();
+        List<BasketTeamMember> toAdd = new ArrayList<>();
+        for (BasketTeamMember member : members) {
+            if (member.getPlayerId() == null || !eligible(division, registration, member.getPlayerId())) {
+                continue;
+            }
+            if (desired.size() >= max) {
+                continue;
+            }
+            desired.add(member.getPlayerId());
+            if (!present.contains(member.getPlayerId())) {
+                toAdd.add(member);
+            }
+        }
+        int removed = 0;
+        for (BasketRegistrationPlayer player : existing) {
+            if (!desired.contains(player.getPlayerId())) {
+                removed += releaseFromWritableRegistrations(registration.getTeamId(), player.getPlayerId(),
+                        "锁定前自动同步，已不在当前合法阵容");
+            }
+        }
+        Date now = new Date();
+        int added = 0;
+        int sort = existing.size();
+        for (BasketTeamMember member : toAdd) {
+            BasketPlayerProfile profile = playerProfileDao.selectById(member.getPlayerId());
+            BasketPlayerPlatformAccount account = findAccount(member.getPlayerId(), division.getPlatformCode());
+            if (profile == null || account == null) {
+                continue;
+            }
+            BasketRegistrationPlayer row = new BasketRegistrationPlayer();
+            row.setRegistrationId(registration.getId());
+            row.setDivisionId(division.getId());
+            row.setSeasonId(registration.getSeasonId());
+            row.setTeamId(registration.getTeamId());
+            row.setPlayerId(member.getPlayerId());
+            row.setMemberId(profile.getMemberId());
+            row.setPlatformIdentityId(account.getId());
+            row.setPlatformCode(GameTerminalSupport.normalize(account.getPlatform()));
+            row.setGameIdSnapshot(account.getDisplayGameId());
+            row.setPlayerNameSnapshot(profile.getGameNickname());
+            row.setPosition(profile.getPositionCode());
+            row.setIsCaptain(member.getPlayerId().equals(registration.getCaptainPlayerId()) ? 1 : 0);
+            row.setIsStarter(1);
+            row.setSortOrder(sort++);
+            row.setCreateTime(now);
+            row.setUpdateTime(now);
+            row.setIsDelete(NOT_DELETED);
+            registrationPlayerDao.insert(row);
+            added++;
+        }
+        rejectOpenPending(registration.getId(), now);
+        if (added > 0) {
+            BasketRegistration fresh = registrationDao.selectById(registration.getId());
+            Long remain = registrationPlayerDao.selectCount(new LambdaQueryWrapper<BasketRegistrationPlayer>()
+                    .eq(BasketRegistrationPlayer::getRegistrationId, registration.getId())
+                    .eq(BasketRegistrationPlayer::getIsDelete, NOT_DELETED));
+            fresh.setLineupCount(remain == null ? 0 : remain.intValue());
+            fresh.setLineupVersion((fresh.getLineupVersion() == null ? 0 : fresh.getLineupVersion()) + 1);
+            fresh.setUpdateTime(now);
+            registrationDao.updateById(fresh);
+            syncWritableEventPlayers(fresh);
+        }
+        return added + removed;
+    }
+
+    private void rejectOpenPending(Long registrationId, Date now) {
+        List<BasketRegistrationRosterChange> pending = rosterChangeDao.selectList(new LambdaQueryWrapper<BasketRegistrationRosterChange>()
+                .eq(BasketRegistrationRosterChange::getRegistrationId, registrationId)
+                .eq(BasketRegistrationRosterChange::getChangeStatus, "PENDING")
+                .eq(BasketRegistrationRosterChange::getIsDelete, NOT_DELETED));
+        for (BasketRegistrationRosterChange change : pending) {
+            change.setChangeStatus("REJECTED");
+            change.setAuditRemark("最终名单锁定前已按当前球队成员自动同步，原名单变更申请失效");
+            change.setAuditTime(now);
+            change.setUpdateTime(now);
+            rosterChangeDao.updateById(change);
+        }
+    }
+
+    private boolean eligible(BasketDivision division, BasketRegistration registration, Long playerId) {
+        BasketPlayerProfile profile = playerProfileDao.selectById(playerId);
+        if (profile == null || !NOT_DELETED.equals(profile.getIsDelete())
+                || !Integer.valueOf(3).equals(profile.getCertificationStatus())) {
+            return false;
+        }
+        BasketPlayerPlatformAccount account = findAccount(playerId, division.getPlatformCode());
+        if (account == null || account.getDisplayGameId() == null || account.getDisplayGameId().isBlank()) {
+            return false;
+        }
+        Long occupied = registrationPlayerDao.selectCount(new LambdaQueryWrapper<BasketRegistrationPlayer>()
+                .eq(BasketRegistrationPlayer::getDivisionId, division.getId())
+                .eq(BasketRegistrationPlayer::getPlayerId, playerId)
+                .eq(BasketRegistrationPlayer::getIsDelete, NOT_DELETED)
+                .ne(BasketRegistrationPlayer::getRegistrationId, registration.getId()));
+        return occupied == null || occupied == 0;
+    }
+
+    private BasketPlayerPlatformAccount findAccount(Long playerId, String divisionPlatform) {
+        List<BasketPlayerPlatformAccount> accounts = platformAccountDao.selectList(new LambdaQueryWrapper<BasketPlayerPlatformAccount>()
+                .eq(BasketPlayerPlatformAccount::getPlayerId, playerId)
+                .eq(BasketPlayerPlatformAccount::getIsDelete, NOT_DELETED)
+                .eq(BasketPlayerPlatformAccount::getAccountStatus, 1));
+        for (BasketPlayerPlatformAccount account : accounts) {
+            if (GameTerminalSupport.matchesDivisionPlatform(divisionPlatform, account.getPlatform())) {
+                return account;
+            }
+        }
+        return null;
     }
 
     private boolean locked(Long divisionId) {

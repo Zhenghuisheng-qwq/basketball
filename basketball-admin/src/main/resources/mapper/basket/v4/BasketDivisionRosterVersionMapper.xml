@@ -41,6 +41,7 @@
           and status = 'LOCKED'
         order by version_no desc
         limit 1
+        for share
     </select>
 
     <select id="selectByDivisionId" resultMap="Result">

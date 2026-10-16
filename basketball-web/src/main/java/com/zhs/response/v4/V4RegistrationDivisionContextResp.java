@@ -62,8 +62,10 @@ public class V4RegistrationDivisionContextResp {
     private Integer currentEventRosterCount;
     /** ELIGIBLE / INELIGIBLE / NEEDS_REVIEW */
     private String eventEligibilityStatus;
-    /** 正式开赛前允许申请调整已审核名单 */
+    /** 最终参赛名单已锁定后、开赛前，才允许申请名单变更 */
     private Boolean rosterChangeAllowed;
+    /** 最终参赛名单版本已锁定。与报名 APPROVED、规则 LOCKED 不是同一件事 */
+    private Boolean rosterLocked;
     private List<V4RegistrationRosterPlayerResp> eligiblePlayers = new ArrayList<>();
     private List<V4RegistrationRosterPlayerResp> ineligiblePlayers = new ArrayList<>();
 }

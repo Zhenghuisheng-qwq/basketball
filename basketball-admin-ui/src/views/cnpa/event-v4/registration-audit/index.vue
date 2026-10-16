@@ -48,7 +48,10 @@
           <el-table-column label="平台" prop="platformCode" width="80" />
           <el-table-column label="球队" prop="teamName" min-width="120" />
           <el-table-column label="队长" prop="captainPlayerName" min-width="100" />
-          <el-table-column label="阵容人数" prop="lineupCount" width="90" align="center" />
+          <el-table-column label="当前有效参赛" width="120" align="center">
+            <template #default="scope">{{ scope.row.currentEligibleCount ?? '-' }}</template>
+          </el-table-column>
+          <el-table-column label="报名记录" prop="lineupCount" width="90" align="center" />
           <el-table-column label="当前资格" width="120" align="center">
             <template #default="scope">
               <el-tag v-if="scope.row.eligibilityStatus === 'INELIGIBLE'" type="danger" size="small">
@@ -99,6 +102,7 @@
             <el-tooltip content="按报名提交时间排序，正式名额以内进入正式参赛名单，超过正式名额的审核合格球队按顺序进入候补名单。" placement="top">
               <el-button type="warning" :disabled="!rosterWorkspace?.canEdit" v-hasPermi="['basket:v4RegistrationAudit:approve']" @click="handleAutoAllocate">按报名顺序自动分配</el-button>
             </el-tooltip>
+            <el-button type="primary" plain :disabled="rosterWorkspace?.rosterStatus === 'LOCKED'" v-hasPermi="['basket:v4Division:edit']" @click="handleSyncRoster">同步球队成员</el-button>
             <el-button type="success" :disabled="!rosterWorkspace?.canLock" v-hasPermi="['basket:v4Division:edit']" @click="handleLockRoster">锁定最终名单</el-button>
             <el-button :disabled="rosterWorkspace?.rosterStatus !== 'LOCKED'" v-hasPermi="['basket:v4Division:edit']" @click="openPromote">候补递补</el-button>
           </el-form-item>
@@ -109,6 +113,8 @@
           <el-descriptions-item label="Rule">{{ rosterWorkspace.ruleVersion?.ruleVersionStatus || '-' }}</el-descriptions-item>
           <el-descriptions-item label="Roster">{{ rosterWorkspace.rosterStatus }}</el-descriptions-item>
           <el-descriptions-item label="正式名额">{{ rosterWorkspace.formalCount || 0 }} / {{ rosterWorkspace.formalCap || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="人数不足球队">{{ rosterWorkspace.shortTeamCount || 0 }}</el-descriptions-item>
+          <el-descriptions-item label="最低人数">{{ rosterWorkspace.lineupMinCount || '-' }}</el-descriptions-item>
         </el-descriptions>
 
         <el-tabs v-if="rosterWorkspace" v-model="rosterInnerTab">
@@ -139,6 +145,12 @@
           <el-table-column label="名单角色" width="120" align="center">
             <template #default="scope">
               <el-tag :type="v4ParticipationRoleTagType(scope.row.participationRole)" size="small">{{ v4ParticipationRoleLabel(scope.row.participationRole) }}</el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column label="当前有效参赛" width="130" align="center">
+            <template #default="scope">
+              <span>{{ scope.row.currentEligibleCount ?? '-' }}</span>
+              <div v-if="scope.row.eligibilityNote" class="sub-text">{{ scope.row.eligibilityNote }}</div>
             </template>
           </el-table-column>
           <el-table-column label="候补顺序" prop="candidateOrder" width="90" align="center" />
@@ -363,20 +375,39 @@
           <el-descriptions-item label="平台赛区">{{ detail.divisionName }}（{{ detail.platformCode }}）</el-descriptions-item>
           <el-descriptions-item label="球队">{{ detail.teamName }}</el-descriptions-item>
           <el-descriptions-item label="队长">{{ detail.captainPlayerName }}</el-descriptions-item>
-          <el-descriptions-item label="阵容人数">{{ detail.lineupCount }}</el-descriptions-item>
+          <el-descriptions-item label="当前有效参赛">{{ detail.currentEligibleCount ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="当前球队人数">{{ detail.currentTeamMemberCount ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="报名记录">{{ detail.lineupCount ?? '-' }}</el-descriptions-item>
+          <el-descriptions-item label="历史名单条数">{{ detail.submittedRosterCount ?? '-' }}</el-descriptions-item>
           <el-descriptions-item label="提交时间">{{ parseTime(detail.submitTime) }}</el-descriptions-item>
           <el-descriptions-item v-if="detail.rejectReason" label="驳回原因" :span="2">{{ detail.rejectReason }}</el-descriptions-item>
         </el-descriptions>
-        <el-divider content-position="left">阵容列表</el-divider>
-        <el-table :data="detail.players || []" size="small" border>
+        <el-divider content-position="left">当前有效参赛名单</el-divider>
+        <el-table :data="activeRoster" size="small" border empty-text="暂无当前有效参赛球员">
           <el-table-column label="球员" prop="playerName" />
           <el-table-column label="Game ID" prop="gameIdSnapshot" />
           <el-table-column label="位置" prop="position" />
           <el-table-column label="队长" width="70">
             <template #default="scope">{{ scope.row.isCaptain === 1 ? '是' : '否' }}</template>
           </el-table-column>
-          <el-table-column label="当前队员" width="90">
-            <template #default="scope">{{ scope.row.currentMember === 1 ? '在队' : '已离队' }}</template>
+        </el-table>
+        <el-divider content-position="left">在队但未审核</el-divider>
+        <el-table :data="detail.pendingMembers || []" size="small" border empty-text="没有待加入参赛名单的新成员">
+          <el-table-column label="球员编号" prop="playerNo" width="140" />
+          <el-table-column label="昵称" prop="nickname" />
+          <el-table-column label="Game ID" min-width="140">
+            <template #default="scope">{{ scope.row.gameId || '未填写' }}</template>
+          </el-table-column>
+          <el-table-column label="说明" min-width="220">
+            <template #default="scope">{{ scope.row.blockReason || '未进入当前有效参赛名单' }}</template>
+          </el-table-column>
+        </el-table>
+        <el-divider content-position="left">已离队历史</el-divider>
+        <el-table :data="leftRoster" size="small" border empty-text="没有已离队的报名记录">
+          <el-table-column label="球员" prop="playerName" />
+          <el-table-column label="Game ID" prop="gameIdSnapshot" />
+          <el-table-column label="状态" width="140">
+            <template #default="scope">{{ scope.row.isDelete === 1 ? '已离队（已释放）' : '已离队' }}</template>
           </el-table-column>
         </el-table>
         <el-divider content-position="left">审核流水</el-divider>
@@ -678,6 +709,7 @@ import {
   getV4TeamRosterVersion,
   getV4TeamRosterWorkspace,
   lockV4TeamRoster,
+  syncV4TeamRoster,
   moveV4TeamRosterCandidate,
   promoteV4TeamRosterCandidate,
   type TeamRosterItemVo,
@@ -836,6 +868,8 @@ const dataList = ref<any[]>([])
 const detailOpen = ref(false)
 const rejectOpen = ref(false)
 const detail = ref<BasketRegistrationAuditDetailVo>()
+const activeRoster = computed(() => (detail.value?.players || []).filter((player) => player.isDelete !== 1 && player.currentMember === 1))
+const leftRoster = computed(() => (detail.value?.players || []).filter((player) => player.isDelete === 1 || player.currentMember !== 1))
 const currentId = ref<number>()
 const rejectForm = reactive({ rejectReason: '' })
 const seasonOptions = ref<V4AdminOptionVo[]>([])
@@ -1371,6 +1405,18 @@ function handleAutoAllocate() {
 function handleMoveCandidate(row: TeamRosterItemVo, direction: string) {
   if (!rosterDivisionId.value || !row.registrationId) return
   moveV4TeamRosterCandidate(rosterDivisionId.value, { registrationId: row.registrationId, direction }).then(() => {
+    loadRosterWorkspace()
+  })
+}
+
+function handleSyncRoster() {
+  if (!rosterDivisionId.value) return
+  syncV4TeamRoster(rosterDivisionId.value).then((res) => {
+    const rows = Array.isArray(res.data) ? res.data : []
+    const added = rows.reduce((sum: number, row: { added?: number }) => sum + (row.added || 0), 0)
+    const removed = rows.reduce((sum: number, row: { removed?: number }) => sum + (row.removed || 0), 0)
+    const blocked = rows.reduce((sum: number, row: { blocked?: unknown[] }) => sum + (row.blocked?.length || 0), 0)
+    proxy.$modal.msgSuccess(`已同步。新增 ${added}，释放 ${removed}，未自动加入 ${blocked}`)
     loadRosterWorkspace()
   })
 }

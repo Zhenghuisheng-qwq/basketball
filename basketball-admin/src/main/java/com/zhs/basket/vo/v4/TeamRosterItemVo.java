@@ -13,4 +13,6 @@ public class TeamRosterItemVo {
     private String auditStatus;
     private String participationRole;
     private Integer candidateOrder;
+    private Integer currentEligibleCount;
+    private String eligibilityNote;
 }

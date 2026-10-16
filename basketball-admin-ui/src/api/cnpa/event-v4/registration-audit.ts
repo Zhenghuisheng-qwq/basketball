@@ -21,6 +21,9 @@ export interface BasketRegistrationAuditListVo {
   captainPlayerId?: number
   captainPlayerName?: string
   lineupCount?: number
+  currentEligibleCount?: number
+  lineupMinCount?: number
+  eligibilityStatus?: string
   registrationStatus?: string
   submitTime?: string
 }
@@ -34,6 +37,15 @@ export interface BasketRegistrationPlayerVo {
   jerseyNo?: string
   isCaptain?: number
   isStarter?: number
+  currentMember?: number
+  isDelete?: number
+}
+
+export interface RegistrationGapMemberVo {
+  playerId?: number
+  playerNo?: string
+  nickname?: string
+  gameId?: string
 }
 
 export interface BasketRegistrationAuditLogVo {
@@ -54,11 +66,15 @@ export interface BasketRegistrationAuditDetailVo {
   teamName?: string
   captainPlayerName?: string
   lineupCount?: number
+  currentEligibleCount?: number
+  currentTeamMemberCount?: number
+  submittedRosterCount?: number
   registrationStatus?: string
   submitTime?: string
   approveTime?: string
   rejectReason?: string
   players?: BasketRegistrationPlayerVo[]
+  pendingMembers?: RegistrationGapMemberVo[]
   audits?: BasketRegistrationAuditLogVo[]
 }
 

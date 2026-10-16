@@ -45,6 +45,7 @@ const saving = ref(false)
 const submitting = ref(false)
 const division = ref<V4RegistrationDivisionContext | null>(null)
 const selectedPlayerIds = ref<string[]>([])
+const approvedPlayerIds = ref<string[]>([])
 const registrationId = ref('')
 const divisionId = computed(() => String(route.params.divisionId || ''))
 
@@ -61,6 +62,11 @@ const selectedCount = computed(() => selectedPlayerIds.value.length)
 const canMutate = computed(() => Boolean(division.value?.canRegister))
 const rosterChangeMode = ref(false)
 const canRequestRosterChange = computed(() => Boolean(division.value?.rosterChangeAllowed && registrationId.value))
+const pendingRosterCount = computed(() => {
+  if (!canRequestRosterChange.value) return 0
+  const approved = new Set(approvedPlayerIds.value)
+  return eligiblePlayers.value.filter((player) => player.playerId && !approved.has(String(player.playerId))).length
+})
 const isReadonly = computed(() => {
   if (rosterChangeMode.value) return false
   const status = (division.value?.myRegistrationStatus || '').toUpperCase()
@@ -201,6 +207,7 @@ async function bootstrap() {
     )
 
     let existingSelected: string[] = []
+    approvedPlayerIds.value = []
     if (registrationId.value) {
       try {
         const detailRes = await getV4RegistrationDetail(registrationId.value)
@@ -208,6 +215,7 @@ async function bootstrap() {
         if (players.length) {
           existingSelected = players.map((p: { playerId?: string | number }) => String(p.playerId))
         }
+        approvedPlayerIds.value = existingSelected.filter((id) => eligiblePlayers.value.some((player) => String(player.playerId) === id))
       } catch {
         // ignore detail load failure; user can re-select lineup
       }
@@ -378,7 +386,10 @@ onMounted(() => {
         <div class="v4-reg-team-meta">
           <p>{{ t('accountEvents.registration.currentTeam') }}<strong>{{ division.grantTeamName || t('accountEvents.registration.noTeam') }}</strong></p>
           <p>{{ t('accountEvents.registration.teamSize', { count: teamMemberCount }) }}</p>
+          <p v-if="division.currentEventRosterCount != null">{{ t('accountEvents.registration.approvedEventRoster', { count: division.currentEventRosterCount }) }}</p>
           <p>{{ t('accountEvents.registration.eligibleCount', { count: eligibleCount }) }}</p>
+          <p v-if="division.myRegistrationStatus === 'APPROVED' && !division.rosterLocked" class="v4-reg-hint">{{ t('accountEvents.registration.autoSyncHint') }}</p>
+          <p v-if="pendingRosterCount > 0" class="v4-reg-warn">{{ t('accountEvents.registration.pendingRosterMembers', { count: pendingRosterCount }) }}</p>
           <p>{{ t('accountEvents.registration.rosterNeed', { min: rosterMin, max: rosterMax }) }}</p>
           <p class="v4-reg-hint">{{ t('accountEvents.registration.reviewHint') }}</p>
           <p class="v4-reg-hint">{{ submitHint }}</p>

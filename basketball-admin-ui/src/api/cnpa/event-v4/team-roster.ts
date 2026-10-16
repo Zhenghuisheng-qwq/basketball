@@ -104,6 +104,10 @@ export function moveV4TeamRosterCandidate(divisionId: number, data: { registrati
   return request({ url: `/basket/v4/divisions/${divisionId}/roster/team/candidate/order`, method: 'post', data })
 }
 
+export function syncV4TeamRoster(divisionId: number): Promise<AjaxResult> {
+  return request({ url: `/basket/v4/divisions/${divisionId}/roster/team/sync`, method: 'post' })
+}
+
 export function lockV4TeamRoster(divisionId: number): Promise<AjaxResult<TeamRosterLockResultVo>> {
   return request({ url: `/basket/v4/divisions/${divisionId}/roster/team/lock`, method: 'post' })
 }

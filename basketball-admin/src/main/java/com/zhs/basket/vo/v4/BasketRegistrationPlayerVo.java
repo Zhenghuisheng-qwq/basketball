@@ -12,6 +12,8 @@ public class BasketRegistrationPlayerVo {
     private String jerseyNo;
     private Integer isCaptain;
     private Integer isStarter;
-    /** 1 当前在队，0 报名行仍在但已不是当前队员 */
+    /** 1 当前在队，0 已不是当前队员 */
     private Integer currentMember;
+    /** 1 已从报名名单释放，0 仍在报名记录中 */
+    private Integer isDelete;
 }
