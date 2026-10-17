@@ -28,14 +28,17 @@ public final class RuleVersionSupport {
 
     /**
      * 产品 Rule Version：仅正式 LOCK 后存在。
-     * snapshot_version 是内部 Draft revision，不能直接展示。
-     * 当前不支持发布后修订，因此第一个 LOCKED Rule 即为 V1。
+     * 展示号由已锁定快照的序号决定，不覆盖历史快照。
      */
-    public static Integer productRuleVersionNo(BasketDivisionFormatSnapshot snapshot) {
+    public static Integer productRuleVersionNo(BasketDivisionFormatSnapshot snapshot, int lockedOrdinal) {
         if (!isLocked(snapshot)) {
             return null;
         }
-        return 1;
+        return lockedOrdinal > 0 ? lockedOrdinal : 1;
+    }
+
+    public static Integer productRuleVersionNo(BasketDivisionFormatSnapshot snapshot) {
+        return productRuleVersionNo(snapshot, 1);
     }
 
     public static boolean isLocked(BasketDivisionFormatSnapshot snapshot) {

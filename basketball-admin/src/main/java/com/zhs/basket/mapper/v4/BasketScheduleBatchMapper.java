@@ -38,6 +38,8 @@ public interface BasketScheduleBatchMapper {
 
     int markStructureStaleByRuleVersionId(@Param("ruleVersionId") Long ruleVersionId);
 
+    int markStructureStaleByDivisionId(@Param("divisionId") Long divisionId);
+
     int markStructureStaleByRosterVersionId(@Param("rosterVersionId") Long rosterVersionId);
 
     int incrementScheduleRevision(@Param("id") Long id);

@@ -16,7 +16,8 @@
         @click="selectTemplate(item.templateCode)"
         @keydown.enter.prevent="selectTemplate(item.templateCode)"
       >
-        <div v-if="selectedCode === item.templateCode" class="scheme-card-check">✓ 已选择</div>
+        <div v-if="item.templateCode === appliedCode" class="scheme-card-check">已应用</div>
+        <div v-else-if="item.templateCode === selectedCode" class="scheme-card-check">待应用</div>
         <div class="scheme-card-name">{{ cardMeta(item).title }}</div>
         <div class="scheme-card-summary">{{ cardMeta(item).flow }}</div>
         <div class="scheme-card-tags">
@@ -30,7 +31,7 @@
       <template #header>
         <div class="params-header">
           <span>{{ cardMeta(selected).paramTitle }}</span>
-          <span class="params-header-sub">待应用模板：{{ cardMeta(selected).title }}</span>
+          <span class="params-header-sub">{{ selectedCode === appliedCode ? '当前已应用模板' : '待应用模板' }}：{{ cardMeta(selected).title }}</span>
         </div>
       </template>
       <el-form label-width="120px" class="quick-params-form">
@@ -49,7 +50,7 @@
                 v-if="opt.inputType === 'SELECT'"
                 :model-value="form[opt.key || '']"
                 style="width: 100%"
-                :disabled="!canApply"
+                :disabled="!canApply && !canRevise"
                 @change="(val) => setOption(opt.key, val)"
               >
                 <el-option
@@ -63,7 +64,7 @@
                 v-else-if="opt.inputType === 'NUMBER' && (opt.allowedValues || []).length"
                 :model-value="String(form[opt.key || ''] ?? opt.defaultValue)"
                 style="width: 100%"
-                :disabled="!canApply"
+                :disabled="!canApply && !canRevise"
                 @change="(val) => setOption(opt.key, Number(val))"
               >
                 <el-option
@@ -78,7 +79,7 @@
                 :model-value="Number(form[opt.key || ''] ?? opt.defaultValue)"
                 :min="opt.minValue"
                 :max="opt.maxValue"
-                :disabled="!canApply"
+                :disabled="!canApply && !canRevise"
                 controls-position="right"
                 @change="(val) => setOption(opt.key, val)"
               />
@@ -100,7 +101,10 @@
           title="个人报名将在报名审核后进行 Formation 临时组队。Formation 不是正式比赛阶段。"
         />
         <el-form-item>
-          <el-button type="primary" :loading="applying" :disabled="!canApply || applying" @click="apply">应用此标准模板</el-button>
+          <el-button v-if="canApply" type="primary" :loading="applying" :disabled="applying || !selectedCode" @click="apply">应用此标准模板</el-button>
+          <el-button v-else-if="canRevise" type="primary" :loading="applying" :disabled="applying || !selectedCode" @click="revise">预览并重新发布</el-button>
+          <el-button v-else type="primary" disabled>应用此标准模板</el-button>
+          <span v-if="selectedCode && selectedCode !== appliedCode" class="el-form-item__tip">当前卡片尚未写入规则。未点击应用或重新发布前，已保存方案不会改变。</span>
         </el-form-item>
       </el-form>
     </el-card>
@@ -124,10 +128,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
+import { computed, getCurrentInstance, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import {
   applyStandardTemplate,
   listStandardTemplates,
+  previewPublishedFormatRevision,
+  publishPublishedFormatRevision,
   type BasketDivisionFormatSnapshotVo,
   type StandardTemplateApplyReq,
   type StandardTemplateDefinition,
@@ -157,6 +163,7 @@ const props = defineProps<{
   seriesName?: string
   mutable?: boolean
   canApply?: boolean
+  canRevise?: boolean
   gameMode?: string
   registrationMode?: string
   snapshot?: BasketDivisionFormatSnapshotVo
@@ -166,16 +173,23 @@ const canApply = computed(() => props.canApply !== false && (props.canApply || p
 
 const emit = defineEmits<{
   applied: [payload: { templateCode: string }]
+  'selection-change': [templateCode: string]
 }>()
+
+const { proxy } = getCurrentInstance()!
 
 const applying = ref(false)
 const templates = ref<StandardTemplateDefinition[]>([])
 const selectedCode = ref('')
-const defaultCode = ref('')
 const catalogSeriesCode = ref('')
 const form = reactive<Record<string, string | number | undefined>>({})
 
 const seriesLabel = computed(() => v4SeriesDisplayLabel(props.seriesName, props.seriesCode || catalogSeriesCode.value) || '-')
+
+const appliedCode = computed(() => {
+  const code = props.snapshot?.sourceTemplateCode || ''
+  return templates.value.some((item) => item.templateCode === code) ? code : ''
+})
 
 const selected = computed(() => templates.value.find((item) => item.templateCode === selectedCode.value))
 
@@ -233,13 +247,16 @@ watch(() => props.seriesId, async (seriesId) => {
   const res = await listStandardTemplates(seriesId)
   catalogSeriesCode.value = res.data?.seriesCode || ''
   templates.value = res.data?.templates || []
-  defaultCode.value = res.data?.defaultTemplateCode || ''
-  const appliedCode = props.snapshot?.sourceTemplateCode
-  selectedCode.value = (appliedCode && templates.value.some((item) => item.templateCode === appliedCode))
-    ? appliedCode
-    : (defaultCode.value || templates.value[0]?.templateCode || '')
+  selectedCode.value = appliedCode.value
   hydrateForm()
 }, { immediate: true })
+
+watch(appliedCode, (code) => {
+  if (!selectedCode.value || selectedCode.value === code || !templates.value.some((item) => item.templateCode === selectedCode.value)) {
+    selectedCode.value = code
+    hydrateForm()
+  }
+})
 
 watch(selectedCode, () => hydrateForm())
 
@@ -309,6 +326,7 @@ function selectTemplate(code?: string) {
   if (!code || code === selectedCode.value) return
   persistDraft()
   selectedCode.value = code
+  emit('selection-change', code)
 }
 
 function setOption(key: string | undefined, value: string | number | null) {
@@ -319,34 +337,70 @@ function setOption(key: string | undefined, value: string | number | null) {
 
 onBeforeUnmount(() => persistDraft())
 
+function buildApplyPayload(): StandardTemplateApplyReq {
+  return {
+    templateCode: selectedCode.value,
+    registrationMode: String(form.registrationMode || ''),
+    gameMode: props.gameMode,
+    roundRobinCycles: num(form.roundRobinCycles),
+    playoffSlots: num(form.playoffSlots),
+    groupCount: num(form.groupCount),
+    groupCycles: num(form.groupCycles),
+    advancePerGroup: num(form.advancePerGroup),
+    groupingMode: str(form.groupingMode),
+    eliminationPlacement: str(form.eliminationPlacement),
+    seedRule: str(form.seedRule),
+    drawRule: str(form.drawRule),
+    byeRule: str(form.byeRule),
+    regularBestOf: num(form.regularBestOf),
+    knockoutBestOf: num(form.knockoutBestOf),
+    semifinalBestOf: num(form.semifinalBestOf),
+    finalBestOf: num(form.finalBestOf),
+    winPoints: num(form.winPoints),
+    lossPoints: num(form.lossPoints)
+  }
+}
+
 async function apply() {
   if (!props.divisionId || !selectedCode.value) return
   applying.value = true
   try {
     persistDraft()
-    const payload: StandardTemplateApplyReq = {
-      templateCode: selectedCode.value,
-      registrationMode: String(form.registrationMode || ''),
-      gameMode: props.gameMode,
-      roundRobinCycles: num(form.roundRobinCycles),
-      playoffSlots: num(form.playoffSlots),
-      groupCount: num(form.groupCount),
-      groupCycles: num(form.groupCycles),
-      advancePerGroup: num(form.advancePerGroup),
-      groupingMode: str(form.groupingMode),
-      eliminationPlacement: str(form.eliminationPlacement),
-      seedRule: str(form.seedRule),
-      drawRule: str(form.drawRule),
-      byeRule: str(form.byeRule),
-      regularBestOf: num(form.regularBestOf),
-      knockoutBestOf: num(form.knockoutBestOf),
-      semifinalBestOf: num(form.semifinalBestOf),
-      finalBestOf: num(form.finalBestOf),
-      winPoints: num(form.winPoints),
-      lossPoints: num(form.lossPoints)
-    }
-    await applyStandardTemplate(props.divisionId, payload)
+    await applyStandardTemplate(props.divisionId, buildApplyPayload())
     emit('applied', { templateCode: selectedCode.value })
+  } finally {
+    applying.value = false
+  }
+}
+
+async function revise() {
+  if (!props.divisionId || !selectedCode.value) return
+  applying.value = true
+  try {
+    persistDraft()
+    const payload = buildApplyPayload()
+    const preview = await previewPublishedFormatRevision(props.divisionId, payload)
+    const data = preview.data
+    if (!data?.allowed) {
+      proxy.$modal.msgError((data?.blockers || []).join('\n') || '当前不能重新发布规则')
+      return
+    }
+    const lines = [
+      `当前方案：${data.currentTemplateType || '-'} / ${data.currentTemplateCode || '-'}`,
+      `新方案：${data.nextTemplateCode || payload.templateCode}`,
+      data.nextFormatSummary ? `阶段：${data.nextFormatSummary}` : '',
+      data.scheduleImpact || '',
+      data.preservedScope || ''
+    ].filter(Boolean)
+    await proxy.$modal.confirm(`${lines.join('\n')}\n\n确认后会保留旧规则版本，并锁定新版本。`)
+    await publishPublishedFormatRevision(props.divisionId, {
+      ...payload,
+      confirmScheduleImpact: !!data.scheduleWillBeInvalidated
+    })
+    emit('applied', { templateCode: selectedCode.value })
+  } catch (error: any) {
+    if (error === 'cancel' || error === 'close') return
+    proxy.$modal.msgError(error?.msg || error?.message || '重新发布失败')
   } finally {
     applying.value = false
   }

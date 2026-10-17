@@ -258,6 +258,16 @@
           and match_status in ('PLAYING', 'FINISHED', 'FORFEITED')
     </select>
 
+    <update id="softDeleteUnstartedByDivisionId">
+        update basket_match
+        set is_delete = 1,
+            match_no = concat(match_no, '#', id),
+            series_game_no = CASE WHEN series_id IS NOT NULL THEN id ELSE series_game_no END,
+            update_time = now()
+        where division_id = #{divisionId} and is_delete = 0
+          and (match_status is null or match_status not in ('PLAYING', 'FINISHED', 'FORFEITED'))
+    </update>
+
     <select id="countByDivisionIdAndStageCode" resultType="int">
         select count(1) from basket_match
         where division_id = #{divisionId} and stage_code = #{stageCode} and <include refid="NotDeleted"/>

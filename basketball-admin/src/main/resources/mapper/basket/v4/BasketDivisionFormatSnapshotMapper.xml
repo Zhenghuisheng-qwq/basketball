@@ -42,6 +42,15 @@
         where division_id = #{divisionId}
     </select>
 
+    <select id="countLockedThroughId" resultType="int">
+        select count(1)
+        from basket_division_format_snapshot
+        where division_id = #{divisionId}
+          and is_delete = 0
+          and snapshot_status in ('LOCKED', 'IN_USE', 'ARCHIVED')
+          and id &lt;= #{snapshotId}
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division_format_snapshot (
             division_id, source_template_id, source_template_code, source_template_name,

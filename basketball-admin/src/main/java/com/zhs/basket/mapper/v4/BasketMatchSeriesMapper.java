@@ -42,4 +42,10 @@ public interface BasketMatchSeriesMapper {
     int softDelete(@Param("id") Long id);
 
     int softDeleteDraftByBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
+
+    int countByDivisionId(@Param("divisionId") Long divisionId);
+
+    int countIrreversibleByDivisionId(@Param("divisionId") Long divisionId);
+
+    int softDeleteUnstartedByDivisionId(@Param("divisionId") Long divisionId);
 }

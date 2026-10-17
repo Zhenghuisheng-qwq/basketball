@@ -27,6 +27,9 @@ public class BasketDivisionFormatSnapshotVo {
     private Integer isCurrent;
     private Boolean mutable;
     private Boolean canApplyStandard;
+    /** 已发布且没有不可逆比赛事实时，允许生成新规则版本。 */
+    private Boolean canRevisePublished;
+    private String revisionBlockReason;
     private Boolean lockable;
     private Boolean locked;
     private String formatSummary;

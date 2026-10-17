@@ -483,6 +483,28 @@ export function isV4WizardTemplateAllowed(templateCode?: string | null): boolean
   return !V4_WIZARD_DISALLOWED_TEMPLATE_CODES.has(templateCode.toUpperCase())
 }
 
+const SERIES_CREATE_TEMPLATE: Record<string, string> = {
+  ARENA: 'ARENA_STANDARD_V1',
+  CUP: 'CUP_STANDARD_V1',
+  OPEN: 'OPEN_STANDARD_V1'
+}
+
+/** 新建赛区时选用真实会落库的模板。League 仍避开向导禁用的 LEAGUE_STANDARD_V1。 */
+export function v4PickDivisionFormatTemplate<T extends { templateCode?: string; isDefault?: number; seriesId?: number | null }>(
+  templates: T[],
+  seriesCode?: string | null
+): T | undefined {
+  const allowed = templates.filter((item) => isV4WizardTemplateAllowed(item.templateCode))
+  const preferred = SERIES_CREATE_TEMPLATE[(seriesCode || '').toUpperCase()]
+  if (preferred) {
+    const hit = allowed.find((item) => item.templateCode === preferred)
+    if (hit) return hit
+  }
+  return allowed.find((item) => item.isDefault === 1 && item.seriesId != null)
+    || allowed.find((item) => item.isDefault === 1)
+    || allowed[0]
+}
+
 const SERIES_DEFAULT_PREFIX: Record<string, string> = {
   LEAGUE: 'CNPA League',
   ARENA: 'CNPA Arena',

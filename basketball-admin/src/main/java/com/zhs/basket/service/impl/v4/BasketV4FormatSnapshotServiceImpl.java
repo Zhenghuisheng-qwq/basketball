@@ -12,6 +12,8 @@ import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
 import com.zhs.basket.support.v4.DivisionFormatPlanValidator;
 import com.zhs.basket.support.v4.DivisionFormatSnapshotFactory;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
+import com.zhs.basket.support.v4.PublishedFormatRevisionGuard;
+import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.DoubleEliminationCapabilityGate;
 import com.zhs.basket.support.v4.FormatSnapshotReadySpecification;
 import com.zhs.basket.support.v4.StageFormatSpecification;
@@ -26,6 +28,7 @@ import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
 import com.zhs.basket.vo.v4.BasketDivisionStageVo;
 import com.zhs.basket.vo.v4.BasketDivisionTieBreakRuleVo;
 import com.zhs.basket.vo.v4.FormatPlanValidationResultVo;
+import com.zhs.basket.vo.v4.FormatRevisionPreviewVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.StringUtils;
 import com.zhs.common.utils.bean.BeanUtils;
@@ -67,6 +70,18 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
     private StandardTemplateGraphGuard standardTemplateGraphGuard;
     @Autowired
     private BasketSeriesMapper seriesMapper;
+    @Autowired
+    private PublishedFormatRevisionGuard publishedFormatRevisionGuard;
+    @Autowired
+    private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private BasketMatchSeriesMapper matchSeriesMapper;
+    @Autowired
+    private BasketScheduleBatchMapper scheduleBatchMapper;
+    @Autowired
+    private BasketStandingMapper standingMapper;
+    @Autowired
+    private V4PublicReadCachePublisher publicReadCachePublisher;
 
     private static final List<String> DEFAULT_TIE_BREAK_CODES = List.of(
             "POINT_DIFFERENCE", "HEAD_TO_HEAD", "TOTAL_POINTS", "MANUAL");
@@ -132,6 +147,13 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         boolean mutable = ruleMutableSpecification.isMutable(division, snapshot);
         vo.setMutable(mutable);
         vo.setCanApplyStandard(mutable);
+        FormatRevisionPreviewVo revision = publishedFormatRevisionGuard.assess(division, snapshot);
+        vo.setCanRevisePublished(revision.isAllowed());
+        SnapshotStatusEnum snapshotStatus = SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus());
+        if (!revision.isAllowed() && revision.getBlockers() != null && !revision.getBlockers().isEmpty()
+                && snapshotStatus != null && snapshotStatus.isLockedOrBeyond()) {
+            vo.setRevisionBlockReason(String.join("；", revision.getBlockers()));
+        }
         vo.setLockable(SnapshotStatusEnum.DRAFT.getCode().equals(snapshot.getSnapshotStatus()));
         vo.setLocked(SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond());
         return vo;
@@ -246,6 +268,98 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         }
         validateSnapshotReady(divisionId);
         return getDivisionSnapshot(divisionId);
+    }
+
+    @Override
+    public FormatRevisionPreviewVo previewPublishedRevision(Long divisionId, StandardTemplateApplyReq req) {
+        BasketDivision division = requireDivision(divisionId);
+        BasketDivisionFormatSnapshot snapshot = requireSnapshot(divisionId);
+        String summary = describeStandardTemplate(division, req);
+        FormatRevisionPreviewVo preview = publishedFormatRevisionGuard.assess(division, snapshot, req, summary);
+        if (req == null || StringUtils.isEmpty(req.getTemplateCode())) {
+            preview.getBlockers().add("请选择要重新发布的标准模板");
+            preview.setAllowed(false);
+        } else if (summary == null) {
+            preview.getBlockers().add("标准模板无法生成，请检查参数");
+            preview.setAllowed(false);
+        }
+        return preview;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BasketDivisionFormatSnapshotVo publishPublishedRevision(Long divisionId, StandardTemplateApplyReq req, Long operatorId) {
+        BasketDivision division = requireDivision(divisionId);
+        BasketSeason season = requireSeason(division.getSeasonId());
+        BasketSeries series = seriesMapper.selectById(season.getSeriesId());
+        if (series == null) {
+            throw new ServiceException("Series 不存在");
+        }
+        if (req == null || StringUtils.isEmpty(req.getTemplateCode())) {
+            throw new ServiceException("请选择要重新发布的标准模板");
+        }
+        String summary = describeStandardTemplate(division, req);
+        if (summary == null) {
+            throw new ServiceException("标准模板无法生成，请检查参数");
+        }
+        BasketDivisionFormatSnapshot existing = requireSnapshot(divisionId);
+        FormatRevisionPreviewVo preview = publishedFormatRevisionGuard.assess(division, existing, req, summary);
+        if (!preview.isAllowed()) {
+            throw new ServiceException(String.join("\n", preview.getBlockers()));
+        }
+        if (preview.isScheduleWillBeInvalidated() && !Boolean.TRUE.equals(req.getConfirmScheduleImpact())) {
+            throw new ServiceException(preview.getScheduleImpact() + " 请确认后再重新发布。");
+        }
+
+        String templateCode = req.getTemplateCode().trim();
+        StandardFormatTemplateBuilder builder = standardTemplateFactory.builderForTemplateCode(templateCode);
+        StandardTemplateContext context = toStandardContext(req, division, builder);
+        context.setRegistrationMode(division.getRegistrationMode());
+        context.setGameMode(division.getGameMode());
+        StandardTemplateDefinition definition = builder.build(context);
+        BasketFormatTemplate template = templateService.requireEnabledTemplateByCode(templateCode);
+
+        Long previousId = existing.getId();
+        retireCurrentSnapshot(existing, false);
+        doCreateSnapshotFromDefinition(division, template, previousId, definition, division.getRegistrationMode());
+        lockSnapshot(divisionId, operatorId);
+        if (preview.isScheduleWillBeInvalidated()) {
+            invalidateUnstartedSchedule(divisionId);
+        }
+        publicReadCachePublisher.divisionMutation(divisionId, division.getSeasonId());
+        publicReadCachePublisher.scheduleMutation(divisionId, division.getSeasonId(), null);
+        return getDivisionSnapshot(divisionId);
+    }
+
+    private String describeStandardTemplate(BasketDivision division, StandardTemplateApplyReq req) {
+        if (req == null || StringUtils.isEmpty(req.getTemplateCode())) {
+            return null;
+        }
+        try {
+            StandardFormatTemplateBuilder builder = standardTemplateFactory.builderForTemplateCode(req.getTemplateCode().trim());
+            StandardTemplateContext context = toStandardContext(req, division, builder);
+            context.setRegistrationMode(division.getRegistrationMode());
+            context.setGameMode(division.getGameMode());
+            StandardTemplateDefinition definition = builder.build(context);
+            if (definition.getStages() == null || definition.getStages().isEmpty()) {
+                return definition.getPreviewSummary();
+            }
+            return definition.getStages().stream()
+                    .map(stage -> stage.getStageName() + "（" + stage.getCompetitionFormat() + "）")
+                    .collect(Collectors.joining(" → "));
+        } catch (RuntimeException ex) {
+            return null;
+        }
+    }
+
+    private void invalidateUnstartedSchedule(Long divisionId) {
+        if (matchMapper.countStartedByDivisionId(divisionId) > 0) {
+            throw new ServiceException("已有正式开赛、完赛或弃权比赛，不能失效赛程");
+        }
+        matchMapper.softDeleteUnstartedByDivisionId(divisionId);
+        matchSeriesMapper.softDeleteUnstartedByDivisionId(divisionId);
+        scheduleBatchMapper.markStructureStaleByDivisionId(divisionId);
+        standingMapper.deleteByDivisionId(divisionId);
     }
 
     private List<BasketDivisionStage> buildFormatPlanStages(Long divisionId, Long snapshotId,
@@ -765,7 +879,8 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         vo.setSnapshotStatusName(V4FormatDisplaySupport.snapshotStatusLabel(snapshot.getSnapshotStatus()));
         vo.setIsCurrent(snapshot.getIsCurrent());
         vo.setRuleVersionId(snapshot.getId());
-        vo.setRuleVersionNo(RuleVersionSupport.productRuleVersionNo(snapshot));
+        int lockedOrdinal = snapshotMapper.countLockedThroughId(snapshot.getDivisionId(), snapshot.getId());
+        vo.setRuleVersionNo(RuleVersionSupport.productRuleVersionNo(snapshot, lockedOrdinal));
         vo.setRuleVersionStatus(snapshot.getSnapshotStatus());
         return vo;
     }

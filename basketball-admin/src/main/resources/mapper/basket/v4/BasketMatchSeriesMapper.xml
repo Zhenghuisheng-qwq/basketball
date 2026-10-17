@@ -216,4 +216,26 @@
         where stage_id = #{stageId} and <include refid="NotDeleted"/>
     </select>
 
+    <select id="countByDivisionId" resultType="int">
+        select count(1) from basket_match_series
+        where division_id = #{divisionId} and <include refid="NotDeleted"/>
+    </select>
+
+    <select id="countIrreversibleByDivisionId" resultType="int">
+        select count(1) from basket_match_series
+        where division_id = #{divisionId} and <include refid="NotDeleted"/>
+          and (
+            series_status in ('RUNNING', 'COMPLETED')
+            or resolution_type in ('FORFEIT', 'MANUAL')
+          )
+    </select>
+
+    <update id="softDeleteUnstartedByDivisionId">
+        update basket_match_series
+        set is_delete = 1, bracket_slot = id, update_time = now()
+        where division_id = #{divisionId} and <include refid="NotDeleted"/>
+          and (series_status is null or series_status not in ('RUNNING', 'COMPLETED'))
+          and (resolution_type is null or resolution_type not in ('FORFEIT', 'MANUAL'))
+    </update>
+
 </mapper>

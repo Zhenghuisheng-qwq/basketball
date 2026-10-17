@@ -7,6 +7,7 @@ import com.zhs.basket.dto.v4.BasketDivisionTieBreakRuleSaveReq;
 import com.zhs.basket.dto.v4.StandardTemplateApplyReq;
 import com.zhs.basket.vo.v4.BasketDivisionFormatSnapshotVo;
 import com.zhs.basket.vo.v4.FormatPlanValidationResultVo;
+import com.zhs.basket.vo.v4.FormatRevisionPreviewVo;
 
 public interface IBasketV4FormatSnapshotService {
     Long createDraftSnapshot(Long divisionId, Long templateId);
@@ -34,4 +35,8 @@ public interface IBasketV4FormatSnapshotService {
     BasketDivisionFormatSnapshotVo applyFormatPlan(Long divisionId, BasketDivisionFormatPlanApplyReq req);
 
     BasketDivisionFormatSnapshotVo applyStandardTemplate(Long divisionId, StandardTemplateApplyReq req);
+
+    FormatRevisionPreviewVo previewPublishedRevision(Long divisionId, StandardTemplateApplyReq req);
+
+    BasketDivisionFormatSnapshotVo publishPublishedRevision(Long divisionId, StandardTemplateApplyReq req, Long operatorId);
 }

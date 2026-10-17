@@ -7,8 +7,10 @@ import com.zhs.basket.dto.v4.BasketDivisionStageSaveReq;
 import com.zhs.basket.dto.v4.BasketDivisionTieBreakRuleSaveReq;
 import com.zhs.basket.dto.v4.StandardTemplateApplyReq;
 import com.zhs.basket.service.v4.IBasketV4FormatSnapshotService;
+import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
 import com.zhs.common.core.domain.AjaxResult;
+import com.zhs.common.enums.BusinessType;
 import com.zhs.common.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -92,6 +94,21 @@ public class BasketV4FormatRuleController extends BaseController {
     public AjaxResult applyStandardTemplate(@PathVariable Long divisionId,
                                             @RequestBody StandardTemplateApplyReq req) {
         return success(snapshotService.applyStandardTemplate(divisionId, req));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_VIEW + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_QUERY + "')")
+    @PostMapping("/{divisionId}/format-snapshot/revision/preview")
+    public AjaxResult previewRevision(@PathVariable Long divisionId,
+                                      @RequestBody StandardTemplateApplyReq req) {
+        return success(snapshotService.previewPublishedRevision(divisionId, req));
+    }
+
+    @Log(title = "V4 已发布赛制重新发布", businessType = BusinessType.UPDATE)
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_LOCK + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_EDIT + "')")
+    @PostMapping("/{divisionId}/format-snapshot/revision/publish")
+    public AjaxResult publishRevision(@PathVariable Long divisionId,
+                                      @RequestBody StandardTemplateApplyReq req) {
+        return success(snapshotService.publishPublishedRevision(divisionId, req, SecurityUtils.getUserId()));
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_LOCK + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_OPEN + "')")

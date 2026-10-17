@@ -113,4 +113,9 @@
           and m.match_status in ('FINISHED', 'FORFEITED') and m.publish_status = 'PUBLISHED'
     </select>
 
+    <select id="countByDivisionId" resultType="int">
+        select count(1) from basket_match_team_stat
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
 </mapper>

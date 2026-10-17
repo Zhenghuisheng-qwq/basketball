@@ -7,7 +7,7 @@
       show-icon
       class="mb8"
     >
-      <template #title>赛事规则已发布，当前版本不可修改。</template>
+      <template #title>{{ snapshot.canRevisePublished ? '当前规则版本已锁定。开赛前可以预览影响后重新发布新版本，历史版本会保留。' : (snapshot.revisionBlockReason || '赛事规则已发布，当前版本不可修改。') }}</template>
     </el-alert>
 
     <div v-if="snapshot" class="current-scheme-bar mb8">
@@ -25,10 +25,12 @@
             :series-name="seriesName"
             :mutable="!!snapshot?.mutable"
             :can-apply="!!snapshot?.mutable"
+            :can-revise="!!snapshot?.canRevisePublished"
             :game-mode="divisionMeta?.gameMode"
             :registration-mode="snapshot?.registrationMode || divisionMeta?.registrationMode"
             :snapshot="snapshot"
             @applied="handleStandardTemplateApplied"
+            @selection-change="handleStandardSelectionChange"
           />
         </template>
       </el-tab-pane>
@@ -894,6 +896,7 @@ const currentSchemeSummary = computed(() => {
 })
 
 const rulesSectionTab = ref<RulesSectionTab>('standard')
+const pendingStandardCode = ref('')
 const selectedScheme = ref<V4FormatSchemeId>('GROUP_TO_ELIM')
 const quickParams = reactive<V4QuickCreateParams>(buildDefaultV4QuickCreateParams('GROUP_TO_ELIM', 16))
 
@@ -1512,7 +1515,17 @@ function ensureRulesUiState() {
   quickParams.expectedTeamCount = props.maxTeamCount
 }
 
+function handleStandardSelectionChange(templateCode: string) {
+  pendingStandardCode.value = templateCode
+}
+
+function hasUnappliedStandardSelection() {
+  const applied = snapshot.value?.sourceTemplateCode || ''
+  return !!pendingStandardCode.value && pendingStandardCode.value !== applied
+}
+
 async function handleStandardTemplateApplied(payload?: { templateCode?: string }) {
+  pendingStandardCode.value = ''
   await loadSnapshot()
   emit('update:formatTemplateId', snapshot.value?.sourceTemplateId)
   emit('snapshot-change', snapshot.value!)
@@ -2118,7 +2131,7 @@ watch(
   }
 )
 
-defineExpose({ reload: loadSnapshot })
+defineExpose({ reload: loadSnapshot, hasUnappliedStandardSelection })
 </script>
 
 <style scoped>

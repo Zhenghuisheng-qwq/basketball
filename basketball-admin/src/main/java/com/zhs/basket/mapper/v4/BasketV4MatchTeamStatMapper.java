@@ -18,4 +18,6 @@ public interface BasketV4MatchTeamStatMapper {
     int softDelete(@Param("id") Long id);
 
     int softDeleteByMatchId(@Param("matchId") Long matchId);
+
+    int countByDivisionId(@Param("divisionId") Long divisionId);
 }

@@ -10,6 +10,8 @@ public interface BasketDivisionFormatSnapshotMapper {
 
     int selectMaxVersionByDivisionId(@Param("divisionId") Long divisionId);
 
+    int countLockedThroughId(@Param("divisionId") Long divisionId, @Param("snapshotId") Long snapshotId);
+
     int insert(BasketDivisionFormatSnapshot entity);
 
     int updateById(BasketDivisionFormatSnapshot entity);

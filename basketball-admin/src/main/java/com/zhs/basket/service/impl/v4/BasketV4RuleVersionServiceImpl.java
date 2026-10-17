@@ -32,6 +32,10 @@ public class BasketV4RuleVersionServiceImpl implements IBasketV4RuleVersionServi
 
     @Override
     public RuleVersionView fromSnapshot(BasketDivisionFormatSnapshot snapshot) {
-        return RuleVersionSupport.fromSnapshot(snapshot);
+        RuleVersionView view = RuleVersionSupport.fromSnapshot(snapshot);
+        if (view != null && snapshot != null && view.isLocked()) {
+            view.setRuleVersionNo(snapshotMapper.countLockedThroughId(snapshot.getDivisionId(), snapshot.getId()));
+        }
+        return view;
     }
 }

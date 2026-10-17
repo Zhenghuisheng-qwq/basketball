@@ -81,6 +81,8 @@ export interface BasketDivisionFormatSnapshotVo {
   isCurrent?: number
   mutable?: boolean
   canApplyStandard?: boolean
+  canRevisePublished?: boolean
+  revisionBlockReason?: string
   lockable?: boolean
   locked?: boolean
   formatSummary?: string
@@ -259,6 +261,22 @@ export interface StandardTemplateApplyReq {
   finalBestOf?: number
   winPoints?: number
   lossPoints?: number
+  confirmScheduleImpact?: boolean
+}
+
+export interface FormatRevisionPreviewVo {
+  allowed?: boolean
+  blockers?: string[]
+  currentTemplateCode?: string
+  currentTemplateType?: string
+  nextTemplateCode?: string
+  nextFormatSummary?: string
+  unstartedMatchCount?: number
+  matchSeriesCount?: number
+  scheduleBatchCount?: number
+  scheduleWillBeInvalidated?: boolean
+  scheduleImpact?: string
+  preservedScope?: string
 }
 
 export function listStandardTemplates(seriesId: number): Promise<AjaxResult<StandardTemplateCatalogVo>> {
@@ -271,4 +289,12 @@ export function getStandardTemplateCapabilities(templateCode: string): Promise<A
 
 export function applyStandardTemplate(divisionId: number, data: StandardTemplateApplyReq): Promise<AjaxResult<BasketDivisionFormatSnapshotVo>> {
   return request({ url: `/basket/v4/divisions/${divisionId}/standard-template/apply`, method: 'post', data, headers: { repeatSubmit: false } })
+}
+
+export function previewPublishedFormatRevision(divisionId: number, data: StandardTemplateApplyReq): Promise<AjaxResult<FormatRevisionPreviewVo>> {
+  return request({ url: `/basket/v4/divisions/${divisionId}/format-snapshot/revision/preview`, method: 'post', data, headers: { repeatSubmit: false } })
+}
+
+export function publishPublishedFormatRevision(divisionId: number, data: StandardTemplateApplyReq): Promise<AjaxResult<BasketDivisionFormatSnapshotVo>> {
+  return request({ url: `/basket/v4/divisions/${divisionId}/format-snapshot/revision/publish`, method: 'post', data, headers: { repeatSubmit: false } })
 }

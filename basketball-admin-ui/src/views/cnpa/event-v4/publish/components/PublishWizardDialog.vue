@@ -191,6 +191,7 @@
             <template v-else>
               <DivisionFormatRulesPanel
                 :key="div.localKey"
+                :ref="(el) => setRulesPanelRef(div.localKey, el)"
                 :context-key="div.localKey"
                 :division-id="div.id!"
                 :max-team-count="div.maxTeamCount"
@@ -376,6 +377,7 @@ import {
   formatV4DivisionTabLabel,
   formatV4WizardPrimaryIssue,
   isV4WizardTemplateAllowed,
+  v4PickDivisionFormatTemplate,
   resolveV4WizardFormatDisplayStatus,
   validateV4DivisionTimeRelations,
   validateV4StageCombinationDetailed,
@@ -748,8 +750,15 @@ function setTimeFormRef(key: string, el: unknown) {
   else timeFormRefs.delete(key)
 }
 
+const rulesPanelRefs = new Map<string, { hasUnappliedStandardSelection?: () => boolean }>()
+
+function setRulesPanelRef(key: string, el: unknown) {
+  if (el && typeof el === 'object') rulesPanelRefs.set(key, el as { hasUnappliedStandardSelection?: () => boolean })
+  else rulesPanelRefs.delete(key)
+}
+
 function createEmptyDivision(): WizardDivisionDraft {
-  const defaultTemplate = enabledFormatTemplates.value.find((t) => t.isDefault === 1) || enabledFormatTemplates.value[0]
+  const defaultTemplate = v4PickDivisionFormatTemplate(enabledFormatTemplates.value, getCurrentSeriesCode())
   return {
     localKey: nextLocalKey(),
     platformCode: 'PS_XBOX',
@@ -1193,6 +1202,10 @@ async function goNext() {
         if (!div.id) {
           formatErrors.push(`「${label}」尚未保存`)
           continue
+        }
+        const panel = rulesPanelRefs.get(div.localKey)
+        if (panel?.hasUnappliedStandardSelection?.()) {
+          formatErrors.push(`「${label}」标准模板尚未应用。请先点击「应用此标准模板」，待应用状态不会被保存。`)
         }
         const stages = sortedStages(div)
         if (!stages.length) {

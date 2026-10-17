@@ -176,4 +176,10 @@
           and m.schedule_batch_id = #{scheduleBatchId}
     </select>
 
+    <select id="countByDivisionId" resultType="int">
+        select count(1)
+        from basket_match_submission
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
 </mapper>

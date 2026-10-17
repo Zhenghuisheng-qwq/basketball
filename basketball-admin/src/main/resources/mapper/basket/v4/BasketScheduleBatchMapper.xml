@@ -211,6 +211,13 @@
           and (structure_status is null or structure_status &lt;&gt; 'STALE')
     </update>
 
+    <update id="markStructureStaleByDivisionId">
+        update basket_schedule_batch
+        set structure_status = 'STALE', update_time = now()
+        where division_id = #{divisionId} and is_delete = 0
+          and (structure_status is null or structure_status &lt;&gt; 'STALE')
+    </update>
+
     <update id="incrementScheduleRevision">
         update basket_schedule_batch
         set schedule_revision = ifnull(schedule_revision, 0) + 1, update_time = now()

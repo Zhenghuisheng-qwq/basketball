@@ -14,6 +14,7 @@ import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketEventTeamMapper;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
+import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.query.v4.BasketDivisionQuery;
 import com.zhs.basket.service.v4.IBasketV4DivisionClosingService;
 import com.zhs.basket.service.v4.IBasketV4DivisionService;
@@ -67,6 +68,8 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
     private DivisionSafeRecoverySupport safeRecoverySupport;
     @Autowired
     private V4PublicReadCachePublisher publicReadCachePublisher;
+    @Autowired
+    private BasketV4MatchMapper matchMapper;
     @Autowired
     private CaptainGrantEventSyncSupport captainGrantEventSyncSupport;
 
@@ -134,13 +137,18 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         Date previousMatchEnd = division.getMatchEndTime();
         boolean draft = DivisionStatusEnum.DRAFT.getCode().equals(division.getDivisionStatus());
         boolean registrationOpen = DivisionStatusEnum.REGISTRATION_OPEN.getCode().equals(division.getDivisionStatus());
+        boolean registrationClosed = DivisionStatusEnum.REGISTRATION_CLOSED.getCode().equals(division.getDivisionStatus());
+        boolean scheduled = DivisionStatusEnum.SCHEDULED.getCode().equals(division.getDivisionStatus());
 
-        if (!draft && !registrationOpen && !DivisionStatusEnum.REGISTRATION_CLOSED.getCode().equals(division.getDivisionStatus())) {
+        if (!draft && !registrationOpen && !registrationClosed && !scheduled) {
             throw new ServiceException("当前状态不允许编辑 Division");
         }
 
         if (draft) {
             applyDraftUpdate(division, req);
+            normalizeDivisionName(division);
+        } else if (scheduled) {
+            applyScheduledDateUpdate(division, req);
             normalizeDivisionName(division);
         } else {
             applyLimitedUpdate(division, req);
@@ -295,6 +303,54 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         }
         if (req.getSortOrder() != null) {
             division.setSortOrder(req.getSortOrder());
+        }
+    }
+
+    /**
+     * 已排赛但比赛尚未正式开始时，只允许调整赛区日期和展示名称。
+     * 赛制仍走重新发布，不在这里换模板。
+     */
+    private void applyScheduledDateUpdate(BasketDivision division, BasketDivisionUpdateReq req) {
+        if (matchMapper.countStartedByDivisionId(division.getId()) > 0) {
+            throw new ServiceException("已有正式开赛、完赛或弃权记录，不能修改赛区日期");
+        }
+        rejectIfChanged(req.getPlatformCode(), division.getPlatformCode(), "已排赛后不允许修改平台");
+        rejectIfChanged(req.getGameMode(), division.getGameMode(), "已排赛后不允许修改比赛模式");
+        rejectIfChanged(req.getRegistrationMode(), division.getRegistrationMode(), "已排赛后不允许修改报名方式");
+        rejectIfChanged(req.getFormatType(), division.getFormatType(), "已排赛后不允许在日期编辑中修改赛制类型");
+        if (req.getFormatTemplateId() != null && !req.getFormatTemplateId().equals(division.getFormatTemplateId())) {
+            throw new ServiceException("已排赛后不允许在日期编辑中更换赛制模板");
+        }
+        rejectIfChanged(req.getLineupMinCount(), division.getLineupMinCount(), "已排赛后不允许修改阵容人数");
+        rejectIfChanged(req.getLineupMaxCount(), division.getLineupMaxCount(), "已排赛后不允许修改阵容人数");
+        rejectIfChanged(req.getMaxTeamCount(), division.getMaxTeamCount(), "已排赛后不允许修改队伍上限");
+        rejectIfChanged(req.getMaxPersonCount(), division.getMaxPersonCount(), "已排赛后不允许修改人数上限");
+        if (req.getDivisionName() != null) {
+            division.setDivisionName(req.getDivisionName().trim());
+        }
+        if (req.getDivisionNameEn() != null) {
+            division.setDivisionNameEn(req.getDivisionNameEn().trim());
+        }
+        if (req.getRegistrationStartTime() != null) {
+            division.setRegistrationStartTime(req.getRegistrationStartTime());
+        }
+        if (req.getRegistrationEndTime() != null) {
+            division.setRegistrationEndTime(req.getRegistrationEndTime());
+        }
+        if (req.getMatchStartTime() != null) {
+            division.setMatchStartTime(req.getMatchStartTime());
+        }
+        if (req.getMatchEndTime() != null) {
+            division.setMatchEndTime(req.getMatchEndTime());
+        }
+        if (req.getSortOrder() != null) {
+            division.setSortOrder(req.getSortOrder());
+        }
+    }
+
+    private void rejectIfChanged(Object requested, Object current, String message) {
+        if (requested != null && !requested.equals(current)) {
+            throw new ServiceException(message);
         }
     }
 

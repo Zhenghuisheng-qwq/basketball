@@ -23,4 +23,6 @@ public class StandardTemplateApplyReq {
     private Integer finalBestOf;
     private Integer winPoints;
     private Integer lossPoints;
+    /** 重新发布时，确认未开赛赛程失效。草稿应用忽略该字段。 */
+    private Boolean confirmScheduleImpact;
 }

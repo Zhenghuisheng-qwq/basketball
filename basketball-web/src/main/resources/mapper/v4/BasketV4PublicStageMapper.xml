@@ -19,6 +19,8 @@
             ds.best_of as bestOf,
             case when ds.execution_status in ('RUNNING', 'RESULT_PENDING_CONFIRM') then 1 else 0 end as currentStage
         from basket_division_stage ds
+        inner join basket_division_format_snapshot snap
+            on snap.id = ds.snapshot_id and snap.is_current = 1 and snap.is_delete = 0
         where ds.division_id = #{divisionId}
           and ds.is_delete = 0
         order by ds.stage_order asc, ds.id asc
