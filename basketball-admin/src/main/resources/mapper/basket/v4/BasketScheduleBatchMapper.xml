@@ -139,6 +139,13 @@
         order by id desc limit 1
     </select>
 
+    <select id="countByStageIdAndStructureStatus" resultType="int">
+        select count(1) from basket_schedule_batch
+        where stage_id = #{stageId}
+          and structure_status = #{structureStatus}
+          and <include refid="NotDeleted"/>
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_schedule_batch (
             season_id, division_id, stage_id, grouping_batch_id, batch_no, format_type, rule_code, generation_strategy,

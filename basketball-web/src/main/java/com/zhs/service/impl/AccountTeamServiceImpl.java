@@ -362,7 +362,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         BasketTeam team = new BasketTeam();
         team.setTeamNo("TM" + IdUtil.getSnowflakeNextIdStr());
         team.setTeamName(req.getTeamName().trim());
-        team.setShortName(trimToNull(req.getShortName()));
+        team.setShortName(shortNameOrName(req.getShortName(), req.getTeamName()));
         team.setGameTerminal("GENERAL");
         team.setRegionCode(trimToNull(req.getRegionCode()));
         team.setRegionName(trimToNull(req.getRegionName()));
@@ -438,7 +438,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         BasketTeam team = new BasketTeam();
         team.setTeamNo("TM" + IdUtil.getSnowflakeNextIdStr());
         team.setTeamName(req.getTeamName().trim());
-        team.setShortName(trimToNull(req.getShortName()));
+        team.setShortName(shortNameOrName(req.getShortName(), req.getTeamName()));
         team.setGameTerminal("GENERAL");
         team.setRegionCode(trimToNull(req.getRegionCode()));
         team.setRegionName(trimToNull(req.getRegionName()));
@@ -1280,6 +1280,15 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
     private String toStringId(Long id) {
         return id == null ? null : String.valueOf(id);
+    }
+
+    private String shortNameOrName(String shortName, String teamName) {
+        String value = trimToNull(shortName);
+        if (value != null) {
+            return value.length() > 32 ? value.substring(0, 32) : value;
+        }
+        String name = teamName == null ? "" : teamName.trim();
+        return name.length() > 32 ? name.substring(0, 32) : name;
     }
 
     private String trimToNull(String value) {

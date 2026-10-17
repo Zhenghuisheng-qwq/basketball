@@ -11,6 +11,7 @@ import com.zhs.basket.req.TeamProfileChangeApproveReq;
 import com.zhs.basket.req.TeamProfileChangeRejectReq;
 import com.zhs.basket.service.IBasketTeamProfileChangeService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.v4.CurrentDisplayCacheEvictor;
 import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.vo.TeamProfileChangeDetailVo;
 import com.zhs.basket.vo.TeamProfileChangeListVo;
@@ -44,6 +45,8 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
     private BasketTeamMapper teamMapper;
     @Autowired
     private BasketAdminMessageService messageService;
+    @Autowired
+    private CurrentDisplayCacheEvictor currentDisplayCacheEvictor;
 
     @Override
     public List<TeamProfileChangeListVo> selectList(TeamProfileChangeQuery query) {
@@ -111,6 +114,7 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
                 "球队资料变更已通过",
                 "您的球队「" + teamName + "」资料变更已通过审核，正式资料已更新。",
                 "TEAM_PROFILE_CHANGE_APPROVED", NoticeParams.json("teamName", teamName));
+        currentDisplayCacheEvictor.afterTeamProfile(team.getId());
     }
 
     @Override

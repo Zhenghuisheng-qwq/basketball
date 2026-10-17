@@ -89,4 +89,39 @@
           and membership_status = #{fromStatus}
           and is_current = 1
     </update>
+    <select id="selectCurrentByTeamAndPlayer" resultMap="BasketTeamMemberResult">
+        select id, membership_no, team_id, division_id, member_id, player_id, role_type, roster_type, jersey_no,
+               join_source, membership_status, is_current, join_time, leave_time, leave_reason, remark,
+               create_time, update_time, is_delete
+        from basket_team_member
+        where team_id = #{teamId}
+          and player_id = #{playerId}
+          and is_current = 1
+          and membership_status = 1
+          and is_delete = 0
+        limit 1
+    </select>
+    <insert id="insertActive" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_team_member (
+            membership_no, team_id, division_id, member_id, player_id, role_type, roster_type, join_source,
+            membership_status, is_current, join_time, active_member_slot, is_delete, create_time, update_time
+        ) values (
+            #{membershipNo}, #{teamId}, #{divisionId}, #{memberId}, #{playerId}, #{roleType}, #{rosterType}, #{joinSource},
+            #{membershipStatus}, #{isCurrent}, #{joinTime}, #{activeMemberSlot}, #{isDelete}, #{createTime}, #{updateTime}
+        )
+    </insert>
+    <update id="endCurrent">
+        update basket_team_member
+        set membership_status = #{status},
+            is_current = 0,
+            leave_time = #{leaveTime},
+            leave_reason = #{leaveReason},
+            active_member_slot = null,
+            active_platform_slot = null,
+            update_time = #{leaveTime}
+        where id = #{id}
+          and is_current = 1
+          and membership_status = 1
+          and is_delete = 0
+    </update>
 </mapper>

@@ -113,6 +113,12 @@
         order by id asc
     </select>
 
+    <select id="selectBySourceTeamId" resultMap="BasketEventTeamResult">
+        select <include refid="BaseColumns" /> from basket_event_team
+        where source_team_id = #{sourceTeamId} and is_delete = 0
+        order by id asc
+    </select>
+
     <select id="selectActiveByDivisionAndRosterVersion" resultMap="BasketEventTeamResult">
         select <include refid="BaseColumns" /> from basket_event_team
         where division_id = #{divisionId}

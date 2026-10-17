@@ -57,6 +57,8 @@ public class OpenRosterMembershipSync {
     private BasketV4ParticipationSupport participationSupport;
     @Autowired
     private PreMatchEventPlayerSync eventPlayerSync;
+    @Autowired
+    private CurrentDisplayCacheEvictor currentDisplayCacheEvictor;
 
     public boolean autoSyncOpen(Long divisionId) {
         if (divisionId == null || eligibilityQueries.frozen(divisionId)) {
@@ -196,6 +198,7 @@ public class OpenRosterMembershipSync {
             registrationMapper.updateById(registration);
             writeAudit(registration, added, removed, desired.size(), now);
             eventPlayerSync.syncWritable(registration);
+            currentDisplayCacheEvictor.afterSourceTeam(registration.getDivisionId(), registration.getTeamId(), registration.getSeasonId());
         }
         return result;
     }

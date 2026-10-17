@@ -34,4 +34,8 @@ public interface BasketEventPlayerMapper {
     int updateById(BasketEventPlayer entity);
 
     int softDelete(@Param("id") Long id);
+
+    int restoreWithoutSnapshot(BasketEventPlayer entity);
+
+    java.util.List<Long> selectEventTeamIdsBySourcePlayer(@Param("sourcePlayerId") Long sourcePlayerId);
 }

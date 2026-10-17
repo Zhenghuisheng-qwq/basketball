@@ -8,6 +8,7 @@ import java.util.List;
 public interface BasketTeamMapper {
     List<BasketTeam> selectAuditList(TeamAuditQuery query);
     BasketTeam selectById(Long id);
+    Long lockById(@Param("id") Long id);
     int updateAuditStatusIfMatch(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses,
             @Param("toStatus") Integer toStatus, @Param("auditorId") Long auditorId);
     int updateMemberCount(@Param("id") Long id, @Param("memberCount") Integer memberCount);

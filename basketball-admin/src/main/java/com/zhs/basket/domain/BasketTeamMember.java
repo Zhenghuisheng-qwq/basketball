@@ -22,6 +22,7 @@ public class BasketTeamMember {
     private Date leaveTime;
     private String leaveReason;
     private String remark;
+    private String activeMemberSlot;
     private Date createTime;
     private Date updateTime;
     private Integer isDelete;

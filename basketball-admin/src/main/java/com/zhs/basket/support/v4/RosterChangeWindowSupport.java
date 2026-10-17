@@ -12,8 +12,8 @@ public final class RosterChangeWindowSupport {
     }
 
     /**
-     * 已排赛但比赛未开始，仍允许调整参赛名单。
-     * 比赛已开始、已结束、弃权，或已有球员统计时拒绝。
+     * 自动同步是否冻结。比赛已开始或已有统计时为 true。
+     * 赛中人工审核换人走单独路径，不放宽这里。
      */
     public static boolean isRosterFrozen(String divisionStatus, int startedMatchCount, int playerStatCount) {
         return DivisionStatusEnum.FINISHED.getCode().equals(divisionStatus)

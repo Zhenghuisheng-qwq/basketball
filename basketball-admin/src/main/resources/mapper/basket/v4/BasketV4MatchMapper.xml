@@ -258,6 +258,21 @@
           and match_status in ('PLAYING', 'FINISHED', 'FORFEITED')
     </select>
 
+    <select id="countPlayingByEventTeamId" resultType="int">
+        select count(1) from basket_match
+        where is_delete = 0
+          and match_status = 'PLAYING'
+          and (home_event_team_id = #{eventTeamId} or away_event_team_id = #{eventTeamId})
+    </select>
+
+    <select id="lockOpenMatchesByEventTeamId" resultType="long">
+        select id from basket_match
+        where is_delete = 0
+          and (match_status is null or match_status not in ('FINISHED', 'FORFEITED', 'CANCELLED'))
+          and (home_event_team_id = #{eventTeamId} or away_event_team_id = #{eventTeamId})
+        for update
+    </select>
+
     <update id="softDeleteUnstartedByDivisionId">
         update basket_match
         set is_delete = 1,

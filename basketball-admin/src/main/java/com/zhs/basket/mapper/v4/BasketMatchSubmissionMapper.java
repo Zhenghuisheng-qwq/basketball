@@ -25,5 +25,7 @@ public interface BasketMatchSubmissionMapper {
 
     int countByDivisionId(@Param("divisionId") Long divisionId);
 
+    int countOpenByEventTeamId(@Param("eventTeamId") Long eventTeamId);
+
     List<BasketMatchSubmission> selectBySeriesSubmissionId(@Param("seriesSubmissionId") Long seriesSubmissionId);
 }

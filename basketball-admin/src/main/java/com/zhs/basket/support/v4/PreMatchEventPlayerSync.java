@@ -8,6 +8,7 @@ import com.zhs.basket.mapper.v4.BasketEventPlayerMapper;
 import com.zhs.basket.mapper.v4.BasketEventTeamMapper;
 import com.zhs.basket.mapper.v4.BasketMatchSubmissionPlayerStatMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationPlayerMapper;
+import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchPlayerStatMapper;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +38,8 @@ public class PreMatchEventPlayerSync {
     @Autowired
     private BasketRegistrationPlayerMapper registrationPlayerMapper;
     @Autowired
+    private BasketV4MatchMapper matchMapper;
+    @Autowired
     private BasketV4MatchPlayerStatMapper matchPlayerStatMapper;
     @Autowired
     private BasketMatchSubmissionPlayerStatMapper submissionPlayerStatMapper;
@@ -52,6 +55,10 @@ public class PreMatchEventPlayerSync {
                 registration.getDivisionId(), registration.getTeamId());
         if (eventTeam == null) {
             return;
+        }
+        matchMapper.lockOpenMatchesByEventTeamId(eventTeam.getId());
+        if (matchMapper.countPlayingByEventTeamId(eventTeam.getId()) > 0) {
+            throw new ServiceException("比赛进行中，不能调整该场参赛人员");
         }
         List<BasketRegistrationPlayer> desired = legalPlayers(registration);
         Set<Long> desiredIds = new HashSet<>();

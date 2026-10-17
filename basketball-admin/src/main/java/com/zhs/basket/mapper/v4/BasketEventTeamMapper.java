@@ -23,6 +23,8 @@ public interface BasketEventTeamMapper {
     List<BasketEventTeam> selectBySeasonAndSourceTeam(@Param("seasonId") Long seasonId,
                                                       @Param("sourceTeamId") Long sourceTeamId);
 
+    List<BasketEventTeam> selectBySourceTeamId(@Param("sourceTeamId") Long sourceTeamId);
+
     List<BasketEventTeam> selectActiveByDivisionAndRosterVersion(@Param("divisionId") Long divisionId,
                                                                 @Param("rosterVersionId") Long rosterVersionId);
 

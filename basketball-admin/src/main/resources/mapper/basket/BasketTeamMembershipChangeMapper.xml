@@ -1,0 +1,304 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketTeamMembershipChangeMapper">
+
+    <resultMap id="ChangeResult" type="com.zhs.basket.domain.BasketTeamMembershipChange">
+        <id property="id" column="id" />
+        <result property="changeNo" column="change_no" />
+        <result property="teamId" column="team_id" />
+        <result property="divisionId" column="division_id" />
+        <result property="registrationId" column="registration_id" />
+        <result property="changeType" column="change_type" />
+        <result property="subjectPlayerId" column="subject_player_id" />
+        <result property="subjectMemberId" column="subject_member_id" />
+        <result property="initiatorMemberId" column="initiator_member_id" />
+        <result property="initiatorRole" column="initiator_role" />
+        <result property="sourceBizType" column="source_biz_type" />
+        <result property="sourceBizId" column="source_biz_id" />
+        <result property="beforeSummary" column="before_summary" />
+        <result property="afterSummary" column="after_summary" />
+        <result property="changeStatus" column="change_status" />
+        <result property="effectStage" column="effect_stage" />
+        <result property="impactSummary" column="impact_summary" />
+        <result property="auditUserId" column="audit_user_id" />
+        <result property="auditUserName" column="audit_user_name" />
+        <result property="auditRemark" column="audit_remark" />
+        <result property="auditTime" column="audit_time" />
+        <result property="effectiveTime" column="effective_time" />
+        <result property="createTime" column="create_time" />
+        <result property="updateTime" column="update_time" />
+        <result property="isDelete" column="is_delete" />
+    </resultMap>
+
+    <resultMap id="ListVoMap" type="com.zhs.basket.vo.TeamMembershipChangeListVo">
+        <id property="id" column="id" />
+        <result property="changeNo" column="change_no" />
+        <result property="teamId" column="team_id" />
+        <result property="teamNo" column="team_no" />
+        <result property="teamName" column="team_name" />
+        <result property="divisionId" column="division_id" />
+        <result property="divisionName" column="division_name" />
+        <result property="registrationId" column="registration_id" />
+        <result property="changeType" column="change_type" />
+        <result property="subjectPlayerId" column="subject_player_id" />
+        <result property="subjectName" column="subject_name" />
+        <result property="subjectPlayerNo" column="subject_player_no" />
+        <result property="initiatorRole" column="initiator_role" />
+        <result property="initiatorName" column="initiator_name" />
+        <result property="changeStatus" column="change_status" />
+        <result property="effectStage" column="effect_stage" />
+        <result property="impactSummary" column="impact_summary" />
+        <result property="beforeSummary" column="before_summary" />
+        <result property="afterSummary" column="after_summary" />
+        <result property="createTime" column="create_time" />
+        <result property="auditTime" column="audit_time" />
+        <result property="effectiveTime" column="effective_time" />
+        <result property="auditUserName" column="audit_user_name" />
+        <result property="auditRemark" column="audit_remark" />
+        <result property="legacyRecord" column="legacy_record" />
+    </resultMap>
+
+    <resultMap id="DetailVoMap" type="com.zhs.basket.vo.TeamMembershipChangeDetailVo" extends="ListVoMap">
+        <result property="subjectMemberId" column="subject_member_id" />
+        <result property="certificationStatus" column="certification_status" />
+    </resultMap>
+
+    <sql id="TrackedSelect">
+        select c.id as id,
+               c.change_no as change_no,
+               c.team_id as team_id,
+               t.team_no as team_no,
+               t.team_name as team_name,
+               c.division_id as division_id,
+               d.division_name as division_name,
+               c.registration_id as registration_id,
+               c.change_type as change_type,
+               c.subject_player_id as subject_player_id,
+               coalesce(mp.nickname, p.game_nickname) as subject_name,
+               p.player_no as subject_player_no,
+               c.initiator_role as initiator_role,
+               coalesce(imp.nickname, '') as initiator_name,
+               c.change_status as change_status,
+               c.effect_stage as effect_stage,
+               c.impact_summary as impact_summary,
+               c.before_summary as before_summary,
+               c.after_summary as after_summary,
+               c.create_time as create_time,
+               c.audit_time as audit_time,
+               c.effective_time as effective_time,
+               c.audit_user_name as audit_user_name,
+               c.audit_remark as audit_remark,
+               0 as legacy_record
+        from basket_team_membership_change c
+        left join basket_team t on t.id = c.team_id
+        left join basket_division d on d.id = c.division_id
+        left join basket_player_profile p on p.id = c.subject_player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = c.subject_member_id and mp.is_delete = 0
+        left join basket_member_profile imp on imp.member_id = c.initiator_member_id and imp.is_delete = 0
+        where c.is_delete = 0
+    </sql>
+
+    <sql id="LegacyInviteSelect">
+        select null as id,
+               i.invitation_no as change_no,
+               i.team_id as team_id,
+               t.team_no as team_no,
+               t.team_name as team_name,
+               t.division_id as division_id,
+               d.division_name as division_name,
+               null as registration_id,
+               'INVITE_JOIN' as change_type,
+               i.invitee_player_id as subject_player_id,
+               coalesce(mp.nickname, p.game_nickname) as subject_name,
+               p.player_no as subject_player_no,
+               'CAPTAIN' as initiator_role,
+               coalesce(imp.nickname, '') as initiator_name,
+               case i.invitation_status
+                   when 0 then 'PENDING_USER'
+                   when 2 then 'REJECTED'
+                   when 3 then 'EXPIRED'
+                   when 4 then 'CANCELLED'
+                   else 'HISTORICAL'
+               end as change_status,
+               null as effect_stage,
+               '上线前邀请记录，没有管理员审批，不补造审核结论' as impact_summary,
+               '不在队' as before_summary,
+               case when i.invitation_status = 1 then '当时已接受并直接入队' else '未入队' end as after_summary,
+               i.create_time as create_time,
+               null as audit_time,
+               i.responded_time as effective_time,
+               null as audit_user_name,
+               null as audit_remark,
+               1 as legacy_record
+        from basket_team_invitation i
+        left join basket_team t on t.id = i.team_id
+        left join basket_division d on d.id = t.division_id
+        left join basket_player_profile p on p.id = i.invitee_player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = i.invitee_member_id and mp.is_delete = 0
+        left join basket_member_profile imp on imp.member_id = i.inviter_member_id and imp.is_delete = 0
+        where i.is_delete = 0
+          and not exists (
+              select 1 from basket_team_membership_change x
+              where x.is_delete = 0 and x.source_biz_type = 'INVITATION' and x.source_biz_id = i.id
+          )
+    </sql>
+
+    <sql id="LegacyLeaveSelect">
+        select null as id,
+               concat('LEGACY-MB-', m.id) as change_no,
+               m.team_id as team_id,
+               t.team_no as team_no,
+               t.team_name as team_name,
+               t.division_id as division_id,
+               d.division_name as division_name,
+               null as registration_id,
+               case when m.membership_status = 0 then 'VOLUNTARY_LEAVE' else 'CAPTAIN_REMOVE' end as change_type,
+               m.player_id as subject_player_id,
+               coalesce(mp.nickname, p.game_nickname) as subject_name,
+               p.player_no as subject_player_no,
+               case when m.membership_status = 0 then 'PLAYER' else 'CAPTAIN' end as initiator_role,
+               '' as initiator_name,
+               'HISTORICAL' as change_status,
+               null as effect_stage,
+               '上线前离队留痕，只有成员关系，没有管理员审批' as impact_summary,
+               '曾在队' as before_summary,
+               coalesce(m.leave_reason, '已离队') as after_summary,
+               coalesce(m.leave_time, m.update_time) as create_time,
+               null as audit_time,
+               m.leave_time as effective_time,
+               null as audit_user_name,
+               null as audit_remark,
+               1 as legacy_record
+        from basket_team_member m
+        left join basket_team t on t.id = m.team_id
+        left join basket_division d on d.id = t.division_id
+        left join basket_player_profile p on p.id = m.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = m.member_id and mp.is_delete = 0
+        where m.is_delete = 0
+          and m.is_current = 0
+          and m.membership_status in (0, 2)
+          and m.leave_time is not null
+          and not exists (
+              select 1 from basket_team_membership_change x
+              where x.is_delete = 0 and x.source_biz_type = 'TEAM_MEMBER' and x.source_biz_id = m.id
+          )
+    </sql>
+
+    <select id="selectList" resultMap="ListVoMap">
+        select * from (
+            <include refid="TrackedSelect" />
+            union all
+            <include refid="LegacyInviteSelect" />
+            union all
+            <include refid="LegacyLeaveSelect" />
+        ) u
+        <where>
+            <if test="teamNo != null and teamNo != ''">
+                and u.team_no like concat('%', #{teamNo}, '%')
+            </if>
+            <if test="teamName != null and teamName != ''">
+                and u.team_name like concat('%', #{teamName}, '%')
+            </if>
+            <if test="changeStatus != null and changeStatus != ''">
+                and u.change_status = #{changeStatus}
+            </if>
+            <if test="changeType != null and changeType != ''">
+                and u.change_type = #{changeType}
+            </if>
+            <if test="playerKeyword != null and playerKeyword != ''">
+                and (u.subject_name like concat('%', #{playerKeyword}, '%')
+                    or u.subject_player_no like concat('%', #{playerKeyword}, '%'))
+            </if>
+        </where>
+        order by u.create_time desc, u.change_no desc
+    </select>
+
+    <select id="selectDetail" resultMap="DetailVoMap">
+        select c.id as id,
+               c.change_no as change_no,
+               c.team_id as team_id,
+               t.team_no as team_no,
+               t.team_name as team_name,
+               c.division_id as division_id,
+               d.division_name as division_name,
+               c.registration_id as registration_id,
+               c.change_type as change_type,
+               c.subject_player_id as subject_player_id,
+               c.subject_member_id as subject_member_id,
+               coalesce(mp.nickname, p.game_nickname) as subject_name,
+               p.player_no as subject_player_no,
+               p.certification_status as certification_status,
+               c.initiator_role as initiator_role,
+               coalesce(imp.nickname, '') as initiator_name,
+               c.change_status as change_status,
+               c.effect_stage as effect_stage,
+               c.impact_summary as impact_summary,
+               c.before_summary as before_summary,
+               c.after_summary as after_summary,
+               c.create_time as create_time,
+               c.audit_time as audit_time,
+               c.effective_time as effective_time,
+               c.audit_user_name as audit_user_name,
+               c.audit_remark as audit_remark,
+               0 as legacy_record
+        from basket_team_membership_change c
+        left join basket_team t on t.id = c.team_id
+        left join basket_division d on d.id = c.division_id
+        left join basket_player_profile p on p.id = c.subject_player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = c.subject_member_id and mp.is_delete = 0
+        left join basket_member_profile imp on imp.member_id = c.initiator_member_id and imp.is_delete = 0
+        where c.id = #{id} and c.is_delete = 0
+    </select>
+
+    <select id="selectById" resultMap="ChangeResult">
+        select * from basket_team_membership_change where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByIdForUpdate" resultMap="ChangeResult">
+        select * from basket_team_membership_change where id = #{id} and is_delete = 0 for update
+    </select>
+
+    <select id="countPendingAdmin" resultType="int">
+        select count(1) from basket_team_membership_change
+        where is_delete = 0 and change_status = 'PENDING_ADMIN'
+    </select>
+
+    <select id="countPendingByTeamAndType" resultType="int">
+        select count(1) from basket_team_membership_change
+        where is_delete = 0
+          and team_id = #{teamId}
+          and change_status = 'PENDING_ADMIN'
+          and change_type = #{changeType}
+    </select>
+
+    <update id="markApproved">
+        update basket_team_membership_change
+        set change_status = 'APPROVED',
+            audit_user_id = #{auditUserId},
+            audit_user_name = #{auditUserName},
+            audit_remark = #{auditRemark},
+            audit_time = #{auditTime},
+            effective_time = #{auditTime},
+            effect_stage = #{effectStage},
+            impact_summary = #{impactSummary},
+            update_time = #{auditTime}
+        where id = #{id} and change_status = 'PENDING_ADMIN' and is_delete = 0
+    </update>
+
+    <update id="markRejected">
+        update basket_team_membership_change
+        set change_status = 'REJECTED',
+            audit_user_id = #{auditUserId},
+            audit_user_name = #{auditUserName},
+            audit_remark = #{auditRemark},
+            audit_time = #{auditTime},
+            update_time = #{auditTime}
+        where id = #{id} and change_status = 'PENDING_ADMIN' and is_delete = 0
+    </update>
+
+    <update id="updateInvitationStatus">
+        update basket_team_invitation
+        set invitation_status = #{status}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>

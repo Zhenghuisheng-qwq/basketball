@@ -53,4 +53,8 @@ public class TeamAuditDetailVo {
     private Boolean teamActive;
 
     private List<TeamAuditMemberVo> members;
+    private Integer eventRosterCount;
+    private Integer pendingAddCount;
+    private Integer pendingRemoveCount;
+    private String rosterGapSummary;
 }

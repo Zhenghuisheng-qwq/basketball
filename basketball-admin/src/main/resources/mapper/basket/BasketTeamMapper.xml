@@ -101,4 +101,7 @@
           and is_delete = 0
           and team_status = #{fromStatus}
     </update>
+    <select id="lockById" resultType="long">
+        select id from basket_team where id = #{id} and is_delete = 0 for update
+    </select>
 </mapper>

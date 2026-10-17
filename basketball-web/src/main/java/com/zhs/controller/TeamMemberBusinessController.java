@@ -63,8 +63,8 @@ public class TeamMemberBusinessController {
     public R<Void> removeMember(@PathVariable String teamId,
                                 @PathVariable String teamMemberId,
                                 HttpServletRequest request) {
-        teamMemberBusinessService.removeMember(teamId, teamMemberId, clientIpResolver.resolve(request));
-        return R.ok(null, "成员移除成功");
+        boolean awaitingAudit = teamMemberBusinessService.removeMember(teamId, teamMemberId, clientIpResolver.resolve(request));
+        return R.ok(null, awaitingAudit ? "已提交管理员审核，通过前不改变参赛名单" : "成员移除成功");
     }
 
     @ApiOperation("主动离队")

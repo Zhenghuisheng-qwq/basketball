@@ -62,6 +62,7 @@ export function mapV4TeamDetailToPublic(
     eventTeamStatus: detail.eventTeamStatus,
     disqualified: Boolean(detail.disqualified),
     activeDisciplineSummary: detail.activeDisciplineSummary || [],
+    description: detail.description,
   }
 }
 

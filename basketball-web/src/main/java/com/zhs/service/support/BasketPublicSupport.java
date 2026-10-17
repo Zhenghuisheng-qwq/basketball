@@ -318,8 +318,17 @@ public class BasketPublicSupport {
         if (player == null) {
             return null;
         }
+        if (player.getMemberId() != null) {
+            BasketMemberProfile member = memberProfileDao.selectOne(new LambdaQueryWrapper<BasketMemberProfile>()
+                    .eq(BasketMemberProfile::getMemberId, player.getMemberId())
+                    .eq(BasketMemberProfile::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                    .last("limit 1"));
+            if (member != null && StringUtils.hasText(member.getNickname())) {
+                return member.getNickname().trim();
+            }
+        }
         if (StringUtils.hasText(player.getGameNickname())) {
-            return player.getGameNickname();
+            return player.getGameNickname().trim();
         }
         return null;
     }

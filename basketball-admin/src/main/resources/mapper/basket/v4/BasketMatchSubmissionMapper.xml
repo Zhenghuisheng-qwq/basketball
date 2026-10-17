@@ -182,4 +182,14 @@
         where division_id = #{divisionId} and is_delete = 0
     </select>
 
+    <select id="countOpenByEventTeamId" resultType="int">
+        select count(1)
+        from basket_match_submission s
+        inner join basket_match m on m.id = s.match_id and m.is_delete = 0
+        where s.is_delete = 0
+          and s.submit_event_team_id = #{eventTeamId}
+          and s.submission_status = 'PENDING_REVIEW'
+          and m.match_status not in ('FINISHED', 'FORFEITED', 'CANCELLED')
+    </select>
+
 </mapper>

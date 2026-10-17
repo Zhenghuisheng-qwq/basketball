@@ -26,7 +26,10 @@ public class RosterVersionPublishValidator implements StagePublishValidator {
             result.add(ValidationIssue.error("ROSTER_NOT_LOCKED", "VERSIONED 名单版本未锁定"));
             return;
         }
-        if (batch == null || batch.getRosterVersionId() == null || !batch.getRosterVersionId().equals(roster.getId())) {
+        if (batch == null) {
+            return;
+        }
+        if (batch.getRosterVersionId() == null || !batch.getRosterVersionId().equals(roster.getId())) {
             result.add(ValidationIssue.error("ROSTER_BINDING_MISMATCH", "结构绑定的名单版本不是当前锁定名单"));
         }
     }

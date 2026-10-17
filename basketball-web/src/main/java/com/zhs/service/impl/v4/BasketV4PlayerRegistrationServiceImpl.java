@@ -37,6 +37,7 @@ import com.zhs.response.v4.V4RegistrationRosterPlayerResp;
 import com.zhs.support.v4.TeamRegistrationEligibility;
 import com.zhs.support.v4.TeamRegistrationEligibilitySupport;
 import com.zhs.service.v4.IBasketV4PlayerRegistrationService;
+import com.zhs.service.team.TeamMembershipChangeGate;
 import com.zhs.support.CaptainGrantSupport;
 import com.zhs.support.GameTerminalSupport;
 import jakarta.annotation.Resource;
@@ -94,6 +95,8 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     private BasketRegistrationRosterChangePlayerDao rosterChangePlayerDao;
     @Resource
     private EventRosterMembershipSync eventRosterMembershipSync;
+    @Resource
+    private TeamMembershipChangeGate membershipChangeGate;
 
     @Override
     public List<V4AvailableDivisionResp> listAvailableDivisions() {
@@ -359,11 +362,12 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         if (pending != null && pending > 0) {
             throw new ServiceException("已有待审核的名单变更，请等待审核完成");
         }
+        membershipChangeGate.assertNoPendingAdmin(registration.getTeamId());
         BasketDivision division = requireDivision(registration.getDivisionId());
         if (!eventRosterMembershipSync.rosterOfficiallyLocked(division.getId())) {
             throw new ServiceException("最终名单锁定前，合法队员会自动进入参赛名单，无需单独申请变更");
         }
-        assertRosterChangeWindow(division, registration.getTeamId());
+        eventRosterMembershipSync.assertAuditedRosterChangeAllowed(division.getId(), registration.getTeamId());
         List<BasketRegistrationPlayer> lineup = buildLineup(
                 division, registration.getTeamId(), registration.getCaptainPlayerId(), req.getPlayerIds(), true);
         Date now = new Date();
@@ -392,19 +396,6 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             rosterChangePlayerDao.insert(row);
         }
         return change.getId();
-    }
-
-    private void assertRosterChangeWindow(BasketDivision division, Long teamId) {
-        if (division == null) {
-            throw new ServiceException("Division 不存在");
-        }
-        String status = division.getDivisionStatus();
-        if ("FINISHED".equals(status) || "ARCHIVED".equals(status)) {
-            throw new ServiceException("赛区已结束或归档，不能调整参赛名单");
-        }
-        if (!eventRosterMembershipSync.divisionWritable(division.getId())) {
-            throw new ServiceException("比赛已开始或已有球员统计，不能调整参赛名单");
-        }
     }
 
     @Override

@@ -33,7 +33,8 @@
     </select>
 
     <select id="countPendingRosterChange" resultType="int">
-        select 0
+        select count(*) from basket_registration_roster_change
+        where is_delete = 0 and change_status = 'PENDING'
     </select>
 
     <select id="countPendingPlatformChange" resultType="int">

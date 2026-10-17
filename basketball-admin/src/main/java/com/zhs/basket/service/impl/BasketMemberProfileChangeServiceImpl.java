@@ -8,6 +8,7 @@ import com.zhs.basket.req.MemberProfileChangeApproveReq;
 import com.zhs.basket.req.MemberProfileChangeRejectReq;
 import com.zhs.basket.service.IBasketMemberProfileChangeService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.v4.CurrentDisplayCacheEvictor;
 import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.vo.MemberProfileChangeDetailVo;
 import com.zhs.basket.vo.MemberProfileChangeListVo;
@@ -33,6 +34,8 @@ public class BasketMemberProfileChangeServiceImpl implements IBasketMemberProfil
     private BasketMemberProfileChangeMapper profileChangeMapper;
     @Autowired
     private BasketAdminMessageService messageService;
+    @Autowired
+    private CurrentDisplayCacheEvictor currentDisplayCacheEvictor;
 
     @Override
     public List<MemberProfileChangeListVo> selectList(MemberProfileChangeQuery query) {
@@ -88,6 +91,7 @@ public class BasketMemberProfileChangeServiceImpl implements IBasketMemberProfil
                 "你的昵称 / 头像修改已审核通过，公开资料已更新。",
                 "PROFILE_CHANGE_APPROVED",
                 null);
+        currentDisplayCacheEvictor.afterMemberProfile(change.getMemberId());
     }
 
     @Override

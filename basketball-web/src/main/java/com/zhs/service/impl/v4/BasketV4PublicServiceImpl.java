@@ -77,6 +77,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     private BasketTeamProfileChangeDao teamProfileChangeDao;
     @Resource
     private BasketPublicHonorSupport publicHonorSupport;
+    @Resource
+    private com.zhs.support.v4.PublicCurrentRosterSupport currentRosterSupport;
 
     @Override
     public List<V4PublicDivisionListItemResp> listDivisions(Long seasonId) {
@@ -350,6 +352,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         copyEventTeamBase(team, resp, captainMap, urlMap);
         fillEventTeamEventContext(resp, team);
         resp.setPlayers(listPlayersByEventTeamId(eventTeamId));
+        currentRosterSupport.overlayTeamDetail(resp, team);
         resp.setActiveDisciplineSummary(publicDisciplineDisplaySupport.listEventTeamActive(team));
         return resp;
     }
@@ -498,8 +501,10 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         Map<Long, String> captainMap = loadCaptainNameMap(new ArrayList<>(teamMap.values()));
         BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
         BasketEventTeam away = teamMap.get(match.getAwayEventTeamId());
+        boolean historicalRoster = MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())
+                || MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus());
         Map<Long, List<V4PublicEventPlayerItemResp>> playersByTeam = listPlayersByEventTeamIds(
-                Arrays.asList(match.getHomeEventTeamId(), match.getAwayEventTeamId()));
+                Arrays.asList(match.getHomeEventTeamId(), match.getAwayEventTeamId()), !historicalRoster);
         if (home != null) {
             V4PublicEventTeamDetailResp homeVo = new V4PublicEventTeamDetailResp();
             copyEventTeamBase(home, homeVo, captainMap, urlMap);
@@ -515,6 +520,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
 
         resp.setTeamStats(listMatchTeamStats(matchId, teamMap));
         resp.setPlayerStats(listMatchPlayerStats(matchId, teamMap));
+        if (historicalRoster) {
+            keepPlayersWithMatchFacts(resp);
+        }
         resp.setPeriodScores(listMatchPeriodScores(matchId));
         if (match.getSeriesId() != null) {
             resp.setMatchSeriesId(match.getSeriesId());
@@ -1273,11 +1281,16 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     }
 
     private List<V4PublicEventPlayerItemResp> listPlayersByEventTeamId(Long eventTeamId) {
-        return listPlayersByEventTeamIds(Collections.singletonList(eventTeamId))
+        return listPlayersByEventTeamIds(Collections.singletonList(eventTeamId), true)
                 .getOrDefault(eventTeamId, Collections.emptyList());
     }
 
     private Map<Long, List<V4PublicEventPlayerItemResp>> listPlayersByEventTeamIds(Collection<Long> eventTeamIds) {
+        return listPlayersByEventTeamIds(eventTeamIds, false);
+    }
+
+    private Map<Long, List<V4PublicEventPlayerItemResp>> listPlayersByEventTeamIds(Collection<Long> eventTeamIds,
+                                                                                   boolean currentRosterOnly) {
         if (CollectionUtils.isEmpty(eventTeamIds)) {
             return Collections.emptyMap();
         }
@@ -1298,6 +1311,9 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 players.stream().map(BasketEventPlayer::getAvatarFileId).filter(Objects::nonNull).collect(Collectors.toSet()));
         Map<Long, List<V4PublicEventPlayerItemResp>> grouped = new LinkedHashMap<>();
         for (BasketEventPlayer player : players) {
+            if (currentRosterOnly && !currentRosterSupport.isCurrentRosterPlayer(player)) {
+                continue;
+            }
             V4PublicEventPlayerItemResp vo = new V4PublicEventPlayerItemResp();
             vo.setEventPlayerId(player.getId());
             vo.setSourcePlayerId(player.getSourcePlayerId());
@@ -1336,6 +1352,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
         Map<Long, BasketMatchSeries> seriesMap = matchSeriesDisplaySupport.loadSeriesMap(matchSeriesIds);
+        Map<Long, V4PublicStageItemResp> stageMap = loadMatchStageLabels(matches);
         List<V4PublicMatchItemResp> result = new ArrayList<>();
         for (BasketV4Match match : matches) {
             V4PublicMatchItemResp vo = new V4PublicMatchItemResp();
@@ -1343,6 +1360,13 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             vo.setSeasonId(match.getSeasonId());
             vo.setDivisionId(match.getDivisionId());
             vo.setRoundNo(match.getRoundNo());
+            V4PublicStageItemResp stage = match.getStageId() == null ? null : stageMap.get(match.getStageId());
+            if (stage != null) {
+                vo.setStageId(stage.getStageId());
+                vo.setStageName(stage.getStageName());
+                vo.setStageType(stage.getStageType());
+                vo.setCompetitionFormat(stage.getCompetitionFormat());
+            }
             vo.setMatchNo(match.getMatchNo());
             vo.setMatchTime(match.getMatchTime());
             if (match.getHomeEventTeamId() != null && match.getHomeEventTeamId() <= 0) {
@@ -1404,6 +1428,59 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             result.add(vo);
         }
         return result;
+    }
+
+    private void keepPlayersWithMatchFacts(V4PublicMatchDetailResp resp) {
+        Set<Long> factIds = new HashSet<>();
+        if (resp.getPlayerStats() != null) {
+            for (V4PublicMatchPlayerStatItemResp stat : resp.getPlayerStats()) {
+                if (stat.getEventPlayerId() != null) {
+                    factIds.add(stat.getEventPlayerId());
+                }
+            }
+        }
+        if (resp.getHomeTeam() != null) {
+            resp.getHomeTeam().setPlayers(filterFactPlayers(resp.getHomeTeam().getPlayers(), factIds));
+        }
+        if (resp.getAwayTeam() != null) {
+            resp.getAwayTeam().setPlayers(filterFactPlayers(resp.getAwayTeam().getPlayers(), factIds));
+        }
+    }
+
+    private List<V4PublicEventPlayerItemResp> filterFactPlayers(List<V4PublicEventPlayerItemResp> players, Set<Long> factIds) {
+        if (CollectionUtils.isEmpty(players)) {
+            return Collections.emptyList();
+        }
+        List<V4PublicEventPlayerItemResp> kept = new ArrayList<>();
+        for (V4PublicEventPlayerItemResp player : players) {
+            if (player.getEventPlayerId() != null && factIds.contains(player.getEventPlayerId())) {
+                kept.add(player);
+            }
+        }
+        return kept;
+    }
+
+    private Map<Long, V4PublicStageItemResp> loadMatchStageLabels(List<BasketV4Match> matches) {
+        Set<Long> stageIds = new HashSet<>();
+        for (BasketV4Match match : matches) {
+            if (match.getStageId() != null) {
+                stageIds.add(match.getStageId());
+            }
+        }
+        if (stageIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<V4PublicStageItemResp> stages = publicStageMapper.selectStagesByIds(stageIds);
+        Map<Long, V4PublicStageItemResp> map = new HashMap<>();
+        if (CollectionUtils.isEmpty(stages)) {
+            return map;
+        }
+        for (V4PublicStageItemResp stage : stages) {
+            if (stage != null && stage.getStageId() != null) {
+                map.put(stage.getStageId(), stage);
+            }
+        }
+        return map;
     }
 
     private Map<Long, BasketEventTeam> loadEventTeamMap(Collection<Long> teamIds) {

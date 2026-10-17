@@ -11,6 +11,7 @@ public class DashboardSummaryVo {
     private Integer pendingRegistration;
     private Integer pendingOpenRegistration;
     private Integer pendingRosterChange;
+    private Integer pendingMembershipChange;
     private Integer pendingPlatformChange;
     private Integer pendingMatchDataAudit;
     private Integer pendingMatchDispute;

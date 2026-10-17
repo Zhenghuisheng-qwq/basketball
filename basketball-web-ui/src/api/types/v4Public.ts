@@ -147,6 +147,7 @@ export interface PublicActiveDisciplineSummary {
 
 export interface V4PublicEventTeamDetail extends V4PublicEventTeamItem {
   players: V4PublicEventPlayerItem[]
+  description?: string | null
   activeDisciplineSummary?: PublicActiveDisciplineSummary[]
 }
 
@@ -154,6 +155,10 @@ export interface V4PublicMatchItem {
   matchId: string
   seasonId: string
   divisionId: string
+  stageId?: string
+  stageName?: string
+  stageType?: string
+  competitionFormat?: string
   roundNo?: number
   matchNo?: string
   matchTime?: string

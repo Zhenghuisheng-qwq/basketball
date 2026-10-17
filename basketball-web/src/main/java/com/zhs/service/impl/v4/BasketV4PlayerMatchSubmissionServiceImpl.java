@@ -569,6 +569,10 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         if (ep == null || !NOT_DELETED.equals(ep.getIsDelete()) || !submitEventTeamId.equals(ep.getEventTeamId())) {
             throw new ServiceException("球员不属于提交方球队");
         }
+        if (ep.getEventPlayerStatus() != null
+                && !"ACTIVE".equalsIgnoreCase(ep.getEventPlayerStatus().trim())) {
+            throw new ServiceException("球员不在当前参赛阵容");
+        }
     }
 
     private BasketV4Match requireMatch(Long matchId) {

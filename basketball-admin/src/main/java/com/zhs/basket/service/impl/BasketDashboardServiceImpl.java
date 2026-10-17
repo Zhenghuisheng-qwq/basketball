@@ -3,6 +3,7 @@ package com.zhs.basket.service.impl;
 import com.zhs.basket.domain.v4.BasketSeason;
 import com.zhs.basket.domain.v4.BasketSeries;
 import com.zhs.basket.mapper.BasketDashboardAdminMapper;
+import com.zhs.basket.mapper.BasketTeamMembershipChangeMapper;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
 import com.zhs.basket.mapper.v4.BasketSeriesMapper;
 import com.zhs.basket.query.v4.BasketSeasonQuery;
@@ -43,6 +44,7 @@ public class BasketDashboardServiceImpl implements IBasketDashboardService {
     private static final DateTimeFormatter KEY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Autowired private BasketDashboardAdminMapper dashboardMapper;
+    @Autowired private BasketTeamMembershipChangeMapper membershipChangeMapper;
     @Autowired private BasketSeasonMapper seasonMapper;
     @Autowired private BasketSeriesMapper seriesMapper;
 
@@ -54,6 +56,7 @@ public class BasketDashboardServiceImpl implements IBasketDashboardService {
         vo.setPendingRegistration(dashboardMapper.countPendingRegistration(null));
         vo.setPendingOpenRegistration(dashboardMapper.countPendingOpenRegistration(null));
         vo.setPendingRosterChange(dashboardMapper.countPendingRosterChange(null));
+        vo.setPendingMembershipChange(membershipChangeMapper.countPendingAdmin());
         vo.setPendingPlatformChange(dashboardMapper.countPendingPlatformChange());
         vo.setPendingMatchDataAudit(dashboardMapper.countPendingMatchDataAudit(null));
         vo.setPendingMatchDispute(dashboardMapper.countPendingMatchDispute(null));
@@ -106,6 +109,7 @@ public class BasketDashboardServiceImpl implements IBasketDashboardService {
                 + dashboardMapper.countPendingPlayerCert()
                 + dashboardMapper.countPendingRegistration(null)
                 + dashboardMapper.countPendingRosterChange(null)
+                + membershipChangeMapper.countPendingAdmin()
                 + dashboardMapper.countPendingPlatformChange()
                 + dashboardMapper.countPendingMatchDataAudit(null)
                 + dashboardMapper.countPendingMatchDispute(null);
@@ -317,6 +321,7 @@ public class BasketDashboardServiceImpl implements IBasketDashboardService {
         vo.setPendingRegistration(0);
         vo.setPendingOpenRegistration(0);
         vo.setPendingRosterChange(0);
+        vo.setPendingMembershipChange(0);
         vo.setPendingPlatformChange(0);
         vo.setPendingMatchDataAudit(0);
         vo.setPendingMatchDispute(0);

@@ -8,7 +8,9 @@ public enum TeamInvitationStatusEnum {
     ACCEPTED(1, "已接受"),
     REJECTED(2, "已拒绝"),
     EXPIRED(3, "已过期"),
-    CANCELLED(4, "已取消");
+    CANCELLED(4, "已取消"),
+    AWAITING_AUDIT(5, "待管理员审核"),
+    ADMIN_REJECTED(6, "管理员已驳回");
 
     private final int code;
     private final String description;

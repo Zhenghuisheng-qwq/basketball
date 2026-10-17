@@ -34,6 +34,7 @@ import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
@@ -101,7 +102,7 @@ public class TeamRosterLockApplicationServiceImpl implements ITeamRosterLockAppl
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class, isolation = Isolation.READ_COMMITTED)
     public TeamRosterLockResultVo lock(Long divisionId, Long operatorId) {
         BasketDivision division = rosterSupport.lockDivision(divisionId);
         rosterSupport.requireTeamMode(division);

@@ -36,6 +36,7 @@ import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamMemberBusinessService;
 import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.service.team.TeamMemberJoinHelper;
+import com.zhs.service.team.TeamMembershipChangeGate;
 import com.zhs.support.PlayerPositionSupport;
 import com.zhs.util.AccountSecurityLogHelper;
 import jakarta.annotation.Resource;
@@ -95,6 +96,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     private BasketPublicSupport publicSupport;
     @Resource
     private EventRosterMembershipSync eventRosterMembershipSync;
+    @Resource
+    private TeamMembershipChangeGate membershipChangeGate;
 
     @Override
     public IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize) {
@@ -236,7 +239,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public void removeMember(String teamId, String teamMemberId, String clientIp) {
+    public boolean removeMember(String teamId, String teamMemberId, String clientIp) {
         Long teamPk = parseLongId(teamId, "球队主键");
         Long teamMemberPk = parseLongId(teamMemberId, "球队成员主键");
         Long memberId = UserContext.getRequiredUserId();
@@ -249,13 +252,19 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         if (TeamMemberRoleEnum.CAPTAIN.getCode().equals(target.getRoleType())) {
             throw new ServiceException("不能移除队长");
         }
+        BasketTeam team = teamDao.selectById(teamPk);
+        if (membershipChangeGate.deferCaptainRemove(team, target, memberId)) {
+            return true;
+        }
         markMemberRemoved(target, "被队长移除");
         eventRosterMembershipSync.syncTeam(teamPk);
         teamMemberJoinHelper.clearActiveMemberSlot(target);
         clearPlayerCurrentTeam(target.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);
+        membershipChangeGate.recordImmediateRemove(team, target, memberId);
         securityLogHelper.write(memberId, EVENT_TEAM_REMOVE, "移除球队成员",
                 null, String.valueOf(target.getMemberId()), memberId, clientIp);
+        return false;
     }
 
     @Override
@@ -278,6 +287,9 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         teamMemberJoinHelper.clearActiveMemberSlot(membership);
         clearPlayerCurrentTeam(membership.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);
+        String rosterNote = eventRosterMembershipSync.releaseAfterVoluntaryLeave(teamPk, membership.getPlayerId());
+        BasketTeam team = teamDao.selectById(teamPk);
+        membershipChangeGate.recordVoluntaryLeave(team, membership, rosterNote);
         securityLogHelper.write(memberId, EVENT_TEAM_LEAVE, "离开球队",
                 null, String.valueOf(teamPk), memberId, clientIp);
     }

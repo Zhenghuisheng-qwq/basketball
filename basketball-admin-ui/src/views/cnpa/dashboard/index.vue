@@ -37,6 +37,7 @@ const summary = ref<any>({
   pendingPlayerCert: 0,
   pendingRegistration: 0,
   pendingRosterChange: 0,
+  pendingMembershipChange: 0,
   pendingPlatformChange: 0,
   pendingMatchDataAudit: 0,
   pendingMatchDispute: 0
@@ -47,6 +48,7 @@ const cards = computed(() => [
   { key: 'teamAudit', title: '球队认证待审', count: summary.value.pendingTeamAudit, path: '/identity/team-certification' },
   { key: 'registration', title: '球队报名待审', count: summary.value.pendingRegistration, path: '/event/event-v4-registration-audit' },
   { key: 'rosterChange', title: '阵容变更待审', count: summary.value.pendingRosterChange, path: '/event/event-v4-event-team' },
+  { key: 'membershipChange', title: '球队成员变更待审', count: summary.value.pendingMembershipChange, path: '/identity/team-membership-change' },
   { key: 'platformChange', title: '平台变更待审', count: summary.value.pendingPlatformChange, path: '/identity/platform-change' },
   { key: 'matchAudit', title: '比赛数据待审', count: summary.value.pendingMatchDataAudit, path: '/competition-exec/event-v4-match-submission-audit' },
   { key: 'matchDispute', title: '数据争议待处理', count: summary.value.pendingMatchDispute, path: '/competition-exec/event-v4-match-submission-audit' }

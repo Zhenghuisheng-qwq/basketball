@@ -30,7 +30,7 @@ const stageLabels = computed<Record<TeamStage, string>>(() => ({
   playoffs: t('publicPages.team.playoffs'),
 }))
 
-const stageLabel = computed(() => stageLabels.value[props.team.currentStage])
+const stageLabel = computed(() => props.team.currentStageLabel?.trim() || stageLabels.value[props.team.currentStage])
 
 const recordText = computed(() => t('publicPages.team.record', {
   wins: props.team.wins,

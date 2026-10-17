@@ -96,4 +96,9 @@
             #{tid}
         </foreach>
     </update>
+    <update id="clearCurrentTeamIfMatch">
+        update basket_player_profile
+        set current_team_id = null, update_time = now()
+        where id = #{playerId} and current_team_id = #{teamId} and is_delete = 0
+    </update>
 </mapper>

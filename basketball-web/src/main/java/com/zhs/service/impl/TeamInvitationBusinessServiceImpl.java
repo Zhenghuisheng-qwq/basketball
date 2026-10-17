@@ -37,6 +37,7 @@ import com.zhs.service.IBusinessMessageService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamInvitationBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
+import com.zhs.service.team.TeamMembershipChangeGate;
 import com.zhs.support.GameTerminalSupport;
 import com.zhs.support.PlatformTeamMembershipSupport;
 import com.zhs.support.TeamMembershipSupport;
@@ -94,6 +95,8 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     private BasketSeriesDao seriesDao;
     @Resource
     private TeamWritableSupport teamWritableSupport;
+    @Resource
+    private TeamMembershipChangeGate membershipChangeGate;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -143,6 +146,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         invitation.setExpireTime(calendar.getTime());
         invitation.setIsDelete(NOT_DELETED);
         invitationDao.insert(invitation);
+        membershipChangeGate.trackInvitation(invitation, team);
 
         businessMessageService.sendSiteMessage(inviteeMemberId, "球队邀请",
                 "您收到来自球队「" + team.getTeamName() + "」的邀请",
@@ -277,7 +281,23 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
             validateTeamJoinable(team);
             teamMembershipSupport.assertEligibleToJoinTeam(memberId, team.getDivisionId());
             BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
-            teamMemberJoinHelper.addMember(team, memberId, profile.getId(), com.zhs.enums.TeamJoinSourceEnum.INVITE);
+            if (membershipChangeGate.shouldHold(team.getId())) {
+                invitationDao.update(null, new LambdaUpdateWrapper<BasketTeamInvitation>()
+                        .eq(BasketTeamInvitation::getId, invitationPk)
+                        .eq(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.ACCEPTED.getCode())
+                        .set(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.AWAITING_AUDIT.getCode()));
+                invitation.setInvitationStatus(TeamInvitationStatusEnum.AWAITING_AUDIT.getCode());
+                membershipChangeGate.markInvitationPendingAdmin(invitation, team);
+                businessMessageService.sendSiteMessage(memberId, "邀请已接受",
+                        "您已接受球队「" + team.getTeamName() + "」的邀请，等待管理员审核后生效",
+                        BIZ_TYPE_TEAM_INVITE, invitation.getId(), "TEAM_INVITATION", String.valueOf(invitation.getId()),
+                        "TEAM_INVITATION_RECEIVED", NoticeParams.json("teamName", team.getTeamName()));
+            } else {
+                teamMemberJoinHelper.addMember(team, memberId, profile.getId(), com.zhs.enums.TeamJoinSourceEnum.INVITE);
+                membershipChangeGate.markInvitationEffective(invitation, team);
+            }
+        } else {
+            membershipChangeGate.markInvitationRejected(invitationPk);
         }
 
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(memberId));
@@ -370,7 +390,9 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         Long count = invitationDao.selectCount(new LambdaQueryWrapper<BasketTeamInvitation>()
                 .eq(BasketTeamInvitation::getTeamId, teamId)
                 .eq(BasketTeamInvitation::getInviteeMemberId, inviteeMemberId)
-                .eq(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.PENDING.getCode())
+                .in(BasketTeamInvitation::getInvitationStatus, java.util.List.of(
+                        TeamInvitationStatusEnum.PENDING.getCode(),
+                        TeamInvitationStatusEnum.AWAITING_AUDIT.getCode()))
                 .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED));
         if (count != null && count > 0) {
             throw BusinessReason.INVITATION_PENDING.exception();

@@ -34,6 +34,8 @@ import com.zhs.model.v4.BasketV4MatchPlayerStat;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -81,6 +83,10 @@ public class EventRosterMembershipSync {
     private BasketPlayerProfileDao playerProfileDao;
     @Resource
     private BasketPlayerPlatformAccountDao platformAccountDao;
+    @Resource
+    private com.zhs.dao.v4.BasketMatchSubmissionDao submissionDao;
+    @Resource
+    private com.zhs.service.support.BasketPublicSupport publicSupport;
 
     @Transactional(rollbackFor = Exception.class)
     public int releaseFromWritableRegistrations(Long teamId, Long playerId, String reason) {
@@ -167,6 +173,77 @@ public class EventRosterMembershipSync {
             changed += reconcile(registration);
         }
         return changed;
+    }
+
+    /**
+     * 主动离队后，已锁定或已开赛的报名不再把该球员当作后续可出场人员。
+     * 进行中的比赛和待审核提交不改写；历史统计保留。
+     */
+    public String releaseAfterVoluntaryLeave(Long teamId, Long playerId) {
+        if (teamId == null || playerId == null) {
+            return "";
+        }
+        List<BasketRegistration> registrations = registrationDao.selectList(new LambdaQueryWrapper<BasketRegistration>()
+                .eq(BasketRegistration::getTeamId, teamId)
+                .eq(BasketRegistration::getRegistrationStatus, "APPROVED")
+                .eq(BasketRegistration::getIsDelete, NOT_DELETED));
+        StringBuilder notes = new StringBuilder();
+        for (BasketRegistration registration : registrations) {
+            if (autoSyncOpen(registration.getDivisionId())) {
+                continue;
+            }
+            try {
+                assertAuditedRosterChangeAllowed(registration.getDivisionId(), teamId);
+            } catch (com.zhs.exception.ServiceException ex) {
+                notes.append("报名").append(registration.getId()).append("保留原名单：").append(ex.getMessage()).append("；");
+                continue;
+            }
+            Date now = new Date();
+            int rows = registrationPlayerDao.update(null, new LambdaUpdateWrapper<BasketRegistrationPlayer>()
+                    .eq(BasketRegistrationPlayer::getRegistrationId, registration.getId())
+                    .eq(BasketRegistrationPlayer::getPlayerId, playerId)
+                    .eq(BasketRegistrationPlayer::getIsDelete, NOT_DELETED)
+                    .set(BasketRegistrationPlayer::getIsDelete, 1)
+                    .set(BasketRegistrationPlayer::getUpdateTime, now));
+            if (rows > 0) {
+                Long remain = registrationPlayerDao.selectCount(new LambdaQueryWrapper<BasketRegistrationPlayer>()
+                        .eq(BasketRegistrationPlayer::getRegistrationId, registration.getId())
+                        .eq(BasketRegistrationPlayer::getIsDelete, NOT_DELETED));
+                registration.setLineupCount(remain == null ? 0 : remain.intValue());
+                registration.setLineupVersion((registration.getLineupVersion() == null ? 0 : registration.getLineupVersion()) + 1);
+                registration.setUpdateTime(now);
+                registrationDao.updateById(registration);
+                writeAudit(registration, "球员主动离队，已从后续参赛名单释放，历史比赛不改", now);
+            }
+            retireOrDropEventPlayer(registration, playerId, now);
+            dropFromPendingChanges(registration.getId(), playerId);
+            notes.append("报名").append(registration.getId()).append("已结束该球员后续出场资格，历史统计保留；");
+        }
+        return notes.toString();
+    }
+
+    private void retireOrDropEventPlayer(BasketRegistration registration, Long playerId, Date now) {
+        BasketEventTeam eventTeam = findEventTeam(registration.getDivisionId(), registration.getTeamId());
+        if (eventTeam == null) {
+            return;
+        }
+        BasketEventPlayer eventPlayer = findEventPlayer(eventTeam.getId(), playerId);
+        if (eventPlayer == null || !NOT_DELETED.equals(eventPlayer.getIsDelete())) {
+            evictCurrentTeam(eventTeam);
+            return;
+        }
+        if (referenced(eventPlayer.getId())) {
+            eventPlayerDao.update(null, new LambdaUpdateWrapper<BasketEventPlayer>()
+                    .eq(BasketEventPlayer::getId, eventPlayer.getId())
+                    .set(BasketEventPlayer::getEventPlayerStatus, "RETIRED")
+                    .set(BasketEventPlayer::getUpdateTime, now));
+        } else {
+            eventPlayerDao.update(null, new LambdaUpdateWrapper<BasketEventPlayer>()
+                    .eq(BasketEventPlayer::getId, eventPlayer.getId())
+                    .set(BasketEventPlayer::getIsDelete, 1)
+                    .set(BasketEventPlayer::getUpdateTime, now));
+        }
+        evictCurrentTeam(eventTeam);
     }
 
     private int reconcile(BasketRegistration registration) {
@@ -489,6 +566,73 @@ public class EventRosterMembershipSync {
                     .set(BasketEventPlayer::getIsDelete, 1)
                     .set(BasketEventPlayer::getUpdateTime, now));
         }
+        evictCurrentTeam(eventTeam);
+    }
+
+    public void assertAuditedRosterChangeAllowed(Long divisionId, Long teamId) {
+        if (divisionId == null) {
+            throw new com.zhs.exception.ServiceException("Division 不存在");
+        }
+        BasketDivision division = divisionDao.selectById(divisionId);
+        if (division == null) {
+            throw new com.zhs.exception.ServiceException("Division 不存在");
+        }
+        String status = division.getDivisionStatus();
+        if ("FINISHED".equals(status) || "ARCHIVED".equals(status)) {
+            throw new com.zhs.exception.ServiceException("赛区已结束或归档，不能调整参赛名单");
+        }
+        if (divisionWritable(divisionId)) {
+            return;
+        }
+        BasketEventTeam eventTeam = findEventTeam(divisionId, teamId);
+        if (eventTeam == null) {
+            return;
+        }
+        Long playing = matchDao.selectCount(new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getIsDelete, NOT_DELETED)
+                .eq(BasketV4Match::getMatchStatus, "PLAYING")
+                .and(w -> w.eq(BasketV4Match::getHomeEventTeamId, eventTeam.getId())
+                        .or().eq(BasketV4Match::getAwayEventTeamId, eventTeam.getId())));
+        if (playing != null && playing > 0) {
+            throw new com.zhs.exception.ServiceException("比赛进行中，不能调整该场参赛人员");
+        }
+        List<com.zhs.model.v4.BasketMatchSubmission> pending = submissionDao.selectList(
+                new LambdaQueryWrapper<com.zhs.model.v4.BasketMatchSubmission>()
+                        .eq(com.zhs.model.v4.BasketMatchSubmission::getSubmitEventTeamId, eventTeam.getId())
+                        .eq(com.zhs.model.v4.BasketMatchSubmission::getIsDelete, NOT_DELETED)
+                        .eq(com.zhs.model.v4.BasketMatchSubmission::getSubmissionStatus, "PENDING_REVIEW"));
+        for (com.zhs.model.v4.BasketMatchSubmission submission : pending) {
+            BasketV4Match match = matchDao.selectById(submission.getMatchId());
+            if (match == null || !NOT_DELETED.equals(match.getIsDelete())) {
+                continue;
+            }
+            String matchStatus = match.getMatchStatus();
+            if (!"FINISHED".equals(matchStatus) && !"FORFEITED".equals(matchStatus) && !"CANCELLED".equals(matchStatus)) {
+                throw new com.zhs.exception.ServiceException("已有比赛数据正在审核，不能同时调整参赛名单");
+            }
+        }
+    }
+
+    private void evictCurrentTeam(BasketEventTeam eventTeam) {
+        if (eventTeam == null || publicSupport == null) {
+            return;
+        }
+        Runnable evict = () -> {
+            publicSupport.evictPublicCache("v4:team:" + eventTeam.getId());
+            if (eventTeam.getDivisionId() != null) {
+                publicSupport.evictPublicCache("v4:team-list:" + eventTeam.getDivisionId());
+            }
+        };
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    evict.run();
+                }
+            });
+            return;
+        }
+        evict.run();
     }
 
     private BasketEventTeam findEventTeam(Long divisionId, Long teamId) {

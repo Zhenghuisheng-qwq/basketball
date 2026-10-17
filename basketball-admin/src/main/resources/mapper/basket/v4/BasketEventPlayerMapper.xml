@@ -175,4 +175,22 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <update id="restoreWithoutSnapshot">
+        update basket_event_player
+        set is_delete = 0,
+            event_player_status = #{eventPlayerStatus},
+            is_captain = #{isCaptain},
+            is_starter = #{isStarter},
+            update_time = now()
+        where id = #{id}
+    </update>
+
+    <select id="selectEventTeamIdsBySourcePlayer" resultType="long">
+        select distinct event_team_id
+        from basket_event_player
+        where source_player_id = #{sourcePlayerId}
+          and is_delete = 0
+          and event_team_id is not null
+    </select>
+
 </mapper>

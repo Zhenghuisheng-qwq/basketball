@@ -4,6 +4,7 @@ import { isDisqualificationResult } from '@/utils/eventContext'
 import { v4MatchStatusToNumber } from '@/views/events/utils/v4PublicAdapters'
 import { formatDateTime, mapMatchStatus, toNumber } from '@/utils/publicDisplay'
 import { v4BestOfLabel, v4MatchSeriesStatusLabel } from '@/utils/v4Display'
+import { isKnockoutStage } from './publicStageLabel'
 import type { TeamBase, TeamMatchRecord } from '@/types/team'
 
 export function mapV4MatchToTeamRecord(
@@ -31,13 +32,15 @@ export function mapV4MatchToTeamRecord(
   const bestOf = toNumber(item.bestOf, 1)
   const gameNo = toNumber(item.seriesGameNo, 0)
   const roundNo = toNumber(item.roundNo, 0)
-  const isPlayoff = Boolean(item.matchSeriesId) && bestOf > 1
-  const seriesLine = isPlayoff
+  const knockout = isKnockoutStage(item.stageType, item.competitionFormat) || (Boolean(item.matchSeriesId) && bestOf > 1)
+  const stageName = item.stageName?.trim()
+  const seriesLine = knockout && bestOf > 1
     ? `${v4BestOfLabel(bestOf)}${gameNo > 0 ? ` G${gameNo}` : ''}`
     : ''
-  const stageHeadline = isPlayoff
-    ? (roundNo > 0 ? translate('publicPages.team.roundN', { round: roundNo }) : translate('publicPages.team.playoffs'))
-    : translate('publicPages.team.regular')
+  const stageHeadline = stageName
+    || (knockout
+      ? (roundNo > 0 ? translate('publicPages.team.roundN', { round: roundNo }) : translate('publicPages.team.knockout'))
+      : translate('publicPages.team.notStarted'))
   const seriesContext = bestOf > 1
     ? `${v4BestOfLabel(bestOf)}${gameNo > 0 ? ` G${gameNo}` : ''}`
     : ''
@@ -58,7 +61,7 @@ export function mapV4MatchToTeamRecord(
     opponentScore: officialOpponentScore ?? undefined,
     result,
     status: finished ? 'finished' : 'scheduled',
-    stage: isPlayoff ? 'playoffs' : 'regular',
+    stage: knockout ? 'playoffs' : 'regular',
     competition: [seriesContext, seriesStatusLabel || translate('publicPages.team.roundN', { round: item.roundNo ?? '--' })].filter(Boolean).join(' · '),
     stageHeadline,
     stageMeta: seriesLine || undefined,

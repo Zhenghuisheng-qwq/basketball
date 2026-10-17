@@ -26,6 +26,21 @@
         order by ds.stage_order asc, ds.id asc
     </select>
 
+    <select id="selectStagesByIds" resultType="com.zhs.response.v4.publicapi.V4PublicStageItemResp">
+        select
+            ds.id as stageId,
+            ds.stage_code as stageCode,
+            ds.stage_name as stageName,
+            ds.stage_type as stageType,
+            ds.competition_format as competitionFormat
+        from basket_division_stage ds
+        where ds.is_delete = 0
+          and ds.id in
+        <foreach collection="stageIds" item="stageId" open="(" separator="," close=")">
+            #{stageId}
+        </foreach>
+    </select>
+
     <select id="selectStageById" resultType="com.zhs.response.v4.publicapi.V4PublicStageItemResp">
         select
             ds.id as stageId,

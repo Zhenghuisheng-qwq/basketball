@@ -9,6 +9,7 @@ import com.zhs.basket.domain.v4.BasketStagePairingExecution;
 import com.zhs.basket.domain.v4.BasketStagePublishRecord;
 import com.zhs.basket.dto.v4.StageWithdrawReq;
 import com.zhs.basket.enums.v4.PublishStatusEnum;
+import com.zhs.basket.enums.v4.StructureStatusEnum;
 import com.zhs.basket.enums.v4.StageExecutionStatusEnum;
 import com.zhs.basket.enums.v4.StagePublishActionTypeEnum;
 import com.zhs.basket.enums.v4.ValidationSeverityEnum;
@@ -227,6 +228,9 @@ public class StagePublishApplicationServiceImpl implements IStagePublishApplicat
             throw new ServiceException("Division 不存在");
         }
         BasketScheduleBatch batch = scheduleBatchMapper.selectActiveByStageId(stageId);
+        boolean historicalStale = batch == null
+                && scheduleBatchMapper.countByStageIdAndStructureStatus(
+                stageId, StructureStatusEnum.STALE.getCode()) > 0;
         BasketDivisionFormatSnapshot rule = snapshotMapper.selectById(stage.getSnapshotId());
         BasketDivisionRosterVersion roster = rosterVersionMapper.selectCurrentLockedByDivisionId(stage.getDivisionId());
         BasketStagePairingExecution pairing = pairingExecutionMapper.selectCurrentByStageId(stageId);
@@ -251,6 +255,7 @@ public class StagePublishApplicationServiceImpl implements IStagePublishApplicat
         context.setRuleVersion(rule);
         context.setRosterVersion(roster);
         context.setStructureBatch(batch);
+        context.setHistoricalStaleStructure(historicalStale);
         context.setPairingExecution(pairing);
         context.setScheduleSummary(summary);
         context.setUnits(units);

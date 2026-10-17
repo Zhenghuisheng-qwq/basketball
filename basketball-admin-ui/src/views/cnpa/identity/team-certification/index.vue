@@ -110,6 +110,7 @@
             <el-descriptions-item label="招募状态">{{ detail.publicStatusName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="地区">{{ detail.regionName || '-' }}</el-descriptions-item>
             <el-descriptions-item label="成员数">{{ detail.currentMemberCount ?? 0 }} 人</el-descriptions-item>
+            <el-descriptions-item label="名单差异" :span="2">{{ detail.rosterGapSummary || '当前永久成员与本届参赛名单一致或暂无报名' }}</el-descriptions-item>
             <el-descriptions-item label="创建时间">{{ parseTime(detail.createTime) }}</el-descriptions-item>
             <el-descriptions-item label="更新时间">{{ parseTime(detail.updateTime) }}</el-descriptions-item>
             <el-descriptions-item label="球队介绍" :span="2">{{ detail.description || '-' }}</el-descriptions-item>

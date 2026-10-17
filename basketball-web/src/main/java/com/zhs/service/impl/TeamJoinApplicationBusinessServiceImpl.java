@@ -36,6 +36,7 @@ import com.zhs.service.IBusinessMessageService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamJoinApplicationBusinessService;
 import com.zhs.service.team.TeamMemberJoinHelper;
+import com.zhs.service.team.TeamMembershipChangeGate;
 import com.zhs.support.GameTerminalSupport;
 import com.zhs.support.PlatformTeamMembershipSupport;
 import com.zhs.support.PlayerPositionSupport;
@@ -89,6 +90,8 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
     private BasketSeasonDao seasonDao;
     @Resource
     private BasketSeriesDao seriesDao;
+    @Resource
+    private TeamMembershipChangeGate membershipChangeGate;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -109,6 +112,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         application.setApplicationStatus(TeamJoinApplicationStatusEnum.PENDING.getCode());
         application.setIsDelete(NOT_DELETED);
         joinApplicationDao.insert(application);
+        membershipChangeGate.trackJoinApplication(application, team);
 
         businessMessageService.sendSiteMessage(team.getCaptainMemberId(), "球队加入申请",
                 "收到新的加入球队申请", BIZ_TYPE_TEAM_JOIN, application.getId(),
@@ -179,6 +183,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         application.setApplicationStatus(TeamJoinApplicationStatusEnum.CANCELLED.getCode());
         application.setProcessedTime(new Date());
         joinApplicationDao.updateById(application);
+        membershipChangeGate.markJoinClosed(applicationPk, false);
     }
 
     @Override
@@ -246,13 +251,24 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         application = joinApplicationDao.selectById(applicationPk);
         if (Boolean.TRUE.equals(approve)) {
             teamMembershipSupport.assertEligibleToJoinTeam(application.getApplicantMemberId(), team.getDivisionId());
-            teamMemberJoinHelper.addMember(team, application.getApplicantMemberId(),
-                    application.getApplicantPlayerId(), TeamJoinSourceEnum.APPLY);
-            businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请已通过",
-                    "您的加入球队申请已通过", BIZ_TYPE_TEAM_JOIN, application.getId(),
-                    "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()),
-                    "TEAM_JOIN_APPLICATION_APPROVED", NoticeParams.json("teamName", team.getTeamName()));
+            if (membershipChangeGate.shouldHold(team.getId())) {
+                membershipChangeGate.markJoinPendingAdmin(application, team, memberId);
+                businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请待审核",
+                        "队长已同意您加入球队「" + team.getTeamName() + "」，等待管理员审核后生效",
+                        BIZ_TYPE_TEAM_JOIN, application.getId(),
+                        "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()),
+                        "TEAM_JOIN_APPLICATION_APPROVED", NoticeParams.json("teamName", team.getTeamName()));
+            } else {
+                teamMemberJoinHelper.addMember(team, application.getApplicantMemberId(),
+                        application.getApplicantPlayerId(), TeamJoinSourceEnum.APPLY);
+                membershipChangeGate.markJoinEffective(application, team, memberId);
+                businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请已通过",
+                        "您的加入球队申请已通过", BIZ_TYPE_TEAM_JOIN, application.getId(),
+                        "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()),
+                        "TEAM_JOIN_APPLICATION_APPROVED", NoticeParams.json("teamName", team.getTeamName()));
+            }
         } else {
+            membershipChangeGate.markJoinClosed(applicationPk, true);
             businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请已驳回",
                     "您的加入球队申请已被驳回", BIZ_TYPE_TEAM_JOIN, application.getId(),
                     "TEAM_JOIN_APPLICATION", String.valueOf(application.getId()),

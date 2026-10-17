@@ -30,7 +30,10 @@ public class RuleVersionPublishValidator implements StagePublishValidator {
                 && !SnapshotStatusEnum.IN_USE.getCode().equals(rule.getSnapshotStatus())) {
             result.add(ValidationIssue.error("RULE_NOT_LOCKED", "VERSIONED 规则版本未锁定"));
         }
-        if (batch == null || batch.getRuleVersionId() == null || !batch.getRuleVersionId().equals(rule.getId())) {
+        if (batch == null) {
+            return;
+        }
+        if (batch.getRuleVersionId() == null || !batch.getRuleVersionId().equals(rule.getId())) {
             result.add(ValidationIssue.error("RULE_BINDING_MISMATCH", "结构绑定的规则版本不是当前锁定规则"));
         }
     }

@@ -65,6 +65,14 @@
         order by submit_time asc, id asc
     </select>
 
+    <select id="selectApprovedByTeamId" resultMap="BasketRegistrationResult">
+        select <include refid="BaseColumns" /> from basket_registration
+        where team_id = #{teamId}
+          and registration_status = 'APPROVED'
+          and is_delete = 0
+        order by id asc
+    </select>
+
     <select id="countApprovedByDivisionAndRole" resultType="int">
         select count(1) from basket_registration
         where division_id = #{divisionId}

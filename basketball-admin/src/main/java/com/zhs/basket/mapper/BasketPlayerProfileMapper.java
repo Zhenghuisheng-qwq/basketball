@@ -17,4 +17,6 @@ public interface BasketPlayerProfileMapper {
     Long selectAvatarFileIdByMemberId(@Param("memberId") Long memberId);
 
     int clearCurrentTeamIdByTeamIds(@Param("teamIds") java.util.List<Long> teamIds);
+
+    int clearCurrentTeamIfMatch(@Param("playerId") Long playerId, @Param("teamId") Long teamId);
 }

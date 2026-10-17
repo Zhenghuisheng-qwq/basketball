@@ -18,7 +18,7 @@ import type { V4PublicDivisionDetail } from '@/api/types/v4Public'
 import { translate } from '@/i18n'
 import { descriptionToText, displayText, toNumber } from '@/utils/publicDisplay'
 import { v4PlatformLabel } from '@/utils/v4Display'
-import type { TeamBase, TeamStage } from '@/types/team'
+import type { TeamBase } from '@/types/team'
 import {
   mapV4PlayerToRoster,
   mapV4StandingToRank,
@@ -26,6 +26,10 @@ import {
   mapV4TeamStatToSeasonStat,
 } from '../utils/mapV4PublicTeam'
 import { resolveEventTeamDivisionId } from '../utils/resolveTeamDivision'
+import {
+  resolvePublicStageLabel,
+  resolveTeamStageKind,
+} from '../utils/publicStageLabel'
 
 export interface PublicTeamPageContext {
   teamId: Ref<string>
@@ -42,14 +46,6 @@ export interface PublicTeamPageContext {
 }
 
 export const PUBLIC_TEAM_PAGE_KEY: InjectionKey<PublicTeamPageContext> = Symbol('publicTeamPage')
-
-function resolveCurrentStage(stage?: { stageType?: string | null; stageCode?: string | null } | null): TeamStage {
-  const code = `${stage?.stageType || ''} ${stage?.stageCode || ''}`.toUpperCase()
-  if (code.includes('KNOCKOUT') || code.includes('PLAYOFF') || code.includes('ELIMINATION')) {
-    return 'playoffs'
-  }
-  return 'regular'
-}
 
 export function usePublicTeamPage() {
   const route = useRoute()
@@ -69,7 +65,7 @@ export function usePublicTeamPage() {
   const ranking = ref<PublicTeamRankItemVo[]>([])
   const standingWins = ref(0)
   const standingLosses = ref(0)
-  const currentStage = ref<{ stageType?: string; stageCode?: string } | null>(null)
+  const stageList = ref<import('@/api/types/v4Public').V4PublicStageItem[]>([])
   const captainName = ref('--')
   const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
   const errorMessage = ref('')
@@ -95,7 +91,8 @@ export function usePublicTeamPage() {
       largeLogoUrl: d.logoUrl?.trim() || '',
       captainName: displayText(captainName.value || captainFromRoster, '--'),
       platform: v4PlatformLabel(d.platformCode),
-      currentStage: resolveCurrentStage(currentStage.value),
+      currentStage: resolveTeamStageKind(stageList.value),
+      currentStageLabel: resolvePublicStageLabel(stageList.value),
       rosterCount: toNumber(d.currentMemberCount, roster.value.length),
       verified: toNumber(d.teamStatus, 0) === 1,
       seasonName: displayText(
@@ -137,7 +134,7 @@ export function usePublicTeamPage() {
     divisionDetail.value = null
     seasonTitle.value = ''
     seriesName.value = ''
-    currentStage.value = null
+    stageList.value = []
 
     try {
       const detailRes = await getV4PublicTeamDetail(id)
@@ -216,10 +213,8 @@ export function usePublicTeamPage() {
         (row) => String(row.eventTeamId) === String(id),
       )
 
-      const activeStage = (stageRes.data ?? []).find((stage) => stage.currentStage)
-      currentStage.value = activeStage
-        ? { stageType: activeStage.stageType, stageCode: activeStage.stageCode }
-        : null
+      const activeStages = stageRes.data ?? []
+      stageList.value = activeStages
 
       detail.value = mapV4TeamDetailToPublic(teamDetail, {
         divisionId: resolvedDivisionId,

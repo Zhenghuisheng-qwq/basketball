@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 
 @Mapper
@@ -13,6 +14,8 @@ import java.util.List;
 public interface BasketV4PublicStageMapper {
 
     List<V4PublicStageItemResp> selectStagesByDivisionId(@Param("divisionId") Long divisionId);
+
+    List<V4PublicStageItemResp> selectStagesByIds(@Param("stageIds") Collection<Long> stageIds);
 
     V4PublicStageItemResp selectStageById(@Param("stageId") Long stageId);
 

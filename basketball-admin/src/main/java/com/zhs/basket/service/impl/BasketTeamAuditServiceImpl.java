@@ -7,11 +7,13 @@ import com.zhs.basket.enums.TeamMemberRoleEnum;
 import com.zhs.basket.enums.TeamPublicStatusEnum;
 import com.zhs.basket.enums.TeamStatusEnum;
 import com.zhs.basket.domain.v4.BasketDivision;
+import com.zhs.basket.domain.v4.BasketRegistration;
 import com.zhs.basket.domain.v4.BasketSeason;
 import com.zhs.basket.domain.v4.BasketSeries;
 import com.zhs.basket.mapper.*;
 import com.zhs.basket.mapper.v4.BasketCaptainGrantMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
+import com.zhs.basket.mapper.v4.BasketRegistrationMapper;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
 import com.zhs.basket.mapper.v4.BasketSeriesMapper;
 import com.zhs.basket.query.TeamAuditQuery;
@@ -60,6 +62,8 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
     @Autowired private BasketDivisionMapper divisionMapper;
     @Autowired private BasketSeasonMapper seasonMapper;
     @Autowired private BasketSeriesMapper seriesMapper;
+    @Autowired private BasketRegistrationMapper registrationMapper;
+    @Autowired private BasketTeamMembershipChangeMapper membershipChangeMapper;
     @Autowired private BasketAdminMessageService messageService;
     @Autowired private TeamNoGenerator teamNoGenerator;
 
@@ -90,6 +94,7 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         enrichCaptainInfo(vo, team);
         enrichAuditInfo(vo, teamId);
         enrichMembers(vo, teamId);
+        enrichRosterGap(vo, team);
         enrichValidationFlags(vo, team);
 
         return vo;
@@ -368,6 +373,24 @@ public class BasketTeamAuditServiceImpl implements IBasketTeamAuditService {
         if (!Objects.equals(cachedCount, memberCount)) {
             teamMapper.updateMemberCount(teamId, memberCount);
         }
+    }
+
+    private void enrichRosterGap(TeamAuditDetailVo vo, BasketTeam team) {
+        int pendingAdd = membershipChangeMapper.countPendingByTeamAndType(team.getId(), "INVITE_JOIN")
+                + membershipChangeMapper.countPendingByTeamAndType(team.getId(), "APPLY_JOIN");
+        int pendingRemove = membershipChangeMapper.countPendingByTeamAndType(team.getId(), "CAPTAIN_REMOVE");
+        vo.setPendingAddCount(pendingAdd);
+        vo.setPendingRemoveCount(pendingRemove);
+        Integer roster = null;
+        if (team.getDivisionId() != null) {
+            BasketRegistration registration = registrationMapper.selectByDivisionTeam(team.getDivisionId(), team.getId());
+            if (registration != null && "APPROVED".equals(registration.getRegistrationStatus())) {
+                roster = registration.getLineupCount();
+            }
+        }
+        vo.setEventRosterCount(roster);
+        int permanent = vo.getCurrentMemberCount() == null ? 0 : vo.getCurrentMemberCount();
+        vo.setRosterGapSummary(BasketTeamMembershipChangeServiceImpl.gapText(permanent, roster, pendingAdd, pendingRemove));
     }
 
     private void fillGameIds(List<TeamAuditMemberVo> members, String divisionPlatform) {

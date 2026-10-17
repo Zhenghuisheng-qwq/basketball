@@ -19,7 +19,7 @@ public interface ITeamMemberBusinessService {
 
     TeamMemberItemResp updateMember(String teamId, String teamMemberId, TeamMemberUpdateReq req);
 
-    void removeMember(String teamId, String teamMemberId, String clientIp);
+    boolean removeMember(String teamId, String teamMemberId, String clientIp);
 
     void leave(String teamId, String clientIp);
 

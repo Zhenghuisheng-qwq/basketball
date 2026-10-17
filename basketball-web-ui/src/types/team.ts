@@ -12,6 +12,7 @@ export interface TeamBase {
   captainName: string
   platform: string
   currentStage: TeamStage
+  currentStageLabel?: string
   rosterCount: number
   verified: boolean
   seasonName: string

@@ -12,5 +12,7 @@ public class V4PublicEventTeamDetailResp extends V4PublicEventTeamItemResp {
 
     private List<V4PublicEventPlayerItemResp> players;
 
+    private String description;
+
     private List<PublicActiveDisciplineSummaryVo> activeDisciplineSummary;
 }

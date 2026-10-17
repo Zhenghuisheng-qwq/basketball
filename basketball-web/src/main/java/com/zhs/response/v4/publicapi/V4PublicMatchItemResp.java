@@ -18,6 +18,15 @@ public class V4PublicMatchItemResp {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long divisionId;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long stageId;
+
+    private String stageName;
+
+    private String stageType;
+
+    private String competitionFormat;
+
     private Integer roundNo;
 
     private String matchNo;

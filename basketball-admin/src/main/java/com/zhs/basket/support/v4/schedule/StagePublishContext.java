@@ -20,6 +20,8 @@ public class StagePublishContext {
     private BasketDivisionFormatSnapshot ruleVersion;
     private BasketDivisionRosterVersion rosterVersion;
     private BasketScheduleBatch structureBatch;
+    /** 当前阶段没有 ACTIVE 批次，但同一阶段仍有 STALE 历史批次。 */
+    private boolean historicalStaleStructure;
     private BasketStagePairingExecution pairingExecution;
     private StageScheduleSummaryVo scheduleSummary;
     private List<ScheduleUnitView> units = new ArrayList<>();

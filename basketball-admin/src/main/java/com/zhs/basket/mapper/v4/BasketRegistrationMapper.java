@@ -14,6 +14,8 @@ public interface BasketRegistrationMapper {
 
     List<BasketRegistration> selectByDivisionId(@Param("divisionId") Long divisionId);
 
+    List<BasketRegistration> selectApprovedByTeamId(@Param("teamId") Long teamId);
+
     BasketRegistration selectByDivisionTeam(@Param("divisionId") Long divisionId, @Param("teamId") Long teamId);
 
     List<BasketRegistrationAuditListVo> selectAuditVoList(BasketRegistrationAuditQuery query);

@@ -20,6 +20,8 @@ import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchPlayerStatMapper;
 import com.zhs.basket.service.v4.IBasketV4RosterVersionService;
 import com.zhs.basket.support.v4.BasketV4ParticipationSupport;
+import com.zhs.basket.support.v4.CurrentDisplayCacheEvictor;
+import com.zhs.basket.support.v4.InSeasonEventRosterApply;
 import com.zhs.basket.support.v4.PreMatchEventPlayerSync;
 import com.zhs.basket.support.v4.RosterChangeWindowSupport;
 import com.zhs.basket.vo.v4.BasketRosterChangeListVo;
@@ -62,6 +64,10 @@ public class BasketV4RosterChangeAuditServiceImpl {
     @Autowired
     private PreMatchEventPlayerSync eventPlayerSync;
     @Autowired
+    private InSeasonEventRosterApply inSeasonEventRosterApply;
+    @Autowired
+    private CurrentDisplayCacheEvictor currentDisplayCacheEvictor;
+    @Autowired
     private IBasketV4RosterVersionService rosterVersionService;
 
     public List<BasketRosterChangeListVo> listPending(Long divisionId) {
@@ -101,7 +107,12 @@ public class BasketV4RosterChangeAuditServiceImpl {
         if (rosterVersionService.getCurrentLockedVersion(change.getDivisionId()) == null) {
             throw new ServiceException("最终名单尚未锁定，当前队员由系统自动同步，不能审核覆盖名单");
         }
-        RosterChangeWindowSupport.assertCanRequest(division, new Date(),
+        if (division == null
+                || com.zhs.basket.enums.v4.DivisionStatusEnum.FINISHED.getCode().equals(division.getDivisionStatus())
+                || com.zhs.basket.enums.v4.DivisionStatusEnum.ARCHIVED.getCode().equals(division.getDivisionStatus())) {
+            throw new ServiceException("赛区已结束或归档，不能调整参赛名单");
+        }
+        boolean frozen = RosterChangeWindowSupport.isRosterFrozen(division.getDivisionStatus(),
                 matchMapper.countStartedByDivisionId(change.getDivisionId()),
                 matchPlayerStatMapper.countByDivisionId(change.getDivisionId())
                         + submissionPlayerStatMapper.countByDivisionId(change.getDivisionId()));
@@ -163,8 +174,14 @@ public class BasketV4RosterChangeAuditServiceImpl {
         if (rosterChangeMapper.markApproved(changeId, SecurityUtils.getUserId(), now) != 1) {
             throw new ServiceException("名单变更已处理，请刷新");
         }
-        eventPlayerSync.syncWritable(registration);
-        writeAudit(registration, "名单变更已通过，有效阵容已替换");
+        if (frozen) {
+            inSeasonEventRosterApply.apply(registration);
+            writeAudit(registration, "赛中名单变更已通过，当前阵容已更新，历史比赛统计保留");
+        } else {
+            eventPlayerSync.syncWritable(registration);
+            writeAudit(registration, "名单变更已通过，有效阵容已替换");
+        }
+        currentDisplayCacheEvictor.afterSourceTeam(registration.getDivisionId(), registration.getTeamId(), registration.getSeasonId());
     }
 
     @Transactional(rollbackFor = Exception.class)

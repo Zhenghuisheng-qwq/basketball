@@ -39,6 +39,9 @@
           <el-table-column label="Draw" width="130">
             <template #default="scope">{{ scope.row.drawRule || '-' }}</template>
           </el-table-column>
+          <el-table-column label="抽签状态" width="130">
+            <template #default="scope">{{ stagePairingLabel(scope.row) }}</template>
+          </el-table-column>
           <el-table-column label="Bye" width="120">
             <template #default="scope">{{ scope.row.byeRule || '-' }}</template>
           </el-table-column>
@@ -297,7 +300,7 @@ import {
 } from '@/utils/v4AdminDisplay'
 
 const router = useRouter()
-const { divisionId, overview, blocked, selectDivision, clearDivision } = useDivisionWorkspace('structure')
+const { divisionId, overview, blocked, selectDivision, clearDivision, loadOverview } = useDivisionWorkspace('structure')
 const stageDivisionId = computed(() => divisionId.value)
 const hasStaleStructure = computed(() => (overview.value?.stages || []).some(s => s.structureStatus === 'STALE'))
 const hasDoubleElim = computed(() => (overview.value?.stages || []).some(s => s.competitionFormat === 'DOUBLE_ELIMINATION'))
@@ -436,7 +439,10 @@ const pairingAlertTitle = computed(() => {
   if (isGroupRankWorkspace(stage)) {
     return `占位 ${vo?.participantCount || 0} · capacity ${vo?.bracketCapacity || '-'} · BYE ${vo?.byeCount ?? '-'} · ${stage?.pairingRule || '-'} / ${vo?.resolutionStatus || 'PENDING'}`
   }
-  return `参赛 ${vo?.participantCount || 0} · capacity ${vo?.bracketCapacity || '-'} · BYE ${vo?.byeCount ?? '-'} · ${stage?.seedRule || '-'} / ${stage?.drawRule || '-'} / ${stage?.byeRule || '-'}`
+  const drawState = vo?.status === 'CONFIRMED'
+    ? '抽签已确认'
+    : '抽签尚未确认'
+  return `参赛 ${vo?.participantCount || 0} · capacity ${vo?.bracketCapacity || '-'} · BYE ${vo?.byeCount ?? '-'} · ${stage?.seedRule || '-'} / ${stage?.drawRule || '-'} / ${stage?.byeRule || '-'} · ${drawState}`
 })
 
 function canManualAdvance(row: BasketDivisionStageExecutionVo) {
@@ -451,12 +457,24 @@ function canAdjustPairing(row: BasketDivisionStageExecutionVo) {
     && !!row.scheduleBatchId
 }
 
+function stagePairingLabel(row: BasketDivisionStageExecutionVo) {
+  return overview.value?.stages?.find(s => s.stageId === row.stageId)?.pairingStatusName || '-'
+}
+
 function loadStageList() {
-  if (!stageDivisionId.value) return
+  if (!stageDivisionId.value) return Promise.resolve()
   stageLoading.value = true
-  listV4StageExecution(stageDivisionId.value).then(res => {
+  return listV4StageExecution(stageDivisionId.value).then(res => {
     stageList.value = res.data || []
+    if (pairingStage.value?.stageId) {
+      const fresh = stageList.value.find(s => s.stageId === pairingStage.value?.stageId)
+      if (fresh) pairingStage.value = fresh
+    }
   }).finally(() => { stageLoading.value = false })
+}
+
+async function refreshAuthoritativeWorkspace() {
+  await Promise.all([loadOverview(), loadStageList(), loadPairingWorkspace()])
 }
 
 function handleStagePreview(row: BasketDivisionStageExecutionVo) {
@@ -473,9 +491,9 @@ function handleStageGenerate(row: BasketDivisionStageExecutionVo) {
     return
   }
   ElMessageBox.confirm('确认生成该阶段草稿赛程？', '提示').then(() => {
-    generateV4StageSchedule(row.stageId).then(res => {
+    generateV4StageSchedule(row.stageId).then(async res => {
       ElMessage.success('生成成功，批次ID=' + res.data)
-      loadStageList()
+      await refreshAuthoritativeWorkspace()
     })
   })
 }
@@ -736,8 +754,12 @@ async function saveRanking() {
 async function doGenerateDraw() {
   if (!pairingStage.value) return
   await generateV4Draw(pairingStage.value.stageId)
+  await refreshAuthoritativeWorkspace()
+  if (pairingVo.value?.status === 'CONFIRMED') {
+    ElMessage.error('抽签预览尚未确认，不能显示为已确认')
+    return
+  }
   ElMessage.success('抽签已生成，刷新不会重抽')
-  await loadPairingWorkspace()
 }
 
 async function doRedraw() {
@@ -756,10 +778,14 @@ async function saveManual() {
 }
 
 async function doConfirmDraw() {
-  if (!pairingStage.value) return
+  if (!pairingStage.value?.stageId) return
   await confirmV4Draw(pairingStage.value.stageId)
+  await refreshAuthoritativeWorkspace()
+  if (pairingVo.value?.status !== 'CONFIRMED') {
+    ElMessage.error('服务端未确认当前阶段抽签，工作台未改为已确认')
+    return
+  }
   ElMessage.success('抽签已确认，可以生成结构')
-  await loadPairingWorkspace()
 }
 
 async function doGenerateGroupCross() {
