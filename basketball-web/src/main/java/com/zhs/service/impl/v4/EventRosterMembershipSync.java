@@ -570,23 +570,33 @@ public class EventRosterMembershipSync {
     }
 
     public void assertAuditedRosterChangeAllowed(Long divisionId, Long teamId) {
+        String reason = auditedRosterChangeBlockReason(divisionId, teamId);
+        if (reason != null) {
+            throw new com.zhs.exception.ServiceException(reason);
+        }
+    }
+
+    /**
+     * 锁定后的名单调整。赛区进行中仍可申请；结束、归档、当场进行中或已有待审比赛数据时关闭。
+     */
+    public String auditedRosterChangeBlockReason(Long divisionId, Long teamId) {
         if (divisionId == null) {
-            throw new com.zhs.exception.ServiceException("Division 不存在");
+            return "Division 不存在";
         }
         BasketDivision division = divisionDao.selectById(divisionId);
         if (division == null) {
-            throw new com.zhs.exception.ServiceException("Division 不存在");
+            return "Division 不存在";
         }
         String status = division.getDivisionStatus();
         if ("FINISHED".equals(status) || "ARCHIVED".equals(status)) {
-            throw new com.zhs.exception.ServiceException("赛区已结束或归档，不能调整参赛名单");
+            return "赛区已结束或归档，不能调整参赛名单";
         }
         if (divisionWritable(divisionId)) {
-            return;
+            return null;
         }
         BasketEventTeam eventTeam = findEventTeam(divisionId, teamId);
         if (eventTeam == null) {
-            return;
+            return null;
         }
         Long playing = matchDao.selectCount(new LambdaQueryWrapper<BasketV4Match>()
                 .eq(BasketV4Match::getIsDelete, NOT_DELETED)
@@ -594,7 +604,7 @@ public class EventRosterMembershipSync {
                 .and(w -> w.eq(BasketV4Match::getHomeEventTeamId, eventTeam.getId())
                         .or().eq(BasketV4Match::getAwayEventTeamId, eventTeam.getId())));
         if (playing != null && playing > 0) {
-            throw new com.zhs.exception.ServiceException("比赛进行中，不能调整该场参赛人员");
+            return "比赛进行中，不能调整该场参赛人员";
         }
         List<com.zhs.model.v4.BasketMatchSubmission> pending = submissionDao.selectList(
                 new LambdaQueryWrapper<com.zhs.model.v4.BasketMatchSubmission>()
@@ -608,9 +618,10 @@ public class EventRosterMembershipSync {
             }
             String matchStatus = match.getMatchStatus();
             if (!"FINISHED".equals(matchStatus) && !"FORFEITED".equals(matchStatus) && !"CANCELLED".equals(matchStatus)) {
-                throw new com.zhs.exception.ServiceException("已有比赛数据正在审核，不能同时调整参赛名单");
+                return "已有比赛数据正在审核，不能同时调整参赛名单";
             }
         }
+        return null;
     }
 
     private void evictCurrentTeam(BasketEventTeam eventTeam) {

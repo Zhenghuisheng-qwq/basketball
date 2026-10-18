@@ -393,6 +393,7 @@ export default {
     changeRoster: 'Request roster change',
     changeRosterHint: 'The current official roster stays in place until an admin approves this change.',
     changeRosterSubmitted: 'Roster change submitted and waiting for review',
+    changeRosterUnavailable: 'Roster changes are not available right now',
     changeRosterPending: 'A roster change is already awaiting review',
     fallbackPlatform: 'this platform',
   },

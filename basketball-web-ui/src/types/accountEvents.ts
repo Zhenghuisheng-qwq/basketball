@@ -132,6 +132,8 @@ export interface ParticipatingEvent {
   primaryAction?: boolean
   isCaptain?: boolean
   rosterLocked?: boolean
+  showRosterChange?: boolean
+  rosterChangeText?: string
   showMatchDataEntry?: boolean
   matchDataActionText?: string
   matchDataActionRoute?: string

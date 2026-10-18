@@ -12,6 +12,7 @@ defineProps<{
 const emit = defineEmits<{
   action: [event: ParticipatingEvent]
   matchDataAction: [event: ParticipatingEvent]
+  rosterChange: [event: ParticipatingEvent]
 }>()
 </script>
 
@@ -46,6 +47,14 @@ const emit = defineEmits<{
         </p>
       </div>
       <div class="my-events-list__action">
+        <button
+          v-if="item.showRosterChange"
+          type="button"
+          class="account-btn-primary"
+          @click="emit('rosterChange', item)"
+        >
+          {{ item.rosterChangeText }}
+        </button>
         <button
           v-if="item.showMatchDataEntry"
           type="button"

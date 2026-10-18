@@ -393,6 +393,7 @@ export default {
     changeRoster: '申请调整参赛名单',
     changeRosterHint: '当前有效名单保持不变。提交后等待管理员审核，通过后才会替换本届参赛名单。',
     changeRosterSubmitted: '名单变更已提交，等待审核',
+    changeRosterUnavailable: '当前不能调整参赛名单',
     changeRosterPending: '已有待审核的名单变更',
     fallbackPlatform: '对应平台',
   },

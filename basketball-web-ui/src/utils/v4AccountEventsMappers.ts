@@ -374,6 +374,11 @@ function wallClockText(value?: string | null): string {
 
 export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
   const isCaptain = item.roleInTeam === 'CAPTAIN'
+  const divisionStatus = (item.divisionStatus || '').toUpperCase()
+  const showRosterChange = isCaptain
+    && !item.legacyEvent
+    && divisionStatus !== 'FINISHED'
+    && divisionStatus !== 'ARCHIVED'
   const pendingCount = item.pendingSubmissionCount ?? 0
   const stageLabel = item.legacyEvent
     ? translate('accountEvents.common.historical')
@@ -416,6 +421,8 @@ export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
     actionRoute: `/account/my-events?tab=schedule&divisionId=${item.divisionId}`,
     isCaptain,
     rosterLocked: true,
+    showRosterChange,
+    rosterChangeText: translate('accountEvents.registration.changeRoster'),
     showMatchDataEntry: pendingCount > 0 || (item.matchCount ?? 0) > 0,
     matchDataActionText: pendingCount > 0 ? translate('accountEvents.common.submitMatchData') : translate('accountEvents.common.viewMatchData'),
     matchDataActionRoute: `/account/my-events?tab=schedule&divisionId=${item.divisionId}${pendingCount > 0 ? '&onlyPendingSubmit=1' : ''}`,

@@ -516,7 +516,8 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
         boolean approved = "APPROVED".equals(status);
         boolean rosterLocked = eventRosterMembershipSync.rosterOfficiallyLocked(division.getId());
         resp.setRosterLocked(rosterLocked);
-        resp.setRosterChangeAllowed(approved && rosterLocked && eventRosterMembershipSync.divisionWritable(division.getId()));
+        resp.setRosterChangeAllowed(approved && rosterLocked
+                && eventRosterMembershipSync.auditedRosterChangeBlockReason(division.getId(), teamId) == null);
     }
 
     private void fillDivisionContextBase(V4RegistrationDivisionContextResp resp, BasketDivision division) {

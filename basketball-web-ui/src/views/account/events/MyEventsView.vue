@@ -304,6 +304,15 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
     router.push(event.matchDataActionRoute)
   }
 }
+
+function handleParticipatingRosterChange(event: ParticipatingEvent) {
+  if (!event.divisionId) return
+  router.push({
+    name: 'AccountV4Registration',
+    params: { divisionId: String(event.divisionId) },
+    query: { rosterChange: '1' },
+  })
+}
 </script>
 
 <template>
@@ -385,6 +394,7 @@ function handleParticipatingMatchDataAction(event: ParticipatingEvent) {
           :events="participatingEvents"
           @action="handleParticipatingAction"
           @match-data-action="handleParticipatingMatchDataAction"
+          @roster-change="handleParticipatingRosterChange"
         />
         <MyEventsPagination
           :page="joinedPage"

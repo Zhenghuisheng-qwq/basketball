@@ -221,6 +221,13 @@ async function bootstrap() {
       }
     }
     selectedPlayerIds.value = defaultSelectedIds(eligiblePlayers.value, existingSelected)
+    if (route.query.rosterChange === '1') {
+      if (canRequestRosterChange.value) {
+        rosterChangeMode.value = true
+      } else {
+        ElMessage.warning(t('accountEvents.registration.changeRosterUnavailable'))
+      }
+    }
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : t('accountEvents.common.loadFailed')
   } finally {
