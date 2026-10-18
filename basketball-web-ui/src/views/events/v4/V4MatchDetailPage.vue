@@ -5,7 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getV4PublicMatchDetail, getV4PublicMatchSeries } from '@/api/v4Public'
 import type { V4PublicMatchDetail, V4PublicMatchSeriesDetail } from '@/api/types/v4Public'
 import PaperSection from '@/components/common/PaperSection.vue'
-import { businessClock, businessKickoffLabel } from '@/utils/businessDateTime'
+import { businessKickoffLabel } from '@/utils/businessDateTime'
 import { requiresPeriodScores } from '@/utils/fullMatchSubmissionRules'
 import {
   publicContestDetailLabel,
@@ -152,11 +152,7 @@ const metaText = computed(() => {
   const round = m.roundNo != null ? t('events.round.OTHER', { round: m.roundNo }) : ''
   const when = m.matchTime
     ? formatMatchWhen(m.matchTime)
-    : (m.bestOf && m.bestOf > 1
-      ? (businessClock(m.seriesContext?.scheduledStartTime)
-        ? t('publicPages.team.followsSeriesLine', { time: businessClock(m.seriesContext?.scheduledStartTime) })
-        : t('publicPages.team.followsSeries'))
-      : '')
+    : (m.bestOf && m.bestOf > 1 ? t('publicPages.team.followsSeries') : '')
   return [stage, round, v4BestOfLabel(m.bestOf || 1), when].filter(Boolean).join(' · ')
 })
 
@@ -224,9 +220,7 @@ const boxHint = computed(() => {
     const no = activeGame.value.seriesGameNo
     const when = activeGame.value.scheduledTime
       ? formatMatchWhen(activeGame.value.scheduledTime)
-      : (businessClock(series.value?.scheduledStartTime)
-        ? t('publicPages.team.followsSeriesLine', { time: businessClock(series.value?.scheduledStartTime) })
-        : t('publicPages.team.followsSeries'))
+      : t('publicPages.team.followsSeries')
     return ['G' + no, when].filter(Boolean).join(' · ')
   }
   return ''

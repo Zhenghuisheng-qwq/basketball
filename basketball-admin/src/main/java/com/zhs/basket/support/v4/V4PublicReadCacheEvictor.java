@@ -1,9 +1,18 @@
 package com.zhs.basket.support.v4;
 
+import com.zhs.basket.domain.v4.BasketDivisionStage;
+import com.zhs.basket.domain.v4.BasketMatchSeries;
+import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
+import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
+import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
+import com.zhs.basket.query.v4.BasketV4MatchQuery;
+import com.zhs.basket.vo.v4.BasketV4MatchListVo;
 import com.zhs.common.core.redis.RedisCache;
 import jakarta.annotation.Resource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -18,9 +27,23 @@ public class V4PublicReadCacheEvictor {
 
     private static final Logger log = LoggerFactory.getLogger(V4PublicReadCacheEvictor.class);
     private static final String PREFIX = "basket:public:";
+    private static final String GEN_PREFIX = PREFIX + "gen:";
+    /**
+     * 代次递增和数据键删除必须同一条 Lua。拆开后，代次已增加但旧值还在的窗口里，
+     * 公开读会直接命中旧缓存并返回。
+     */
+    private static final DefaultRedisScript<Long> BUMP_AND_DELETE = bumpAndDeleteScript();
 
     @Resource
     private RedisCache redisCache;
+    @Resource
+    private StringRedisTemplate stringRedisTemplate;
+    @Resource
+    private BasketDivisionStageMapper divisionStageMapper;
+    @Resource
+    private BasketMatchSeriesMapper matchSeriesMapper;
+    @Resource
+    private BasketV4MatchMapper matchMapper;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onOfficialResultCommitted(V4PublicReadCacheEvictEvent event) {
@@ -36,8 +59,76 @@ public class V4PublicReadCacheEvictor {
 
     public void evict(V4PublicReadCacheEvictEvent event) {
         Set<String> keys = collectKeys(event);
-        if (!keys.isEmpty()) {
-            redisCache.deleteObject(keys);
+        if (event != null) {
+            addCurrentDivisionDisplays(keys, event.getDivisionId());
+        }
+        if (keys.isEmpty()) {
+            return;
+        }
+        for (String key : keys) {
+            if (key == null || !key.startsWith(PREFIX) || key.startsWith(GEN_PREFIX)) {
+                continue;
+            }
+            try {
+                stringRedisTemplate.execute(
+                        BUMP_AND_DELETE,
+                        java.util.List.of(GEN_PREFIX + key.substring(PREFIX.length()), key));
+            } catch (Exception ex) {
+                log.warn("public cache generation bump failed, key={}: {}", key, ex.getMessage());
+            }
+        }
+    }
+
+    private static DefaultRedisScript<Long> bumpAndDeleteScript() {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setResultType(Long.class);
+        script.setScriptText("""
+                redis.call('INCR', KEYS[1])
+                redis.call('DEL', KEYS[2])
+                return 1
+                """);
+        return script;
+    }
+
+    /**
+     * 资料或名单变更后，比赛详情、系列赛和阶段榜不在 division 通配键里。按本赛区主键逐个失效。
+     */
+    private void addCurrentDivisionDisplays(Set<String> keys, Long divisionId) {
+        if (divisionId == null) {
+            return;
+        }
+        try {
+            java.util.List<BasketDivisionStage> stages = divisionStageMapper.selectByDivisionId(divisionId);
+            if (stages != null) {
+                for (BasketDivisionStage stage : stages) {
+                    if (stage == null || stage.getId() == null) {
+                        continue;
+                    }
+                    keys.add(PREFIX + "v4:stage:standings:" + stage.getId());
+                    keys.add(PREFIX + "v4:stage:bracket:" + stage.getId());
+                    keys.add(PREFIX + "v4:stage:series:" + stage.getId());
+                }
+            }
+            java.util.List<BasketMatchSeries> seriesList = matchSeriesMapper.selectByDivisionId(divisionId);
+            if (seriesList != null) {
+                for (BasketMatchSeries series : seriesList) {
+                    if (series != null && series.getId() != null) {
+                        keys.add(PREFIX + "v4:match-series:" + series.getId());
+                    }
+                }
+            }
+            BasketV4MatchQuery query = new BasketV4MatchQuery();
+            query.setDivisionId(divisionId);
+            java.util.List<BasketV4MatchListVo> matches = matchMapper.selectVoList(query);
+            if (matches != null) {
+                for (BasketV4MatchListVo match : matches) {
+                    if (match != null && match.getId() != null) {
+                        keys.add(PREFIX + "v4:match:" + match.getId());
+                    }
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("public cache division display keys skipped, divisionId={}: {}", divisionId, ex.getMessage());
         }
     }
 

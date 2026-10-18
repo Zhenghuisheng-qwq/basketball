@@ -10,6 +10,8 @@ import com.zhs.basket.domain.v4.BasketRegistrationRosterChange;
 import com.zhs.basket.domain.v4.BasketRegistrationRosterChangePlayer;
 import com.zhs.basket.dto.v4.BasketRegistrationAuditRejectReq;
 import com.zhs.basket.enums.v4.RegistrationStatusEnum;
+import com.zhs.basket.mapper.BasketPlayerPlatformAccountMapper;
+import com.zhs.basket.mapper.BasketPlayerProfileMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationAuditMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationMapper;
@@ -50,6 +52,10 @@ public class BasketV4RosterChangeAuditServiceImpl {
     @Autowired
     private BasketRegistrationPlayerMapper registrationPlayerMapper;
     @Autowired
+    private BasketPlayerProfileMapper playerProfileMapper;
+    @Autowired
+    private BasketPlayerPlatformAccountMapper platformAccountMapper;
+    @Autowired
     private BasketRegistrationAuditMapper registrationAuditMapper;
     @Autowired
     private BasketDivisionMapper divisionMapper;
@@ -75,6 +81,8 @@ public class BasketV4RosterChangeAuditServiceImpl {
             return List.of();
         }
         List<BasketRosterChangeListVo> rows = rosterChangeMapper.selectPendingByDivisionId(divisionId);
+        BasketDivision division = divisionMapper.selectById(divisionId);
+        String platform = division == null ? null : division.getPlatformCode();
         for (BasketRosterChangeListVo row : rows) {
             List<Long> current = new ArrayList<>();
             for (BasketRegistrationPlayer player : registrationPlayerMapper.selectByRegistrationId(row.getRegistrationId())) {
@@ -86,8 +94,8 @@ public class BasketV4RosterChangeAuditServiceImpl {
             }
             row.setCurrentPlayerIds(current);
             row.setTargetPlayerIds(target);
-            row.setAddedNames(difference(target, current));
-            row.setRemovedNames(difference(current, target));
+            row.setAddedNames(difference(target, current, platform));
+            row.setRemovedNames(difference(current, target, platform));
         }
         return rows;
     }
@@ -240,13 +248,63 @@ public class BasketV4RosterChangeAuditServiceImpl {
         registrationAuditMapper.insert(audit);
     }
 
-    private List<String> difference(List<Long> left, List<Long> right) {
+    private List<String> difference(List<Long> left, List<Long> right, String platformCode) {
         List<String> result = new ArrayList<>();
         for (Long id : left) {
             if (!right.contains(id)) {
-                result.add(String.valueOf(id));
+                result.add(describePlayer(id, platformCode));
             }
         }
         return result;
+    }
+
+    private String describePlayer(Long playerId, String platformCode) {
+        if (playerId == null) {
+            return "-";
+        }
+        BasketPlayerProfile profile = playerProfileMapper.selectById(playerId);
+        String name = profile == null ? null : StringUtils.trim(profile.getGameNickname());
+        String playerNo = profile == null ? null : StringUtils.trim(profile.getPlayerNo());
+        String gameId = activeGameId(playerId, platformCode);
+        StringBuilder text = new StringBuilder();
+        text.append(StringUtils.isNotEmpty(name) ? name : String.valueOf(playerId));
+        if (StringUtils.isNotEmpty(playerNo)) {
+            text.append("（").append(playerNo).append("）");
+        }
+        if (StringUtils.isNotEmpty(gameId)) {
+            text.append(" / ").append(gameId);
+        }
+        return text.toString();
+    }
+
+    private String activeGameId(Long playerId, String platformCode) {
+        List<BasketPlayerPlatformAccount> accounts = platformAccountMapper.selectByPlayerId(playerId);
+        if (accounts == null || accounts.isEmpty()) {
+            return null;
+        }
+        String fallback = null;
+        for (BasketPlayerPlatformAccount account : accounts) {
+            if (account == null || !Integer.valueOf(0).equals(account.getIsDelete())
+                    || !Integer.valueOf(1).equals(account.getAccountStatus())
+                    || StringUtils.isEmpty(account.getDisplayGameId())) {
+                continue;
+            }
+            if (fallback == null) {
+                fallback = account.getDisplayGameId().trim();
+            }
+            if (matchesPlatform(platformCode, account.getPlatform())) {
+                return account.getDisplayGameId().trim();
+            }
+        }
+        return fallback;
+    }
+
+    private static boolean matchesPlatform(String divisionPlatform, String accountPlatform) {
+        if (StringUtils.isEmpty(divisionPlatform) || StringUtils.isEmpty(accountPlatform)) {
+            return false;
+        }
+        String division = divisionPlatform.trim().toUpperCase();
+        String account = accountPlatform.trim().toUpperCase();
+        return division.equals(account) || division.contains(account) || account.contains(division);
     }
 }

@@ -13,6 +13,12 @@ import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketEventTeam;
 import com.zhs.response.v4.publicapi.V4PublicEventPlayerItemResp;
 import com.zhs.response.v4.publicapi.V4PublicEventTeamDetailResp;
+import com.zhs.response.v4.publicapi.V4PublicEventTeamItemResp;
+import com.zhs.response.v4.publicapi.V4PublicMatchItemResp;
+import com.zhs.response.v4.publicapi.V4PublicMatchSeriesDetailResp;
+import com.zhs.response.v4.publicapi.V4PublicScheduleItemResp;
+import com.zhs.response.v4.publicapi.V4PublicStandingItemResp;
+import com.zhs.response.v4.publicapi.V4PublicTeamStatItemResp;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.support.GameTerminalSupport;
@@ -30,6 +36,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 
 /**
  * 官网「当前」展示读取最新合法资料，不回写 EventTeam / EventPlayer / 比赛统计快照。
@@ -58,6 +65,194 @@ public class PublicCurrentRosterSupport {
         return !StringUtils.hasText(status) || ACTIVE.equalsIgnoreCase(status.trim());
     }
 
+    /**
+     * 尚未开赛的当前展示才用已生效球队资料。进行中、已结束、已弃赛保持赛事快照。
+     */
+    public static boolean useCurrentIdentity(String status) {
+        if (!StringUtils.hasText(status)) {
+            return false;
+        }
+        return switch (status.trim().toUpperCase()) {
+            case "SCHEDULED", "PENDING", "READY" -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * 系列赛已经开打或结束时，尚未开赛的子局也沿用系列赛快照，避免同一系列在不同页面各用一套队名和 Logo。
+     */
+    public static boolean useCurrentIdentity(String unitStatus, String parentSeriesStatus) {
+        if (StringUtils.hasText(parentSeriesStatus) && !useCurrentIdentity(parentSeriesStatus)) {
+            return false;
+        }
+        return useCurrentIdentity(unitStatus);
+    }
+
+    /**
+     * 已审核并写入长期球队的名称、简称、Logo。空字段不返回，调用方因此不会用空值盖掉快照。
+     * 未审核的资料变更还在申请表里，这里读不到。
+     */
+    public static CurrentTeamFace faceFrom(BasketTeam source, String logoUrl) {
+        if (source == null || !Objects.equals(source.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+            return null;
+        }
+        String name = text(source.getTeamName());
+        String shortName = text(source.getShortName());
+        Long logoFileId = source.getLogoFileId();
+        if (name == null && shortName == null && logoFileId == null) {
+            return null;
+        }
+        return new CurrentTeamFace(name, shortName, logoFileId, logoFileId == null ? null : logoUrl);
+    }
+
+    public Map<Long, CurrentTeamFace> loadCurrentFaces(Collection<BasketEventTeam> teams) {
+        Map<Long, CurrentTeamFace> faces = new HashMap<>();
+        if (CollectionUtils.isEmpty(teams)) {
+            return faces;
+        }
+        Map<Long, Long> eventToSource = new HashMap<>();
+        Set<Long> sourceIds = new HashSet<>();
+        for (BasketEventTeam team : teams) {
+            if (team == null || team.getId() == null || team.getSourceTeamId() == null) {
+                continue;
+            }
+            eventToSource.put(team.getId(), team.getSourceTeamId());
+            sourceIds.add(team.getSourceTeamId());
+        }
+        if (sourceIds.isEmpty()) {
+            return faces;
+        }
+        List<BasketTeam> sources = teamDao.selectList(new LambdaQueryWrapper<BasketTeam>()
+                .in(BasketTeam::getId, sourceIds)
+                .eq(BasketTeam::getIsDelete, BasketPublicConstants.NOT_DELETED));
+        Map<Long, BasketTeam> sourceMap = new HashMap<>();
+        Set<Long> logoIds = new HashSet<>();
+        for (BasketTeam source : sources) {
+            sourceMap.put(source.getId(), source);
+            if (source.getLogoFileId() != null) {
+                logoIds.add(source.getLogoFileId());
+            }
+        }
+        Map<Long, String> logoUrls = publicSupport.loadAccessUrlMap(logoIds);
+        for (Map.Entry<Long, Long> entry : eventToSource.entrySet()) {
+            BasketTeam source = sourceMap.get(entry.getValue());
+            String logoUrl = source == null || source.getLogoFileId() == null
+                    ? null : logoUrls.get(source.getLogoFileId());
+            CurrentTeamFace face = faceFrom(source, logoUrl);
+            if (face != null) {
+                faces.put(entry.getKey(), face);
+            }
+        }
+        return faces;
+    }
+
+    public static void applyItem(V4PublicEventTeamItemResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        if (face.teamName() != null) {
+            vo.setTeamName(face.teamName());
+        }
+        if (face.shortName() != null) {
+            vo.setTeamShortName(face.shortName());
+        }
+        applyLogo(face, vo::setTeamLogoFileId, vo::setTeamLogoUrl);
+    }
+
+    public static void applyMatchHome(V4PublicMatchItemResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        if (face.teamName() != null) {
+            vo.setHomeTeamName(face.teamName());
+        }
+        applyLogo(face, vo::setHomeTeamLogoFileId, vo::setHomeTeamLogoUrl);
+    }
+
+    public static void applyMatchAway(V4PublicMatchItemResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        if (face.teamName() != null) {
+            vo.setAwayTeamName(face.teamName());
+        }
+        applyLogo(face, vo::setAwayTeamLogoFileId, vo::setAwayTeamLogoUrl);
+    }
+
+    public static void applyScheduleHome(V4PublicScheduleItemResp item, CurrentTeamFace face) {
+        if (item == null || face == null) {
+            return;
+        }
+        if (face.teamName() != null) {
+            item.setHomeTeam(face.teamName());
+        }
+        if (face.shortName() != null) {
+            item.setHomeTeamShortName(face.shortName());
+            item.setHomeTeamCode(face.shortName());
+        }
+        applyLogo(face, item::setHomeTeamLogoFileId, item::setHomeTeamLogoUrl);
+    }
+
+    public static void applyScheduleAway(V4PublicScheduleItemResp item, CurrentTeamFace face) {
+        if (item == null || face == null) {
+            return;
+        }
+        if (face.teamName() != null) {
+            item.setAwayTeam(face.teamName());
+        }
+        if (face.shortName() != null) {
+            item.setAwayTeamShortName(face.shortName());
+            item.setAwayTeamCode(face.shortName());
+        }
+        applyLogo(face, item::setAwayTeamLogoFileId, item::setAwayTeamLogoUrl);
+    }
+
+    public static void applySeriesHome(V4PublicMatchSeriesDetailResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        if (face.teamName() != null) {
+            vo.setHomeTeamName(face.teamName());
+        }
+        if (face.shortName() != null) {
+            vo.setHomeTeamShortName(face.shortName());
+        }
+        applyLogo(face, vo::setHomeTeamLogoFileId, vo::setHomeTeamLogoUrl);
+    }
+
+    public static void applySeriesAway(V4PublicMatchSeriesDetailResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        if (face.teamName() != null) {
+            vo.setAwayTeamName(face.teamName());
+        }
+        if (face.shortName() != null) {
+            vo.setAwayTeamShortName(face.shortName());
+        }
+        applyLogo(face, vo::setAwayTeamLogoFileId, vo::setAwayTeamLogoUrl);
+    }
+
+    public static void applyStanding(V4PublicStandingItemResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        if (face.teamName() != null) {
+            vo.setTeamName(face.teamName());
+        }
+        applyLogo(face, vo::setTeamLogoFileId, vo::setTeamLogoUrl);
+    }
+
+    public static void applyTeamStat(V4PublicTeamStatItemResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        if (face.teamName() != null) {
+            vo.setTeamName(face.teamName());
+        }
+        applyLogo(face, vo::setTeamLogoFileId, vo::setTeamLogoUrl);
+    }
+
     public void overlayTeamDetail(V4PublicEventTeamDetailResp resp, BasketEventTeam eventTeam) {
         if (resp == null || eventTeam == null) {
             return;
@@ -83,19 +278,33 @@ public class PublicCurrentRosterSupport {
         if (source == null || !Objects.equals(source.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
             return;
         }
-        if (StringUtils.hasText(source.getTeamName())) {
-            resp.setTeamName(source.getTeamName().trim());
+        String logoUrl = null;
+        if (source.getLogoFileId() != null) {
+            logoUrl = publicSupport.loadAccessUrlMap(Collections.singleton(source.getLogoFileId()))
+                    .get(source.getLogoFileId());
         }
-        if (StringUtils.hasText(source.getShortName())) {
-            resp.setTeamShortName(source.getShortName().trim());
+        applyItem(resp, faceFrom(source, logoUrl));
+        if (StringUtils.hasText(source.getDescription())) {
+            resp.setDescription(source.getDescription());
         }
-        resp.setDescription(source.getDescription());
-        if (source.getLogoFileId() == null) {
+    }
+
+    private static void applyLogo(CurrentTeamFace face, Consumer<Long> logoId, Consumer<String> logoUrl) {
+        if (face.logoFileId() == null) {
             return;
         }
-        resp.setTeamLogoFileId(source.getLogoFileId());
-        Map<Long, String> urls = publicSupport.loadAccessUrlMap(Collections.singleton(source.getLogoFileId()));
-        resp.setTeamLogoUrl(urls.get(source.getLogoFileId()));
+        logoId.accept(face.logoFileId());
+        logoUrl.accept(face.logoUrl());
+    }
+
+    private static String text(String value) {
+        if (!StringUtils.hasText(value)) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    public record CurrentTeamFace(String teamName, String shortName, Long logoFileId, String logoUrl) {
     }
 
     private void overlayPlayers(List<V4PublicEventPlayerItemResp> players) {

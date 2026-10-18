@@ -1,0 +1,17 @@
+# 隔离验收专用。与 druid profile 叠加时覆盖主库和 Redis。
+server:
+  port: 18080
+
+spring:
+  datasource:
+    druid:
+      master:
+        url: jdbc:mysql://127.0.0.1:3306/basketball_e2e?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&serverTimezone=GMT%2B8
+        username: cnpa_e2e
+        password: CnpaE2e_LocalOnly_2026
+  data:
+    redis:
+      host: 127.0.0.1
+      port: 16380
+      password: ''
+      database: 0

@@ -17,7 +17,7 @@ public interface BasketDivisionDao extends BaseMapper<BasketDivision> {
     @Select("""
             select count(1) from basket_division_roster_version
             where division_id = #{divisionId} and is_delete = 0 and is_current = 1 and status = 'LOCKED'
-            for share
+            lock in share mode
             """)
     int countCurrentLockedRoster(@Param("divisionId") Long divisionId);
 }

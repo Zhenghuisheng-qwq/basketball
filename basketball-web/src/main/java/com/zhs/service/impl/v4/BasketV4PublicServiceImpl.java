@@ -22,6 +22,8 @@ import com.zhs.service.support.PublicTeamDisplaySupport;
 import com.zhs.service.support.V4CurrentSeasonSelector;
 import com.zhs.service.support.V4MatchSeriesDisplaySupport;
 import com.zhs.service.v4.IBasketV4PublicService;
+import com.zhs.support.v4.PublicCurrentRosterSupport;
+import com.zhs.support.v4.PublicCurrentRosterSupport.CurrentTeamFace;
 import com.zhs.support.v4.V4PublicMatchSeriesStatAggregator;
 import com.zhs.support.v4.V4PublicTeamArchiveAssembler;
 import jakarta.annotation.Resource;
@@ -331,6 +333,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         for (BasketEventTeam team : teams) {
             result.add(toEventTeamItem(team, captainMap, urlMap));
         }
+        overlayCurrentTeamItems(result, teams);
         return result;
     }
 
@@ -517,6 +520,21 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             awayVo.setPlayers(playersByTeam.getOrDefault(away.getId(), Collections.emptyList()));
             resp.setAwayTeam(awayVo);
         }
+        String seriesStatus = null;
+        if (match.getSeriesId() != null) {
+            BasketMatchSeries parent = matchSeriesDisplaySupport.loadSeriesMap(Collections.singleton(match.getSeriesId()))
+                    .get(match.getSeriesId());
+            seriesStatus = parent == null ? null : parent.getSeriesStatus();
+        }
+        if (PublicCurrentRosterSupport.useCurrentIdentity(match.getMatchStatus(), seriesStatus)) {
+            Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
+            if (resp.getHomeTeam() != null && home != null) {
+                PublicCurrentRosterSupport.applyItem(resp.getHomeTeam(), faces.get(home.getId()));
+            }
+            if (resp.getAwayTeam() != null && away != null) {
+                PublicCurrentRosterSupport.applyItem(resp.getAwayTeam(), faces.get(away.getId()));
+            }
+        }
 
         resp.setTeamStats(listMatchTeamStats(matchId, teamMap));
         resp.setPlayerStats(listMatchPlayerStats(matchId, teamMap));
@@ -578,6 +596,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             }
             result.add(vo);
         }
+        overlayCurrentStandings(result, teamMap.values());
         return result;
     }
 
@@ -733,6 +752,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             }
             fillStandingWinRate(row);
         }
+        overlayCurrentStandings(rows, teamMap.values());
     }
 
     private void fillStandingWinRate(V4PublicStandingItemResp row) {
@@ -825,6 +845,10 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             }
             result.add(vo);
         }
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
+        for (V4PublicTeamStatItemResp vo : result) {
+            PublicCurrentRosterSupport.applyTeamStat(vo, faces.get(vo.getEventTeamId()));
+        }
         return result;
     }
 
@@ -873,6 +897,13 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setTeamName(team.getTeamNameSnapshot());
             }
             result.add(vo);
+        }
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
+        for (V4PublicPlayerStatItemResp vo : result) {
+            CurrentTeamFace face = faces.get(vo.getEventTeamId());
+            if (face != null && face.teamName() != null) {
+                vo.setTeamName(face.teamName());
+            }
         }
         return result;
     }
@@ -924,6 +955,13 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 }
             }
             result.add(vo);
+        }
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
+        for (V4PublicRankItemResp vo : result) {
+            CurrentTeamFace face = faces.get(vo.getEventTeamId());
+            if (face != null && face.teamName() != null) {
+                vo.setTeamName(face.teamName());
+            }
         }
         return result;
     }
@@ -1226,6 +1264,26 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         return map;
     }
 
+    private void overlayCurrentTeamItems(List<V4PublicEventTeamItemResp> items, List<BasketEventTeam> teams) {
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teams);
+        if (faces.isEmpty()) {
+            return;
+        }
+        for (V4PublicEventTeamItemResp item : items) {
+            PublicCurrentRosterSupport.applyItem(item, faces.get(item.getEventTeamId()));
+        }
+    }
+
+    private void overlayCurrentStandings(List<V4PublicStandingItemResp> rows, Collection<BasketEventTeam> teams) {
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teams);
+        if (faces.isEmpty()) {
+            return;
+        }
+        for (V4PublicStandingItemResp row : rows) {
+            PublicCurrentRosterSupport.applyStanding(row, faces.get(row.getEventTeamId()));
+        }
+    }
+
     private V4PublicEventTeamItemResp toEventTeamItem(BasketEventTeam team, Map<Long, String> captainMap,
                                                       Map<Long, String> urlMap) {
         V4PublicEventTeamItemResp vo = new V4PublicEventTeamItemResp();
@@ -1353,6 +1411,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 .collect(Collectors.toSet());
         Map<Long, BasketMatchSeries> seriesMap = matchSeriesDisplaySupport.loadSeriesMap(matchSeriesIds);
         Map<Long, V4PublicStageItemResp> stageMap = loadMatchStageLabels(matches);
+        Map<Long, CurrentTeamFace> currentFaces = currentRosterSupport.loadCurrentFaces(teamMap.values());
         List<V4PublicMatchItemResp> result = new ArrayList<>();
         for (BasketV4Match match : matches) {
             V4PublicMatchItemResp vo = new V4PublicMatchItemResp();
@@ -1422,6 +1481,14 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setAwayTeamName(null);
             }
             com.zhs.support.v4.EventTeamPublicDisplaySupport.fillMatch(vo, match, home, away);
+            if (PublicCurrentRosterSupport.useCurrentIdentity(match.getMatchStatus(), vo.getSeriesStatus())) {
+                if (home != null) {
+                    PublicCurrentRosterSupport.applyMatchHome(vo, currentFaces.get(home.getId()));
+                }
+                if (away != null) {
+                    PublicCurrentRosterSupport.applyMatchAway(vo, currentFaces.get(away.getId()));
+                }
+            }
             result.add(vo);
         }
         return result;

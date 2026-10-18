@@ -18,6 +18,8 @@ import com.zhs.model.v4.BasketScheduleBatch;
 import com.zhs.model.v4.BasketMatchSeries;
 import com.zhs.model.v4.BasketV4Match;
 import com.zhs.response.v4.publicapi.V4PublicMatchSeriesDetailResp;
+import com.zhs.support.v4.PublicCurrentRosterSupport;
+import com.zhs.support.v4.PublicCurrentRosterSupport.CurrentTeamFace;
 import com.zhs.response.v4.publicapi.V4PublicMatchSeriesGameResp;
 import com.zhs.response.v4.publicapi.V4PublicScheduleItemResp;
 import com.zhs.response.v4.publicapi.V4PublicStageItemResp;
@@ -36,6 +38,8 @@ public class V4MatchSeriesDisplaySupport {
     private BasketV4MatchDao matchDao;
     @Resource
     private BasketEventTeamDao eventTeamDao;
+    @Resource
+    private PublicCurrentRosterSupport currentRosterSupport;
     @Resource
     private BasketV4PublicStageMapper publicStageMapper;
     @Resource
@@ -205,6 +209,13 @@ public class V4MatchSeriesDisplaySupport {
         return map;
     }
 
+    private Map<Long, CurrentTeamFace> loadCurrentFaces(Collection<BasketEventTeam> teams) {
+        if (currentRosterSupport == null || CollectionUtils.isEmpty(teams)) {
+            return Map.of();
+        }
+        return currentRosterSupport.loadCurrentFaces(teams);
+    }
+
     private void addPositiveId(Set<Long> ids, Long id) {
         if (id != null && id > 0) {
             ids.add(id);
@@ -222,6 +233,9 @@ public class V4MatchSeriesDisplaySupport {
             }
         }
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(logoIds);
+        Map<Long, CurrentTeamFace> currentFaces = currentRosterSupport == null
+                ? Map.of()
+                : currentRosterSupport.loadCurrentFaces(teamMap.values());
         for (V4PublicScheduleItemResp item : items) {
             BasketEventTeam home = teamMap.get(item.getHomeEventTeamId());
             if (home != null) {
@@ -234,6 +248,10 @@ public class V4MatchSeriesDisplaySupport {
                 item.setAwayTeamLogoFileId(away.getTeamLogoFileId());
                 item.setAwayTeamLogoUrl(urlMap.get(away.getTeamLogoFileId()));
                 fillScheduleTeamIdentity(item, away, false);
+            }
+            if (PublicCurrentRosterSupport.useCurrentIdentity(item.getStatus())) {
+                PublicCurrentRosterSupport.applyScheduleHome(item, currentFaces.get(item.getHomeEventTeamId()));
+                PublicCurrentRosterSupport.applyScheduleAway(item, currentFaces.get(item.getAwayEventTeamId()));
             }
         }
     }
@@ -406,7 +424,7 @@ public class V4MatchSeriesDisplaySupport {
         }
 
         fillStageInfo(vo, series, ctx.stages);
-        fillTeamNames(vo, series, ctx.teamMap, ctx.urlMap);
+        fillTeamNames(vo, series, ctx.teamMap, ctx.urlMap, ctx.currentFaces);
         fillForfeitSummary(vo, series);
         fillDisqualificationDisplay(vo, series, ctx.teamMap);
         vo.setGames(buildGames(series, currentMatchId, ctx.matchesBySeries.getOrDefault(series.getId(), List.of())));
@@ -436,7 +454,8 @@ public class V4MatchSeriesDisplaySupport {
     }
 
     private void fillTeamNames(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series,
-                               Map<Long, BasketEventTeam> teamMap, Map<Long, String> urlMap) {
+                               Map<Long, BasketEventTeam> teamMap, Map<Long, String> urlMap,
+                               Map<Long, CurrentTeamFace> currentFaces) {
         Map<Long, BasketEventTeam> map = teamMap == null ? Collections.emptyMap() : teamMap;
         if (urlMap == null) {
             urlMap = Collections.emptyMap();
@@ -481,6 +500,10 @@ public class V4MatchSeriesDisplaySupport {
         BasketEventTeam winner = map.get(series.getWinnerEventTeamId());
         if (winner != null) {
             vo.setWinnerTeamName(winner.getTeamNameSnapshot());
+        }
+        if (PublicCurrentRosterSupport.useCurrentIdentity(series.getSeriesStatus()) && currentFaces != null) {
+            PublicCurrentRosterSupport.applySeriesHome(vo, currentFaces.get(series.getHomeEventTeamId()));
+            PublicCurrentRosterSupport.applySeriesAway(vo, currentFaces.get(series.getAwayEventTeamId()));
         }
     }
 
@@ -664,6 +687,7 @@ public class V4MatchSeriesDisplaySupport {
         private List<V4PublicStageItemResp> stages = List.of();
         private Map<Long, BasketEventTeam> teamMap = Collections.emptyMap();
         private Map<Long, String> urlMap = Collections.emptyMap();
+        private Map<Long, CurrentTeamFace> currentFaces = Map.of();
         private Map<Long, List<BasketV4Match>> matchesBySeries = new HashMap<>();
         private final Map<Long, Integer> maxRoundByStage = new HashMap<>();
     }
@@ -723,6 +747,7 @@ public class V4MatchSeriesDisplaySupport {
         if (existingTeams != null && !existingTeams.isEmpty() && teamIds.stream().allMatch(existingTeams::containsKey)) {
             ctx.teamMap = existingTeams;
             ctx.urlMap = existingUrls != null ? existingUrls : Collections.emptyMap();
+            ctx.currentFaces = loadCurrentFaces(existingTeams.values());
         } else if (!teamIds.isEmpty()) {
             List<BasketEventTeam> teams = eventTeamDao.selectByIds(teamIds);
             Map<Long, BasketEventTeam> map = new HashMap<>();
@@ -739,6 +764,7 @@ public class V4MatchSeriesDisplaySupport {
             }
             ctx.teamMap = map;
             ctx.urlMap = publicSupport.loadAccessUrlMap(logoIds);
+            ctx.currentFaces = loadCurrentFaces(map.values());
         }
         if (!seriesIds.isEmpty()) {
             List<BasketV4Match> matches = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()

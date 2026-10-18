@@ -31,6 +31,8 @@ import com.zhs.util.MiniRedisUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -75,6 +77,8 @@ public class BasketPublicSupport {
     @Resource
     private MiniRedisUtil miniRedisUtil;
     @Resource
+    private RedisTemplate<String, Object> redisTemplate;
+    @Resource
     private ObjectMapper objectMapper;
 
     private ObjectMapper cacheMapper;
@@ -117,7 +121,16 @@ public class BasketPublicSupport {
     }
 
     private static final long CACHE_BREAKER_MS = 30_000L;
+    static final String GEN_PREFIX = BasketPublicCacheKey.PREFIX + "gen:";
+    private static final DefaultRedisScript<Long> SET_IF_GENERATION = setIfGenerationScript();
     private volatile long cacheDisabledUntilMs;
+
+    /**
+     * 审核失效会先把代次加一。加载期间代次变了，就不能把读到的旧结果写回。
+     */
+    static boolean cacheWriteAllowed(long generationBeforeLoad, long generationAfterLoad) {
+        return generationBeforeLoad == generationAfterLoad;
+    }
 
     public long liveTtlSeconds() {
         return LIVE_TTL_SECONDS;
@@ -173,12 +186,21 @@ public class BasketPublicSupport {
             }
             log.debug("public cache get ignored: {}", ex.getMessage());
         }
+        long generationBeforeLoad = readGeneration(cacheSuffix);
         T value = loader.get();
         if (value != null && System.currentTimeMillis() >= cacheDisabledUntilMs) {
             long ttl = ttlResolver == null ? LIVE_TTL_SECONDS : Math.max(1L, ttlResolver.applyAsLong(value));
-            BasketPublicCacheKey key = new BasketPublicCacheKey(cacheSuffix, ttl);
             try {
-                miniRedisUtil.set(key, cacheMapper.writeValueAsString(value));
+                String json = cacheMapper.writeValueAsString(value);
+                Long written = redisTemplate.execute(
+                        SET_IF_GENERATION,
+                        java.util.List.of(BasketPublicCacheKey.PREFIX + cacheSuffix, GEN_PREFIX + cacheSuffix),
+                        String.valueOf(generationBeforeLoad),
+                        json,
+                        String.valueOf(ttl));
+                if (written != null && written == 0L) {
+                    log.debug("public cache write skipped, generation moved: {}", cacheSuffix);
+                }
             } catch (com.fasterxml.jackson.core.JsonProcessingException ex) {
                 log.debug("public cache serialize ignored: {}", ex.getMessage());
             } catch (Exception ex) {
@@ -189,6 +211,38 @@ public class BasketPublicSupport {
             }
         }
         return value;
+    }
+
+    private long readGeneration(String cacheSuffix) {
+        try {
+            Object raw = miniRedisUtil.get(new BasketPublicCacheKey("gen:" + cacheSuffix));
+            if (raw == null) {
+                return 0L;
+            }
+            return Long.parseLong(String.valueOf(raw).trim());
+        } catch (NumberFormatException ex) {
+            return 0L;
+        } catch (Exception ex) {
+            if (isRedisInfraFailure(ex)) {
+                cacheDisabledUntilMs = System.currentTimeMillis() + CACHE_BREAKER_MS;
+            }
+            return 0L;
+        }
+    }
+
+    private static DefaultRedisScript<Long> setIfGenerationScript() {
+        DefaultRedisScript<Long> script = new DefaultRedisScript<>();
+        script.setResultType(Long.class);
+        script.setScriptText("""
+                local current = redis.call('GET', KEYS[2])
+                if current == false then current = '0' end
+                if current == ARGV[1] then
+                  redis.call('SET', KEYS[1], ARGV[2], 'EX', tonumber(ARGV[3]))
+                  return 1
+                end
+                return 0
+                """);
+        return script;
     }
 
     static boolean isRedisInfraFailure(Throwable ex) {

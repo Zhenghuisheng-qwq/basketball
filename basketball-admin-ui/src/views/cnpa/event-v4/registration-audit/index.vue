@@ -108,6 +108,17 @@
           </el-form-item>
         </el-form>
 
+        <el-alert
+          v-if="rosterWorkspace?.rosterStatus === 'LOCKED'"
+          class="mb8"
+          type="warning"
+          :closable="false"
+          show-icon
+          title="当前参赛名单已锁定。后续人员变更须由队长提交申请，并经管理员审核通过后生效。"
+        >
+          <el-button link type="primary" @click="activeTab = 'team'">去审核名单变更</el-button>
+        </el-alert>
+
         <el-descriptions v-if="rosterWorkspace" :column="4" border class="mb8">
           <el-descriptions-item label="赛区">{{ rosterWorkspace.divisionName }}</el-descriptions-item>
           <el-descriptions-item label="Rule">{{ rosterWorkspace.ruleVersion?.ruleVersionStatus || '-' }}</el-descriptions-item>

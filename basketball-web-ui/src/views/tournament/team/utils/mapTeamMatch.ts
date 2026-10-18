@@ -92,9 +92,7 @@ export function formatTeamMatchWhen(match: TeamMatchRecord): string {
     return `${month}-${day} ${match.time || ''}`.trim()
   }
   if (match.followsSeries) {
-    return match.seriesStartTime
-      ? translate('publicPages.team.followsSeriesLine', { time: match.seriesStartTime })
-      : translate('publicPages.team.followsSeries')
+    return translate('publicPages.team.followsSeries')
   }
   return '--'
 }
