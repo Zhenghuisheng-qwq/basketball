@@ -8,6 +8,7 @@ import type {
 } from '@/api/types/v4Public'
 import type { Team } from '@/views/events/types/events'
 import { translate } from '@/i18n'
+import { businessDateTime } from '@/utils/businessDateTime'
 import { formatSeriesSetScore, v4MatchStatusLabel } from '@/utils/v4Display'
 
 export const SERIES_TOTAL_TAB = 'SERIES_TOTAL'
@@ -57,46 +58,14 @@ export function formatShooting(made?: number | null, attempt?: number | null): s
   return `${Number(made)}/${Number(attempt)}`
 }
 
-function shanghaiClock(value: string): { month: string; day: string; week: number; clock: string } | null {
-  if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(value)) return null
-  const dt = new Date(value)
-  if (Number.isNaN(dt.getTime())) return null
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Shanghai',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hourCycle: 'h23',
-      weekday: 'short',
-    }).formatToParts(dt).map((part) => [part.type, part.value]),
-  )
-  const weekMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 }
-  return {
-    month: parts.month || '',
-    day: parts.day || '',
-    week: weekMap[parts.weekday || ''] ?? 0,
-    clock: parts.hour && parts.minute ? `${parts.hour}:${parts.minute}` : '',
-  }
-}
-
 export function formatMatchWhen(value?: string | null, date?: string | null, time?: string | null): string {
   const raw = String(value || '').trim()
-  const zoned = raw ? shanghaiClock(raw) : null
-  if (zoned) {
-    const week = translate(`eventsPage.weekdayFull.${zoned.week}`)
-    const clock = zoned.clock && zoned.clock !== '00:00' ? zoned.clock : ''
-    return [`${zoned.month}.${zoned.day}`, week, clock].filter(Boolean).join(' · ')
-  }
-  const datePart = raw ? raw.replace('T', ' ').split(/\s+/)[0] : String(date || '').trim()
-  const timePart = raw ? (raw.replace('T', ' ').split(/\s+/)[1] || '').slice(0, 5) : String(time || '').slice(0, 5)
-  if (!datePart) return timePart || ''
-  const [, month, day] = datePart.split('-')
-  const dt = new Date(datePart.replace(/-/g, '/'))
-  const week = Number.isNaN(dt.getTime()) ? '' : translate(`eventsPage.weekdayFull.${dt.getDay()}`)
-  const shortDate = month && day ? `${month}.${day}` : datePart
-  const clock = timePart && timePart !== '00:00' ? timePart : ''
+  const parsed = raw ? businessDateTime(raw) : businessDateTime([date, time].filter(Boolean).join(' '))
+  if (!parsed) return ''
+  const [, month, day] = parsed.date.split('-')
+  const week = translate(`eventsPage.weekdayFull.${parsed.week}`)
+  const clock = parsed.time !== '--' && parsed.time !== '00:00' ? parsed.time : ''
+  const shortDate = month && day ? `${month}.${day}` : parsed.date
   return [shortDate, week, clock].filter(Boolean).join(' · ')
 }
 

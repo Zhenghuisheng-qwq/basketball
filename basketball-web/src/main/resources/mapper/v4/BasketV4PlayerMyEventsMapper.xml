@@ -80,18 +80,15 @@
         inner join basket_division d on d.id = et.division_id and d.is_delete = 0
         inner join basket_season se on se.id = et.season_id and se.is_delete = 0
         inner join basket_series s on s.id = se.series_id and s.is_delete = 0
-        left join (
-            select ds.id, ds.division_id, ds.stage_name, ds.stage_type, ds.execution_status
+        left join basket_division_stage cs on cs.id = (
+            select ds.id
             from basket_division_stage ds
-            inner join (
-                select division_id, max(stage_order) as max_order
-                from basket_division_stage
-                where is_delete = 0
-                  and execution_status in ('RUNNING', 'RESULT_PENDING_CONFIRM', 'COMPLETED')
-                group by division_id
-            ) lo on lo.division_id = ds.division_id and lo.max_order = ds.stage_order
-            where ds.is_delete = 0
-        ) cs on cs.division_id = d.id
+            where ds.division_id = d.id
+              and ds.is_delete = 0
+              and ds.execution_status in ('RUNNING', 'RESULT_PENDING_CONFIRM', 'COMPLETED')
+            order by ds.stage_order desc, ds.id desc
+            limit 1
+        )
         left join basket_standing st on st.is_delete = 0
             and st.stage_id = cs.id
             and st.event_team_id = et.id
@@ -102,9 +99,16 @@
                 limit 1
             )
         left join basket_division_group dg on dg.id = st.group_scope_key and dg.is_delete = 0 and st.group_scope_key > 0
-        left join basket_division_stage_qualification q on q.is_delete = 0
-            and q.stage_id = cs.id and q.event_team_id = et.id
-            and q.qualification_status in ('PREVIEW', 'CONFIRMED')
+        left join basket_division_stage_qualification q on q.id = (
+            select q2.id
+            from basket_division_stage_qualification q2
+            where q2.is_delete = 0
+              and q2.stage_id = cs.id
+              and q2.event_team_id = et.id
+              and q2.qualification_status in ('PREVIEW', 'CONFIRMED')
+            order by case q2.qualification_status when 'CONFIRMED' then 0 else 1 end, q2.id desc
+            limit 1
+        )
         where ep.is_delete = 0
           and (ep.member_id = #{memberId} or ep.source_player_id = #{playerId})
         order by se.id desc, d.sort_order asc, et.id desc

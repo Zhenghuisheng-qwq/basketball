@@ -5,6 +5,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { getV4PublicMatchDetail, getV4PublicMatchSeries } from '@/api/v4Public'
 import type { V4PublicMatchDetail, V4PublicMatchSeriesDetail } from '@/api/types/v4Public'
 import PaperSection from '@/components/common/PaperSection.vue'
+import { businessClock, businessKickoffLabel } from '@/utils/businessDateTime'
 import { requiresPeriodScores } from '@/utils/fullMatchSubmissionRules'
 import {
   publicContestDetailLabel,
@@ -131,18 +132,31 @@ const seriesNote = computed(() => {
   return ''
 })
 
+function seriesStartText(date?: string | null, time?: string | null): string {
+  const label = businessKickoffLabel(date, time)
+  if (label) return t('publicPages.team.seriesStart', { time: label })
+  return formatMatchWhen(null, date, null)
+}
+
 const metaText = computed(() => {
   if (seriesMode.value) {
     const s = series.value
     const stage = v4StageLabel(undefined, s?.stageName)
     const round = v4PublicRoundLabel(seriesRoundName.value, s?.roundNo)
-    return [stage, round, v4BestOfLabel(s?.bestOf)].filter(Boolean).join(' · ')
+    const when = seriesStartText(s?.scheduledDate, s?.scheduledStartTime)
+    return [stage, round, v4BestOfLabel(s?.bestOf), when].filter(Boolean).join(' · ')
   }
   const m = match.value
   if (!m) return ''
   const stage = v4StageLabel(m.stageType, m.stageName) || t('events.regularSeason')
   const round = m.roundNo != null ? t('events.round.OTHER', { round: m.roundNo }) : ''
-  const when = formatMatchWhen(m.matchTime)
+  const when = m.matchTime
+    ? formatMatchWhen(m.matchTime)
+    : (m.bestOf && m.bestOf > 1
+      ? (businessClock(m.seriesContext?.scheduledStartTime)
+        ? t('publicPages.team.followsSeriesLine', { time: businessClock(m.seriesContext?.scheduledStartTime) })
+        : t('publicPages.team.followsSeries'))
+      : '')
   return [stage, round, v4BestOfLabel(m.bestOf || 1), when].filter(Boolean).join(' · ')
 })
 
@@ -208,7 +222,11 @@ const boxHint = computed(() => {
   }
   if (seriesMode.value && activeGame.value) {
     const no = activeGame.value.seriesGameNo
-    const when = formatMatchWhen(activeGame.value.scheduledTime)
+    const when = activeGame.value.scheduledTime
+      ? formatMatchWhen(activeGame.value.scheduledTime)
+      : (businessClock(series.value?.scheduledStartTime)
+        ? t('publicPages.team.followsSeriesLine', { time: businessClock(series.value?.scheduledStartTime) })
+        : t('publicPages.team.followsSeries'))
     return ['G' + no, when].filter(Boolean).join(' · ')
   }
   return ''

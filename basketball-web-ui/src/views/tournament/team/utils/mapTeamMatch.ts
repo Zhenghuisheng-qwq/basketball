@@ -2,6 +2,7 @@ import type { V4PublicMatchItem } from '@/api/types/v4Public'
 import { translate } from '@/i18n'
 import { isDisqualificationResult } from '@/utils/eventContext'
 import { v4MatchStatusToNumber } from '@/views/events/utils/v4PublicAdapters'
+import { businessClock, businessKickoffLabel } from '@/utils/businessDateTime'
 import { formatDateTime, mapMatchStatus, toNumber } from '@/utils/publicDisplay'
 import { v4BestOfLabel, v4MatchSeriesStatusLabel } from '@/utils/v4Display'
 import { isKnockoutStage } from './publicStageLabel'
@@ -27,9 +28,12 @@ export function mapV4MatchToTeamRecord(
   } else if (finished && item.winnerEventTeamId) {
     result = 'loss'
   }
-  const dt = formatDateTime(item.matchTime)
   const seriesStatusLabel = item.seriesStatus ? v4MatchSeriesStatusLabel(item.seriesStatus) : ''
   const bestOf = toNumber(item.bestOf, 1)
+  const independentTime = Boolean(String(item.matchTime || '').trim())
+  const dt = independentTime ? formatDateTime(item.matchTime) : { date: '', time: '' }
+  const seriesClock = businessKickoffLabel(item.seriesScheduleDate, item.seriesStartTime) || businessClock(item.seriesStartTime)
+  const followsSeries = !independentTime && Boolean(item.matchSeriesId) && bestOf > 1
   const gameNo = toNumber(item.seriesGameNo, 0)
   const roundNo = toNumber(item.roundNo, 0)
   const knockout = isKnockoutStage(item.stageType, item.competitionFormat) || (Boolean(item.matchSeriesId) && bestOf > 1)
@@ -55,8 +59,10 @@ export function mapV4MatchToTeamRecord(
     opponentLogoUrl: isHome
       ? item.awayTeamLogoUrl || ''
       : item.homeTeamLogoUrl || '',
-    date: dt.date === '--' ? '' : dt.date,
-    time: dt.time,
+    date: independentTime && dt.date !== '--' ? dt.date : '',
+    time: independentTime ? dt.time : '',
+    followsSeries,
+    seriesStartTime: followsSeries ? seriesClock : undefined,
     teamScore: officialTeamScore ?? undefined,
     opponentScore: officialOpponentScore ?? undefined,
     result,
@@ -78,6 +84,19 @@ export function mapV4MatchToTeamRecord(
     matchSeriesId: item.matchSeriesId ? String(item.matchSeriesId) : undefined,
     bestOf: bestOf > 1 ? bestOf : undefined,
   } as TeamMatchRecord & { opponentName: string; opponentLogoUrl: string }
+}
+
+export function formatTeamMatchWhen(match: TeamMatchRecord): string {
+  if (match.date) {
+    const [, month, day] = match.date.split('-')
+    return `${month}-${day} ${match.time || ''}`.trim()
+  }
+  if (match.followsSeries) {
+    return match.seriesStartTime
+      ? translate('publicPages.team.followsSeriesLine', { time: match.seriesStartTime })
+      : translate('publicPages.team.followsSeries')
+  }
+  return '--'
 }
 
 /** @deprecated use mapV4MatchToTeamRecord */

@@ -1,5 +1,6 @@
 package com.zhs.response.v4.publicapi;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -46,6 +47,7 @@ public class V4PublicMatchDetailResp {
 
     private String matchNo;
 
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Shanghai")
     private Date matchTime;
 
     private String matchStatus;

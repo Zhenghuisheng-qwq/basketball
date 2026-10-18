@@ -13,7 +13,7 @@ import {
   PUBLIC_TEAM_PAGE_KEY,
   type PublicTeamPageContext,
 } from './composables/usePublicTeamPage'
-import { mapV4MatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
+import { formatTeamMatchWhen, mapV4MatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
 import DisciplineStatusPanel from '@/components/discipline/DisciplineStatusPanel.vue'
 
 const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
@@ -85,11 +85,7 @@ watch(
 )
 
 function formatDateTime(match: TeamMatchRecord): string {
-  if (!match.date) return '--'
-  const parts = match.date.split('-')
-  const month = parts[1] || '--'
-  const day = parts[2] || '--'
-  return `${month}-${day} ${match.time || ''}`.trim()
+  return formatTeamMatchWhen(match)
 }
 
 function getStatusLabel(match: TeamMatchRecord): string {

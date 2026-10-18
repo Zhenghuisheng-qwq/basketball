@@ -2,6 +2,7 @@
 import { useI18n } from 'vue-i18n'
 import type { Team } from '@/views/events/types/events'
 import type { V4PublicMatchSeriesGame } from '@/api/types/v4Public'
+import { businessDateTime } from '@/utils/businessDateTime'
 import { formatExactScore, isPresent } from './matchDetailDisplay'
 
 const props = defineProps<{
@@ -62,17 +63,9 @@ function winnerTeam(game: V4PublicMatchSeriesGame): Team | null {
 }
 
 function gameDate(value?: string): string {
-  const raw = String(value || '').trim()
-  if (!raw) return ''
-  const date = new Date(raw)
-  if (Number.isNaN(date.getTime())) {
-    const part = raw.replace('T', ' ').slice(0, 10)
-    if (/^\d{4}-\d{2}-\d{2}$/.test(part)) return `${part.slice(5, 7)}.${part.slice(8, 10)}`
-    return ''
-  }
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  return `${month}.${day}`
+  const parsed = businessDateTime(value)
+  if (!parsed) return ''
+  return `${parsed.date.slice(5, 7)}.${parsed.date.slice(8, 10)}`
 }
 
 function canSelect(game: V4PublicMatchSeriesGame): boolean {

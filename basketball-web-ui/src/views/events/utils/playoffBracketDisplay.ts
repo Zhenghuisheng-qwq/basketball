@@ -1,5 +1,6 @@
 import type { V4PublicMatchItem, V4PublicMatchSeriesDetail } from '@/api/types/v4Public'
 import { translate } from '@/i18n'
+import { businessClock, businessDateTime } from '@/utils/businessDateTime'
 import { toNumber } from '@/utils/publicDisplay'
 import { v4BestOfLabel } from '@/utils/v4Display'
 import type { PlayoffRoundKey, PlayoffSeries } from '../types/events'
@@ -182,6 +183,15 @@ function dedupeMatchesToSeries(matches: V4PublicMatchItem[]): V4PublicMatchItem[
   return [...bySeries.values()]
 }
 
+function ownSchedule(item: V4PublicMatchItem): { date?: string; time?: string } | null {
+  const parsed = businessDateTime(item.matchTime)
+  if (!parsed) return null
+  return {
+    date: parsed.date,
+    time: parsed.time === '--' ? undefined : parsed.time,
+  }
+}
+
 export function groupMatchItemsToRounds(matches: V4PublicMatchItem[]): BracketRoundColumn[] {
   const seriesList = dedupeMatchesToSeries(matches)
   const fake: V4PublicMatchSeriesDetail[] = seriesList.map((item) => ({
@@ -202,8 +212,10 @@ export function groupMatchItemsToRounds(matches: V4PublicMatchItem[]): BracketRo
     awayWinCount: item.seriesAwayWinCount,
     seriesStatus: item.seriesStatus,
     winnerEventTeamId: item.winnerEventTeamId,
-    scheduledDate: item.matchTime,
-    scheduledStartTime: item.matchTime,
+    scheduledDate: item.seriesScheduleDate || ownSchedule(item)?.date,
+    scheduledStartTime: item.seriesStartTime
+      ? businessClock(item.seriesStartTime)
+      : ownSchedule(item)?.time,
     games: item.matchId ? [{ matchId: String(item.matchId) }] : [],
   }))
   return groupPublicSeriesToRounds(fake)

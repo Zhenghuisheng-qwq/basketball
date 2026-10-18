@@ -1,4 +1,5 @@
 import { i18n, translate } from '@/i18n'
+import { businessDateTime } from '@/utils/businessDateTime'
 
 export function displayText(value: unknown, fallback = '--'): string {
   if (value === null || value === undefined) return fallback
@@ -100,17 +101,14 @@ export function matchStatusLabel(status: number | string | null | undefined): st
 }
 
 export function formatDateTime(value: string | null | undefined): { date: string; time: string; full: string } {
-  if (!value) return { date: '--', time: '--', full: '--' }
-  const normalized = value.replace('T', ' ').trim()
-  const [datePart = '', timePart = ''] = normalized.split(/\s+/)
-  const time = timePart.slice(0, 5) || '--'
-  if (!datePart) return { date: '--', time, full: displayText(value) }
-  const [, m, d] = datePart.split('-')
-  const dt = new Date(datePart.replace(/-/g, '/'))
-  const week = Number.isNaN(dt.getTime()) ? '' : translate(`match.weekday.${dt.getDay()}`)
-  const shortDate = m && d ? `${m}.${d}` : datePart
+  const parsed = businessDateTime(value)
+  if (!parsed) return { date: '--', time: '--', full: '--' }
+  const [, month, day] = parsed.date.split('-')
+  const week = translate(`match.weekday.${parsed.week}`)
+  const shortDate = month && day ? `${month}.${day}` : parsed.date
+  const time = parsed.time || '--'
   const full = week ? `${shortDate} ${week} ${time}` : `${shortDate} ${time}`
-  return { date: datePart, time, full }
+  return { date: parsed.date, time, full }
 }
 
 export function descriptionToText(value: unknown): string {

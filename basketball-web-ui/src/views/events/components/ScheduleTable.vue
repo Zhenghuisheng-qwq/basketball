@@ -5,7 +5,6 @@ import type { V4PublicScheduleItem } from '@/api/types/v4Public'
 import TeamLogo from './TeamLogo.vue'
 import { publicContestDetailLabel } from '@/utils/v4Display'
 import {
-  formatMatchNo,
   formatScheduleClock,
   formatStageRoundBlock,
   isScheduleSeries,
@@ -35,10 +34,6 @@ const emit = defineEmits<{
 
 function clockText(item: V4PublicScheduleItem): string {
   return formatScheduleClock(item.startTime) || t('match.tbd')
-}
-
-function matchNoText(item: V4PublicScheduleItem): string {
-  return formatMatchNo(item)
 }
 
 function scoreView(item: V4PublicScheduleItem): ScheduleScoreView {
@@ -107,7 +102,6 @@ function roundText(item: V4PublicScheduleItem): string {
     >
       <div class="match-time">
         <strong>{{ clockText(item) }}</strong>
-        <span v-if="matchNoText(item)" class="match-no">{{ matchNoText(item) }}</span>
       </div>
 
       <TeamEntryLink :team="toScheduleTeam(item, 'away')" class="team-cell team-cell--away">
@@ -258,7 +252,6 @@ function roundText(item: V4PublicScheduleItem): string {
   text-align: center;
 }
 
-.match-time,
 .stage-cell {
   flex-direction: column;
   gap: 4px;
@@ -273,46 +266,65 @@ function roundText(item: V4PublicScheduleItem): string {
   }
 }
 
-.match-no {
-  color: #aaa;
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
 .team-cell.team-cell--away,
 .team-cell.team-cell--home,
 :deep(.team-entry-link.team-cell) {
   display: flex;
   width: 100%;
+  min-width: 0;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
+  gap: 8px;
   color: inherit;
-  text-align: center;
   text-decoration: none;
+}
+
+.team-cell.team-cell--away,
+:deep(.team-entry-link.team-cell--away) {
+  justify-content: flex-end;
+}
+
+.team-cell.team-cell--home,
+:deep(.team-entry-link.team-cell--home) {
+  justify-content: flex-start;
 }
 
 .team-name {
   flex: 0 1 auto;
   min-width: 0;
-  max-width: calc(100% - 58px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 16px;
   font-weight: 800;
+  line-height: 1.2;
+}
+
+.team-cell--away .team-name {
+  text-align: right;
+}
+
+.team-cell--home .team-name {
+  text-align: left;
 }
 
 .team-cell :deep(.team-logo),
 .team-cell :deep(.team-logo-schedule) {
-  flex-shrink: 0;
+  flex: 0 0 32px;
+  width: 32px;
+  height: 32px;
 }
 
-.team-cell :deep(.team-logo-schedule) {
-  width: 46px;
-  height: 46px;
+.team-cell :deep(.team-logo-schedule .team-logo-image) {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  object-position: center;
+}
+
+.team-cell :deep(.team-logo-schedule .team-logo-fallback) {
+  width: 32px;
+  height: 32px;
+  font-size: 10px;
 }
 
 .score {
@@ -491,17 +503,24 @@ function roundText(item: V4PublicScheduleItem): string {
     padding-bottom: 8px;
   }
 
-  .team-cell--away,
-  .team-cell--home {
+  .team-cell.team-cell--away,
+  .team-cell.team-cell--home,
+  :deep(.team-entry-link.team-cell--away),
+  :deep(.team-entry-link.team-cell--home) {
     flex-direction: column;
+    align-items: center;
+    justify-content: center;
     text-align: center;
   }
 
-  .team-name {
+  .team-cell--away .team-name,
+  .team-cell--home .team-name {
     max-width: 100%;
+    text-align: center;
   }
 
-  .team-cell--away {
+  .team-cell.team-cell--away,
+  :deep(.team-entry-link.team-cell--away) {
     flex-direction: column-reverse;
   }
 

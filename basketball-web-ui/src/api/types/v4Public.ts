@@ -162,6 +162,8 @@ export interface V4PublicMatchItem {
   roundNo?: number
   matchNo?: string
   matchTime?: string
+  seriesScheduleDate?: string
+  seriesStartTime?: string
   homeEventTeamId?: string
   homeTeamName?: string
   homeSourceType?: string

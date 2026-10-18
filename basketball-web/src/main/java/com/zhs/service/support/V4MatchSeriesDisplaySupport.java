@@ -502,7 +502,7 @@ public class V4MatchSeriesDisplaySupport {
             game.setHomeScore(match.getHomeScore());
             game.setAwayScore(match.getAwayScore());
             game.setWinnerEventTeamId(match.getWinnerEventTeamId());
-            game.setScheduledTime(match.getMatchTime() != null ? match.getMatchTime() : inheritSeriesTime(series));
+            game.setScheduledTime(match.getMatchTime());
             game.setCurrentGame(currentMatchId != null && currentMatchId.equals(match.getId()));
             game.setReplayUrl(normalizeReplayUrl(match.getReplayUrl()));
             if ((seriesCompleted || seriesForfeit) && !isOfficialResult(match)) {
@@ -924,14 +924,6 @@ public class V4MatchSeriesDisplaySupport {
             return away;
         }
         return null;
-    }
-
-    private java.util.Date inheritSeriesTime(BasketMatchSeries series) {
-        if (series == null || series.getScheduledDate() == null || series.getScheduledStartTime() == null) {
-            return null;
-        }
-        return java.util.Date.from(java.time.LocalDateTime.of(series.getScheduledDate(), series.getScheduledStartTime())
-                .atZone(java.time.ZoneId.of("Asia/Shanghai")).toInstant());
     }
 
     private boolean isOfficialResult(BasketV4Match match) {

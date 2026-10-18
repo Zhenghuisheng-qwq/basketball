@@ -93,11 +93,6 @@ export function formatScheduleDateShort(scheduleDate?: string | null): string | 
   return `${raw.slice(5, 7)}-${raw.slice(8, 10)}`
 }
 
-export function formatMatchNo(item: V4PublicScheduleItem): string {
-  const code = String(item.matchNo || item.seriesCode || '').trim()
-  return code ? `#${code}` : ''
-}
-
 export function formatRoundLine(item: V4PublicScheduleItem): string {
   const raw = String(item.roundName || '').trim()
   const labeled = v4PublicRoundLabel(item.roundName, item.roundNo)

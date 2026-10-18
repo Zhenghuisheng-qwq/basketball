@@ -8,7 +8,8 @@ import type {
 import type { AvailableEvent, MyApplication, ParticipatingEvent } from '@/types/accountEvents'
 import { translate } from '@/i18n'
 import { formatDateTimeShort } from '@/utils/participationMappers'
-import { v4PlatformLabel } from '@/utils/v4Display'
+import { businessDateTime } from '@/utils/businessDateTime'
+import { v4DivisionStatusLabel, v4PlatformLabel } from '@/utils/v4Display'
 
 export function v4RegistrationStatusLabel(status?: string | null, participationRole?: string | null): string {
   const code = (status || '').toUpperCase()
@@ -360,6 +361,17 @@ export function mapV4RegistrationToApplication(item: V4MyRegistration): MyApplic
   }
 }
 
+function divisionStatusText(status?: string | null): string {
+  const label = v4DivisionStatusLabel(status)
+  return label && label !== '--' ? label : translate('accountEvents.common.inProgress')
+}
+
+function wallClockText(value?: string | null): string {
+  const parsed = businessDateTime(value)
+  if (!parsed) return String(value || '')
+  return parsed.time && parsed.time !== '--' ? `${parsed.date} ${parsed.time}` : parsed.date
+}
+
 export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
   const isCaptain = item.roleInTeam === 'CAPTAIN'
   const pendingCount = item.pendingSubmissionCount ?? 0
@@ -389,13 +401,15 @@ export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
     identityType: item.roleInTeam || 'PLAYER',
     identityText: isCaptain ? translate('accountEvents.common.captainRole') : translate('accountEvents.common.memberRole'),
     status: item.eventTeamStatus || '',
-    statusText: item.legacyEvent ? translate('accountEvents.common.historical') : (item.divisionStatus || translate('accountEvents.common.inProgress')),
+    statusText: item.legacyEvent
+      ? translate('accountEvents.common.historical')
+      : divisionStatusText(item.divisionStatus),
     pendingTaskCount: pendingCount,
     pendingTaskText: pendingCount > 0 ? translate('accountEvents.common.pendingMatchData', { count: pendingCount }) : undefined,
     stageSummary: stageLabel,
     rankSummary: rankLabel,
     qualificationSummary: qualLabel,
-    nextMatchSummary: item.nextMatchTime ? translate('accountEvents.common.nextMatch', { time: item.nextMatchTime }) : undefined,
+    nextMatchSummary: item.nextMatchTime ? translate('accountEvents.common.nextMatch', { time: wallClockText(item.nextMatchTime) }) : undefined,
     latestMatchSummary: item.latestMatchResult ? translate('accountEvents.common.latestMatch', { result: item.latestMatchResult }) : undefined,
     actionText: translate('accountEvents.common.viewSchedule'),
     actionType: 'VIEW_EVENT_RELATION',

@@ -80,6 +80,9 @@ export interface TeamMatchRecord {
   opponentLogoUrl?: string
   date: string
   time: string
+  /** 子局没有独立开赛时间，时间文案表示系列赛安排。 */
+  followsSeries?: boolean
+  seriesStartTime?: string
   teamScore?: number
   opponentScore?: number
   result?: TeamMatchResult

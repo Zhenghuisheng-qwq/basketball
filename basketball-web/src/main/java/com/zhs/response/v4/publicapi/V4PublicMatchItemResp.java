@@ -1,5 +1,6 @@
 package com.zhs.response.v4.publicapi;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -31,7 +32,15 @@ public class V4PublicMatchItemResp {
 
     private String matchNo;
 
+    /** 子局或 BO1 的独立开赛时刻。无独立排期时为空，不借用系列赛时间。 */
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Shanghai")
     private Date matchTime;
+
+    /** 系列赛排期日期，Asia/Shanghai 墙钟 yyyy-MM-dd。 */
+    private String seriesScheduleDate;
+
+    /** 系列赛开赛钟面，Asia/Shanghai HH:mm。 */
+    private String seriesStartTime;
 
     @JsonSerialize(using = ToStringSerializer.class)
     private Long homeEventTeamId;

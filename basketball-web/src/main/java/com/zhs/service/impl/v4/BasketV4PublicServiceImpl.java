@@ -1398,10 +1398,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                     vo.setAwaySourceType(ms.getAwaySourceType());
                     vo.setHomeSourceDisplay(ms.getHomeSourceDisplay());
                     vo.setAwaySourceDisplay(ms.getAwaySourceDisplay());
-                    if (vo.getMatchTime() == null && ms.getScheduledDate() != null && ms.getScheduledStartTime() != null) {
-                        vo.setMatchTime(java.util.Date.from(java.time.LocalDateTime.of(ms.getScheduledDate(), ms.getScheduledStartTime())
-                                .atZone(java.time.ZoneId.of("Asia/Shanghai")).toInstant()));
-                    }
+                    fillSeriesSchedule(vo, ms);
                 }
             }
             BasketEventTeam home = teamMap.get(match.getHomeEventTeamId());
@@ -1429,6 +1426,18 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         }
         return result;
     }
+
+    private void fillSeriesSchedule(V4PublicMatchItemResp vo, BasketMatchSeries series) {
+        if (series.getScheduledDate() != null) {
+            vo.setSeriesScheduleDate(series.getScheduledDate().toString());
+        }
+        if (series.getScheduledStartTime() != null) {
+            vo.setSeriesStartTime(series.getScheduledStartTime().format(SERIES_CLOCK));
+        }
+    }
+
+    private static final java.time.format.DateTimeFormatter SERIES_CLOCK =
+            java.time.format.DateTimeFormatter.ofPattern("HH:mm");
 
     private void keepPlayersWithMatchFacts(V4PublicMatchDetailResp resp) {
         Set<Long> factIds = new HashSet<>();

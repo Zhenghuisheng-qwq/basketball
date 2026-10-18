@@ -36,7 +36,7 @@ public class BasketV4PublicSeasonController {
 
     @ApiOperation("当前公开 Season：同一 Series 同时只开一届，按业务优先级取当前赛季")
     @GetMapping("/current")
-    public R<V4PublicSeasonItemResp> getCurrentSeason(@RequestParam String seriesCode) {
+    public R<V4PublicSeasonItemResp> getCurrentSeason(@RequestParam(required = false) String seriesCode) {
         return R.ok(v4PublicService.getCurrentSeason(seriesCode));
     }
 

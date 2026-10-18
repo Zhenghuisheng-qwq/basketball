@@ -9,7 +9,7 @@ import {
   PUBLIC_TEAM_PAGE_KEY,
   type PublicTeamPageContext,
 } from './composables/usePublicTeamPage'
-import { mapV4MatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
+import { formatTeamMatchWhen, mapV4MatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
 import { publicContestDetailPath } from '@/utils/v4Display'
 
 type StatusFilter = 'all' | TeamMatchStatus
@@ -134,9 +134,7 @@ function getOpponent(match: TeamMatchRecord) {
 }
 
 function formatDateTime(match: TeamMatchRecord): string {
-  if (!match.date) return match.time || '--'
-  const [, month, day] = match.date.split('-')
-  return `${month}-${day} ${match.time || ''}`.trim()
+  return formatTeamMatchWhen(match)
 }
 
 function getStatusLabel(match: TeamMatchRecord): string {
@@ -602,7 +600,8 @@ function goPage(page: number) {
   font-weight: 600;
   color: #666;
   letter-spacing: 0.02em;
-  white-space: nowrap;
+  line-height: 1.35;
+  white-space: normal;
 }
 
 .match-table__opponent {

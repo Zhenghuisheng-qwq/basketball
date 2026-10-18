@@ -1,5 +1,6 @@
 package com.zhs.response.v4.publicapi;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -18,6 +19,8 @@ public class V4PublicMatchSeriesGameResp {
     private Integer awayScore;
     @JsonSerialize(using = ToStringSerializer.class)
     private Long winnerEventTeamId;
+    /** 仅子局自己的 match_time。未单独排期时为空。 */
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ssXXX", timezone = "Asia/Shanghai")
     private Date scheduledTime;
     private Boolean skipped;
     private String skippedReason;
