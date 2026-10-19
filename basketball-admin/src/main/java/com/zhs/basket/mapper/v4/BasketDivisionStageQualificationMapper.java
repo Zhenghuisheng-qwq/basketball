@@ -20,6 +20,8 @@ public interface BasketDivisionStageQualificationMapper {
 
     int countByStageIdAndStatus(@Param("stageId") Long stageId, @Param("qualificationStatus") String qualificationStatus);
 
+    int countConfirmedByDivisionId(@Param("divisionId") Long divisionId);
+
     int revertConfirmedToPreviewByStageId(@Param("stageId") Long stageId);
 
     BasketDivisionStageQualification selectActiveBySourceSeriesId(@Param("sourceSeriesId") Long sourceSeriesId);

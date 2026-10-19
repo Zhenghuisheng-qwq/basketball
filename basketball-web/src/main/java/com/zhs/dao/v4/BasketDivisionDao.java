@@ -20,4 +20,7 @@ public interface BasketDivisionDao extends BaseMapper<BasketDivision> {
             lock in share mode
             """)
     int countCurrentLockedRoster(@Param("divisionId") Long divisionId);
+
+    @Select("select id from basket_division where id = #{id} and is_delete = 0 for update")
+    Long lockById(@Param("id") Long id);
 }

@@ -102,6 +102,7 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
         Long memberId = UserContext.getRequiredMemberId();
         BasketPlayerProfile player = requirePlayerByMemberId(memberId);
         BasketMatchSeries series = requireSeries(req.getMatchSeriesId());
+        divisionDao.lockById(series.getDivisionId());
         SideContext side = requireSeriesSideCaptain(series, player.getId(), memberId);
         FullMatchSubmissionRules.assertValidSeriesScore(nvl(series.getBestOf()),
                 req.getDeclaredHomeWinCount(), req.getDeclaredAwayWinCount());
@@ -125,6 +126,7 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
         Long memberId = UserContext.getRequiredMemberId();
         BasketPlayerProfile player = requirePlayerByMemberId(memberId);
         BasketMatchSeries series = requireSeries(req.getMatchSeriesId());
+        divisionDao.lockById(series.getDivisionId());
         SideContext side = requireSeriesSideCaptain(series, player.getId(), memberId);
         BasketV4Match match = requirePublishedMatch(req.getMatchId());
         if (!series.getId().equals(match.getSeriesId())) {
@@ -182,6 +184,7 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
             throw new ServiceException("系列赛提交任务不存在");
         }
         BasketMatchSeries series = requireSeries(header.getMatchSeriesId());
+        divisionDao.lockById(series.getDivisionId());
         SideContext side = requireSeriesSideCaptain(series, player.getId(), memberId);
         if (!SubmissionStatusEnum.DRAFT.getCode().equals(header.getStatus())
                 && !SubmissionStatusEnum.REJECTED.getCode().equals(header.getStatus())) {
@@ -255,6 +258,7 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
             throw new ServiceException("仅驳回状态可重提");
         }
         BasketMatchSeries series = requireSeries(old.getMatchSeriesId());
+        divisionDao.lockById(series.getDivisionId());
         SideContext side = requireSeriesSideCaptain(series, player.getId(), memberId);
         Date now = new Date();
         old.setStatus(SubmissionStatusEnum.SUPERSEDED.getCode());

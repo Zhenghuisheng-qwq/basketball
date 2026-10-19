@@ -24,4 +24,6 @@ public interface BasketStagePairingExecutionMapper {
     int clearCurrentByStageId(@Param("stageId") Long stageId);
 
     int markSuperseded(@Param("id") Long id);
+
+    int rebindStage(@Param("id") Long id, @Param("stageId") Long stageId, @Param("sourceStageId") Long sourceStageId);
 }

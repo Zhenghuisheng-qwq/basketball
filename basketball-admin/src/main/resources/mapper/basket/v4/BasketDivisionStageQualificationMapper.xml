@@ -49,6 +49,13 @@
           and <include refid="NotDeleted"/>
     </select>
 
+    <select id="countConfirmedByDivisionId" resultType="int">
+        select count(1) from basket_division_stage_qualification
+        where division_id = #{divisionId}
+          and qualification_status = 'CONFIRMED'
+          and <include refid="NotDeleted"/>
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_division_stage_qualification (
             division_id, stage_id, group_id, event_team_id, qualification_type, source_rank,

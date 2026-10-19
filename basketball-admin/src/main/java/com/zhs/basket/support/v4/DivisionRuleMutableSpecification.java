@@ -47,7 +47,9 @@ public class DivisionRuleMutableSpecification {
     }
 
     public void assertCanEditRules(BasketDivision division, BasketDivisionFormatSnapshot snapshot) {
-        if (superAdminMayRewriteUnstarted(division)) {
+        if (superAdminMayRewriteUnstarted(division)
+                && snapshot != null
+                && SnapshotStatusEnum.DRAFT.getCode().equals(snapshot.getSnapshotStatus())) {
             return;
         }
         if (!DivisionStatusEnum.DRAFT.getCode().equals(division.getDivisionStatus())) {
@@ -166,7 +168,8 @@ public class DivisionRuleMutableSpecification {
     }
 
     public void assertCanApplyStandardTemplate(BasketDivision division, BasketDivisionFormatSnapshot snapshot) {
-        if (superAdminMayRewriteUnstarted(division)) {
+        if (superAdminMayRewriteUnstarted(division)
+                && (snapshot == null || SnapshotStatusEnum.DRAFT.getCode().equals(snapshot.getSnapshotStatus()))) {
             return;
         }
         if (snapshot != null && SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond()) {

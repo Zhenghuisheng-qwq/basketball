@@ -55,6 +55,11 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <select id="countByDivisionId" resultType="int">
+        select count(1) from basket_match_period_score
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
     <select id="selectByMatchId" resultMap="BasketV4MatchPeriodScoreResult">
         select <include refid="BaseColumns" /> from basket_match_period_score
         where match_id = #{matchId} and is_delete = 0

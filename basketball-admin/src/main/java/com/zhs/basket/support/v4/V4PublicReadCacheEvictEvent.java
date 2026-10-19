@@ -2,6 +2,7 @@ package com.zhs.basket.support.v4;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 
 public class V4PublicReadCacheEvictEvent implements Serializable {
 
@@ -17,6 +18,9 @@ public class V4PublicReadCacheEvictEvent implements Serializable {
     private final Long matchSeriesId;
     private final Long playerId;
     private final boolean evictSeriesList;
+    private List<Long> retiredMatchIds = List.of();
+    private List<Long> retiredSeriesIds = List.of();
+    private List<Long> retiredStageIds = List.of();
 
     public V4PublicReadCacheEvictEvent(Long divisionId, Long matchId, Long seasonId, Long stageId,
                                        Long homeEventTeamId, Long awayEventTeamId) {
@@ -51,4 +55,10 @@ public class V4PublicReadCacheEvictEvent implements Serializable {
     public Long getMatchSeriesId() { return matchSeriesId; }
     public Long getPlayerId() { return playerId; }
     public boolean isEvictSeriesList() { return evictSeriesList; }
+    public List<Long> getRetiredMatchIds() { return retiredMatchIds; }
+    public List<Long> getRetiredSeriesIds() { return retiredSeriesIds; }
+    public List<Long> getRetiredStageIds() { return retiredStageIds; }
+    public void setRetiredMatchIds(List<Long> retiredMatchIds) { this.retiredMatchIds = retiredMatchIds == null ? List.of() : retiredMatchIds; }
+    public void setRetiredSeriesIds(List<Long> retiredSeriesIds) { this.retiredSeriesIds = retiredSeriesIds == null ? List.of() : retiredSeriesIds; }
+    public void setRetiredStageIds(List<Long> retiredStageIds) { this.retiredStageIds = retiredStageIds == null ? List.of() : retiredStageIds; }
 }

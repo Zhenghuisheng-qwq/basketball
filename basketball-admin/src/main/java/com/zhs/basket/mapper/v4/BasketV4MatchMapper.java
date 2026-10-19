@@ -40,6 +40,8 @@ public interface BasketV4MatchMapper {
 
     int countStartedByDivisionId(@Param("divisionId") Long divisionId);
 
+    int countScoredByDivisionId(@Param("divisionId") Long divisionId);
+
     int countPlayingByEventTeamId(@Param("eventTeamId") Long eventTeamId);
 
     List<Long> lockOpenMatchesByEventTeamId(@Param("eventTeamId") Long eventTeamId);

@@ -5,10 +5,12 @@ import com.zhs.basket.domain.v4.BasketDivisionFormatSnapshot;
 import com.zhs.basket.dto.v4.StandardTemplateApplyReq;
 import com.zhs.basket.enums.v4.DivisionStatusEnum;
 import com.zhs.basket.enums.v4.SnapshotStatusEnum;
+import com.zhs.basket.mapper.v4.BasketDivisionStageQualificationMapper;
 import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
 import com.zhs.basket.mapper.v4.BasketMatchSubmissionMapper;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
+import com.zhs.basket.mapper.v4.BasketV4MatchPeriodScoreMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchPlayerStatMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchTeamStatMapper;
 import com.zhs.basket.vo.v4.FormatRevisionPreviewVo;
@@ -25,6 +27,10 @@ public class PublishedFormatRevisionGuard {
 
     @Autowired
     private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private BasketV4MatchPeriodScoreMapper periodScoreMapper;
+    @Autowired
+    private BasketDivisionStageQualificationMapper qualificationMapper;
     @Autowired
     private BasketMatchSeriesMapper matchSeriesMapper;
     @Autowired
@@ -69,6 +75,18 @@ public class PublishedFormatRevisionGuard {
         }
         if (submissions > 0) {
             blockers.add("已有比赛数据提交，不能改写比赛历史");
+        }
+        int scored = matchMapper.countScoredByDivisionId(divisionId);
+        if (scored > 0) {
+            blockers.add("已有 " + scored + " 场比赛写入比分，不能改写比赛历史");
+        }
+        int periodScores = periodScoreMapper.countByDivisionId(divisionId);
+        if (periodScores > 0) {
+            blockers.add("已有节比分，不能改写比赛历史");
+        }
+        int confirmedQualifications = qualificationMapper.countConfirmedByDivisionId(divisionId);
+        if (confirmedQualifications > 0) {
+            blockers.add("已有确认晋级记录，不能改写比赛历史");
         }
         return blockers;
     }

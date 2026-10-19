@@ -516,6 +516,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Transactional(rollbackFor = Exception.class)
     public void confirmQualification(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
+        divisionMapper.selectByIdForUpdate(stage.getDivisionId());
         if (StageExecutionStatusEnum.COMPLETED.getCode().equals(stage.getExecutionStatus())) {
             return;
         }

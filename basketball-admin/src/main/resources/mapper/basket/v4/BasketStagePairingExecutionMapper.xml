@@ -99,6 +99,14 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <update id="rebindStage">
+        update basket_stage_pairing_execution
+        set stage_id = #{stageId},
+            <if test="sourceStageId != null">source_stage_id = #{sourceStageId},</if>
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
     <update id="clearCurrentByStageId">
         update basket_stage_pairing_execution
         set is_current = 0, current_unique_key = NULL, update_time = now()

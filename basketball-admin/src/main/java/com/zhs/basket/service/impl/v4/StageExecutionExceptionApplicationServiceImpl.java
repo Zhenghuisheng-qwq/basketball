@@ -71,6 +71,8 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
     @Autowired
     private BasketDivisionStageMapper stageMapper;
     @Autowired
+    private com.zhs.basket.mapper.v4.BasketDivisionMapper divisionMapper;
+    @Autowired
     private BasketDivisionStageTeamMapper stageTeamMapper;
     @Autowired
     private BasketDivisionStageQualificationMapper qualificationMapper;
@@ -98,6 +100,7 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
     public void forfeitMatch(BasketMatchForfeitReq req) {
         requireReason(req.getReason());
         BasketV4Match match = requireMatch(req.getMatchId());
+        divisionMapper.selectByIdForUpdate(match.getDivisionId());
         PairingResolutionGuard.assertResolvedForExecution(match.getHomeEventTeamId(), match.getAwayEventTeamId());
         if (!AdminOfficialResultCapability.canForfeitMatch(match)) {
             throw new ServiceException("当前比赛不能判负");
@@ -199,6 +202,7 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
     public void forfeitSeries(BasketSeriesForfeitReq req) {
         requireReason(req.getReason());
         BasketMatchSeries series = requireSeries(req.getSeriesId());
+        divisionMapper.selectByIdForUpdate(series.getDivisionId());
         PairingResolutionGuard.assertResolvedForExecution(series.getHomeEventTeamId(), series.getAwayEventTeamId());
         if (SeriesResolutionTypeEnum.FORFEIT.getCode().equals(series.getResolutionType())) {
             if (req.getForfeitEventTeamId().equals(series.getHomeEventTeamId())
@@ -434,6 +438,7 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
         requireReason(req.getReason());
         requireScores(req.getHomeScore(), req.getAwayScore());
         BasketV4Match match = requireMatch(req.getMatchId());
+        divisionMapper.selectByIdForUpdate(match.getDivisionId());
         PairingResolutionGuard.assertResolvedForExecution(match.getHomeEventTeamId(), match.getAwayEventTeamId());
         if (!AdminOfficialResultCapability.canEnterOfficialResult(match)) {
             throw new ServiceException("当前比赛不能管理员录入正式结果");

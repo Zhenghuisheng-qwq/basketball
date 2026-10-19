@@ -14,6 +14,8 @@ public class BasketDivisionStageSaveReq {
     private Integer groupCount;
     private Integer roundRobinCycles;
     private Integer bestOf;
+    private Integer semifinalBestOf;
+    private Integer finalBestOf;
     private Integer winPoints;
     private Integer lossPoints;
     private Integer forfeitWinPoints;

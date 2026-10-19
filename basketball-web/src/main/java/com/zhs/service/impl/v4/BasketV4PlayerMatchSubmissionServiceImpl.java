@@ -159,6 +159,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         Long memberId = UserContext.getRequiredMemberId();
         BasketPlayerProfile player = requirePlayerByMemberId(memberId);
         BasketV4Match match = requirePublishedMatch(req.getMatchId());
+        divisionDao.lockById(match.getDivisionId());
         SubmitContext ctx = requireSubmitContext(match, req.getSubmitEventTeamId(), player.getId(), memberId);
 
         BasketMatchSubmission submission = findEditableSubmission(req.getMatchId(), req.getSubmitEventTeamId());
@@ -214,6 +215,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         if (!memberId.equals(submission.getSubmitMemberId())) {
             throw new ServiceException("无权提交该记录");
         }
+        divisionDao.lockById(submission.getDivisionId());
         if (!SubmissionStatusEnum.DRAFT.getCode().equals(submission.getSubmissionStatus())
                 && !SubmissionStatusEnum.REJECTED.getCode().equals(submission.getSubmissionStatus())) {
             throw BusinessReason.SUBMISSION_NOT_ALLOWED.exception();
@@ -259,6 +261,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         if (!memberId.equals(old.getSubmitMemberId())) {
             throw new ServiceException("无权重提该记录");
         }
+        divisionDao.lockById(old.getDivisionId());
         BasketV4Match match = requirePublishedMatch(old.getMatchId());
         SubmitContext ctx = requireSubmitContext(match, old.getSubmitEventTeamId(), player.getId(), memberId);
         Date now = new Date();

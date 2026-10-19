@@ -654,6 +654,12 @@
             />
           </el-select>
         </el-form-item>
+        <el-form-item label="半决赛局数">
+          <el-input-number v-model="stageForm.semifinalBestOf" :min="1" :max="7" controls-position="right" style="width: 100%" />
+        </el-form-item>
+        <el-form-item label="总决赛局数">
+          <el-input-number v-model="stageForm.finalBestOf" :min="1" :max="7" controls-position="right" style="width: 100%" />
+        </el-form-item>
         <el-form-item label="人工确认结果">
           <el-switch v-model="stageForm.requiresManualConfirmation" :active-value="1" :inactive-value="0" />
           <span class="el-form-item__tip ml8">开启后淘汰赛晋级需运营确认</span>
@@ -1976,6 +1982,8 @@ function openEditStage(stage: BasketDivisionStageVo) {
     groupCount: stage.groupCount,
     roundRobinCycles: stage.roundRobinCycles,
     bestOf: stage.bestOf,
+    semifinalBestOf: stage.semifinalBestOf,
+    finalBestOf: stage.finalBestOf,
     winPoints: stage.winPoints,
     lossPoints: stage.lossPoints,
     advancementType: stage.advancementType,

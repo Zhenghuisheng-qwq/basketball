@@ -37,6 +37,8 @@ export interface BasketDivisionStageVo {
   groupCount?: number
   roundRobinCycles?: number
   bestOf?: number
+  semifinalBestOf?: number
+  finalBestOf?: number
   winPoints?: number
   lossPoints?: number
   forfeitWinPoints?: number
@@ -101,6 +103,8 @@ export interface BasketDivisionStageSaveReq {
   groupCount?: number
   roundRobinCycles?: number
   bestOf?: number
+  semifinalBestOf?: number
+  finalBestOf?: number
   winPoints?: number
   lossPoints?: number
   forfeitWinPoints?: number

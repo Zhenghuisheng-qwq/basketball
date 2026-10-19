@@ -61,6 +61,7 @@ public class V4PublicReadCacheEvictor {
         Set<String> keys = collectKeys(event);
         if (event != null) {
             addCurrentDivisionDisplays(keys, event.getDivisionId());
+            addRetiredDisplays(keys, event);
         }
         if (keys.isEmpty()) {
             return;
@@ -129,6 +130,25 @@ public class V4PublicReadCacheEvictor {
             }
         } catch (Exception ex) {
             log.warn("public cache division display keys skipped, divisionId={}: {}", divisionId, ex.getMessage());
+        }
+    }
+
+    private void addRetiredDisplays(Set<String> keys, V4PublicReadCacheEvictEvent event) {
+        addIdKeys(keys, event.getRetiredMatchIds(), "v4:match:");
+        addIdKeys(keys, event.getRetiredSeriesIds(), "v4:match-series:");
+        addIdKeys(keys, event.getRetiredStageIds(), "v4:stage:bracket:");
+        addIdKeys(keys, event.getRetiredStageIds(), "v4:stage:series:");
+        addIdKeys(keys, event.getRetiredStageIds(), "v4:stage:standings:");
+    }
+
+    private void addIdKeys(Set<String> keys, java.util.List<Long> ids, String suffix) {
+        if (ids == null) {
+            return;
+        }
+        for (Long id : ids) {
+            if (id != null) {
+                keys.add(PREFIX + suffix + id);
+            }
         }
     }
 

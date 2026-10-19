@@ -13,7 +13,10 @@ import com.zhs.basket.support.v4.DivisionFormatPlanValidator;
 import com.zhs.basket.support.v4.DivisionFormatSnapshotFactory;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
 import com.zhs.basket.support.v4.PublishedFormatRevisionGuard;
+import com.zhs.basket.query.v4.BasketV4MatchQuery;
+import com.zhs.basket.support.v4.V4PublicReadCacheEvictEvent;
 import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
+import com.zhs.basket.vo.v4.BasketV4MatchListVo;
 import com.zhs.basket.support.v4.DoubleEliminationCapabilityGate;
 import com.zhs.basket.support.v4.FormatSnapshotReadySpecification;
 import com.zhs.basket.support.v4.StageFormatSpecification;
@@ -83,6 +86,8 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
     private BasketStandingMapper standingMapper;
     @Autowired
     private V4PublicReadCachePublisher publicReadCachePublisher;
+    @Autowired
+    private BasketStagePairingExecutionMapper pairingExecutionMapper;
 
     private static final List<String> DEFAULT_TIE_BREAK_CODES = List.of(
             "POINT_DIFFERENCE", "HEAD_TO_HEAD", "TOTAL_POINTS", "MANUAL");
@@ -147,8 +152,9 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         vo.setFormatSummary(V4FormatDisplaySupport.buildFormatSummary(vo));
         boolean mutable = ruleMutableSpecification.isMutable(division, snapshot);
         boolean superAdminRollback = ruleMutableSpecification.superAdminMayRewriteUnstarted(division);
-        vo.setMutable(mutable || superAdminRollback);
-        vo.setCanApplyStandard(mutable || superAdminRollback);
+        boolean draftSnapshot = SnapshotStatusEnum.DRAFT.getCode().equals(snapshot.getSnapshotStatus());
+        vo.setMutable(mutable || (superAdminRollback && draftSnapshot));
+        vo.setCanApplyStandard(mutable || (superAdminRollback && draftSnapshot));
         vo.setSuperAdminRollback(superAdminRollback);
         FormatRevisionPreviewVo revision = publishedFormatRevisionGuard.assess(division, snapshot);
         vo.setCanRevisePublished(revision.isAllowed());
@@ -362,10 +368,36 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         if (!SecurityUtils.isAdmin()) {
             throw new ServiceException("仅超级管理员可以退回未开赛赛程");
         }
-        BasketDivision division = requireDivision(divisionId);
-        java.util.List<String> blockers = publishedFormatRevisionGuard.unstartedRewriteBlockers(division);
+        BasketDivision locked = divisionMapper.selectByIdForUpdate(divisionId);
+        if (locked == null) {
+            throw new ServiceException("赛区不存在");
+        }
+        java.util.List<String> blockers = publishedFormatRevisionGuard.unstartedRewriteBlockers(locked);
         if (!blockers.isEmpty()) {
             throw new ServiceException(String.join("；", blockers));
+        }
+        java.util.List<Long> retiredMatchIds = new java.util.ArrayList<>();
+        java.util.List<Long> retiredSeriesIds = new java.util.ArrayList<>();
+        java.util.Set<Long> retiredStageIds = new java.util.LinkedHashSet<>();
+        BasketV4MatchQuery liveQuery = new BasketV4MatchQuery();
+        liveQuery.setDivisionId(divisionId);
+        for (BasketV4MatchListVo match : matchMapper.selectVoList(liveQuery)) {
+            if (match == null || match.getId() == null) {
+                continue;
+            }
+            retiredMatchIds.add(match.getId());
+            if (match.getStageId() != null) {
+                retiredStageIds.add(match.getStageId());
+            }
+        }
+        for (BasketMatchSeries series : matchSeriesMapper.selectByDivisionId(divisionId)) {
+            if (series == null || series.getId() == null) {
+                continue;
+            }
+            retiredSeriesIds.add(series.getId());
+            if (series.getStageId() != null) {
+                retiredStageIds.add(series.getStageId());
+            }
         }
         invalidateUnstartedSchedule(divisionId);
         for (BasketScheduleBatch batch : scheduleBatchMapper.selectByDivisionIds(java.util.List.of(divisionId))) {
@@ -388,16 +420,93 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
             stage.setUpdateTime(now);
             divisionStageMapper.updateExecutionStatus(stage);
         }
-        BasketDivisionFormatSnapshot snapshot = snapshotMapper.selectActiveByDivisionId(divisionId);
-        if (snapshot != null && SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond()) {
-            snapshot.setSnapshotStatus(SnapshotStatusEnum.DRAFT.getCode());
-            snapshot.setUpdateTime(now);
-            if (snapshotMapper.updateById(snapshot) != 1) {
-                throw new ServiceException("退回规则快照失败");
+        openCurrentDraftFromLockedSnapshot(locked, now);
+        publicReadCachePublisher.divisionMutation(divisionId, locked.getSeasonId());
+        publicReadCachePublisher.scheduleMutation(divisionId, locked.getSeasonId(), null);
+        V4PublicReadCacheEvictEvent retired = new V4PublicReadCacheEvictEvent(
+                divisionId, null, locked.getSeasonId(), null, null, null);
+        retired.setRetiredMatchIds(retiredMatchIds);
+        retired.setRetiredSeriesIds(retiredSeriesIds);
+        retired.setRetiredStageIds(new java.util.ArrayList<>(retiredStageIds));
+        publicReadCachePublisher.publish(retired);
+    }
+
+    /**
+     * 保留已发布规则快照原文，另开一份当前草稿供超级管理员修改。
+     */
+    private void openCurrentDraftFromLockedSnapshot(BasketDivision division, Date now) {
+        BasketDivisionFormatSnapshot current = snapshotMapper.selectActiveByDivisionId(division.getId());
+        if (current == null || !SnapshotStatusEnum.fromCode(current.getSnapshotStatus()).isLockedOrBeyond()) {
+            return;
+        }
+        List<BasketDivisionStage> oldStages = divisionStageMapper.selectBySnapshotId(current.getId());
+        List<BasketDivisionTieBreakRule> oldRules = divisionTieBreakRuleMapper.selectBySnapshotId(current.getId());
+        retireCurrentSnapshot(current, false);
+        int nextVersion = snapshotMapper.selectMaxVersionByDivisionId(division.getId()) + 1;
+        BasketDivisionFormatSnapshot draft = new BasketDivisionFormatSnapshot();
+        draft.setDivisionId(division.getId());
+        draft.setSourceTemplateId(current.getSourceTemplateId());
+        draft.setSourceTemplateCode(current.getSourceTemplateCode());
+        draft.setSourceTemplateName(current.getSourceTemplateName());
+        draft.setSourceTemplateVersion(current.getSourceTemplateVersion());
+        draft.setSourceTemplateType(current.getSourceTemplateType());
+        draft.setRegistrationMode(current.getRegistrationMode());
+        draft.setSnapshotVersion(nextVersion);
+        draft.setSnapshotStatus(SnapshotStatusEnum.DRAFT.getCode());
+        draft.setRosterWorkflowMode(current.getRosterWorkflowMode());
+        draft.setIsCurrent(1);
+        draft.setActiveUniqueKey(DivisionFormatSnapshotFactory.buildActiveUniqueKey(division.getId()));
+        draft.setSupersededSnapshotId(current.getId());
+        draft.setCreateTime(now);
+        draft.setUpdateTime(now);
+        draft.setIsDelete(0);
+        snapshotMapper.insert(draft);
+        Map<Long, Long> stageIds = new HashMap<>();
+        for (BasketDivisionStage oldStage : oldStages) {
+            BasketDivisionStage copy = new BasketDivisionStage();
+            BeanUtils.copyBeanProp(copy, oldStage);
+            copy.setId(null);
+            copy.setSnapshotId(draft.getId());
+            copy.setScheduleBatchId(null);
+            copy.setExecutionStatus(StageExecutionStatusEnum.READY.getCode());
+            copy.setCurrentUniqueKey(null);
+            copy.setStartedTime(null);
+            copy.setCompletedTime(null);
+            copy.setCreateTime(now);
+            copy.setUpdateTime(now);
+            copy.setIsDelete(0);
+            divisionStageMapper.insert(copy);
+            stageIds.put(oldStage.getId(), copy.getId());
+        }
+        for (BasketDivisionTieBreakRule oldRule : oldRules) {
+            Long newStageId = stageIds.get(oldRule.getStageId());
+            if (newStageId == null) {
+                continue;
+            }
+            BasketDivisionTieBreakRule copy = new BasketDivisionTieBreakRule();
+            BeanUtils.copyBeanProp(copy, oldRule);
+            copy.setId(null);
+            copy.setSnapshotId(draft.getId());
+            copy.setStageId(newStageId);
+            copy.setCreateTime(now);
+            copy.setUpdateTime(now);
+            copy.setIsDelete(0);
+            divisionTieBreakRuleMapper.insert(copy);
+        }
+        for (Long oldStageId : stageIds.keySet()) {
+            BasketStagePairingExecution execution = pairingExecutionMapper.selectCurrentByStageId(oldStageId);
+            if (execution == null) {
+                continue;
+            }
+            Long sourceStageId = execution.getSourceStageId() != null && stageIds.containsKey(execution.getSourceStageId())
+                    ? stageIds.get(execution.getSourceStageId()) : null;
+            if (pairingExecutionMapper.rebindStage(execution.getId(), stageIds.get(oldStageId), sourceStageId) != 1) {
+                throw new ServiceException("迁移当前抽签到新规则版本失败");
             }
         }
-        publicReadCachePublisher.divisionMutation(divisionId, division.getSeasonId());
-        publicReadCachePublisher.scheduleMutation(divisionId, division.getSeasonId(), null);
+        division.setFormatSnapshotId(draft.getId());
+        division.setUpdateTime(now);
+        divisionMapper.updateById(division);
     }
 
     private void invalidateUnstartedSchedule(Long divisionId) {
@@ -817,6 +926,12 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         stage.setGroupCount(req.getGroupCount());
         stage.setRoundRobinCycles(req.getRoundRobinCycles());
         stage.setBestOf(req.getBestOf());
+        if (req.getSemifinalBestOf() != null) {
+            stage.setSemifinalBestOf(req.getSemifinalBestOf());
+        }
+        if (req.getFinalBestOf() != null) {
+            stage.setFinalBestOf(req.getFinalBestOf());
+        }
         stage.setWinPoints(req.getWinPoints());
         stage.setLossPoints(req.getLossPoints());
         stage.setForfeitWinPoints(req.getForfeitWinPoints());

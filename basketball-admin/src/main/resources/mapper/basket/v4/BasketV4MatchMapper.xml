@@ -258,6 +258,12 @@
           and match_status in ('PLAYING', 'FINISHED', 'FORFEITED')
     </select>
 
+    <select id="countScoredByDivisionId" resultType="int">
+        select count(1) from basket_match
+        where division_id = #{divisionId} and is_delete = 0
+          and (home_score is not null or away_score is not null)
+    </select>
+
     <select id="countPlayingByEventTeamId" resultType="int">
         select count(1) from basket_match
         where is_delete = 0
