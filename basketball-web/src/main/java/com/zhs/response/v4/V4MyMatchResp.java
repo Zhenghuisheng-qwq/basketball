@@ -23,6 +23,7 @@ public class V4MyMatchResp {
     private Long groupId;
     private String groupName;
     private Integer roundNo;
+    private Integer stageMaxRoundNo;
     private String roundName;
     private String matchNo;
     private Date matchTime;

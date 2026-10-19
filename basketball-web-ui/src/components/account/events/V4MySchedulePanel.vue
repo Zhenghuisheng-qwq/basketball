@@ -135,15 +135,24 @@ function resolveRoundLine(row: V4MyScheduleItem): string {
   return t('accountEvents.common.regularSeason')
 }
 
+function knockoutRoundLabel(roundNo: number, maxRound?: number | null): string {
+  if (!maxRound || maxRound < roundNo) {
+    return t('accountEvents.schedule.knockoutRound', { round: roundNo })
+  }
+  const teamsInRound = 1 << (maxRound - roundNo + 1)
+  if (teamsInRound <= 2) return t('accountEvents.schedule.final')
+  if (teamsInRound === 4) return t('accountEvents.schedule.semifinal')
+  if (teamsInRound === 8) return t('accountEvents.schedule.quarterfinal')
+  if (teamsInRound === 16) return t('accountEvents.schedule.roundOf16')
+  if (teamsInRound === 32) return t('accountEvents.schedule.roundOf32')
+  return t('accountEvents.schedule.knockoutRound', { round: roundNo })
+}
+
 function roundLabel(row: V4MyScheduleItem): string {
   if (!row.roundNo || row.roundNo <= 0) return row.groupName || row.roundName || ''
   const stage = `${row.stageCode || ''} ${row.stageType || ''}`.toUpperCase()
   if (stage.includes('KNOCKOUT') || stage.includes('PLAYOFF')) {
-    const teamsInRound = 1 << row.roundNo
-    if (teamsInRound === 8) return t('accountEvents.schedule.quarterfinal')
-    if (teamsInRound === 4) return t('accountEvents.schedule.semifinal')
-    if (teamsInRound === 2) return t('accountEvents.schedule.final')
-    return t('accountEvents.schedule.knockoutRound', { round: row.roundNo })
+    return knockoutRoundLabel(row.roundNo, row.stageMaxRoundNo)
   }
   if (stage.includes('GROUP')) {
     return row.groupName

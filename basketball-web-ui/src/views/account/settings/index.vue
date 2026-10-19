@@ -23,25 +23,25 @@ const router = useRouter()
 const { t } = useI18n()
 const accountStore = useAccountStore()
 
-const activeTab = ref<SettingsTab>('security')
+const activeTab = ref<SettingsTab>('profile')
 const settingsLoading = ref(false)
 const settingsSaving = ref(false)
+
+function isSettingsTab(tab: unknown): tab is SettingsTab {
+  return tab === 'profile' || tab === 'privacy' || tab === 'notification' || tab === 'security'
+}
 
 watch(
   () => route.query.tab,
   (tab) => {
-    if (tab === 'profile' || tab === 'privacy' || tab === 'notification') {
-      activeTab.value = tab
-    } else {
-      activeTab.value = 'security'
-    }
+    activeTab.value = isSettingsTab(tab) ? tab : 'profile'
   },
   { immediate: true },
 )
 
 function setTab(tab: SettingsTab) {
   activeTab.value = tab
-  router.replace({ query: tab === 'security' ? {} : { tab } })
+  router.replace({ query: tab === 'profile' ? {} : { tab } })
 }
 
 const form = reactive({

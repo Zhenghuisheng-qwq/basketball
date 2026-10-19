@@ -150,6 +150,7 @@ export interface V4MyScheduleItem {
   groupId?: string
   groupName?: string
   roundNo?: number
+  stageMaxRoundNo?: number
   roundName?: string
   matchNo?: string
   matchTime?: string

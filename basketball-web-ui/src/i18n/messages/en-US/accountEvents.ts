@@ -264,6 +264,8 @@ export default {
     myTeam: 'My team',
     win: 'W',
     quarterfinal: 'Quarterfinal',
+    roundOf16: 'Round of 16',
+    roundOf32: 'Round of 32',
     semifinal: 'Semifinal',
     final: 'Final',
     knockoutRound: 'Knockout round {round}',

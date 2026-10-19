@@ -264,6 +264,8 @@ export default {
     myTeam: '我的球队',
     win: '胜',
     quarterfinal: '八强赛',
+    roundOf16: '十六强',
+    roundOf32: '三十二强',
     semifinal: '半决赛',
     final: '决赛',
     knockoutRound: '淘汰赛第 {round} 轮',

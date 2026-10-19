@@ -438,10 +438,14 @@ async function bootstrap() {
     loadError.value = error instanceof Error ? error.message : t('accountTeam.common.loadFailed')
   } finally {
     pageLoading.value = false
-    if (typeof route.query.tab !== 'string' && !hasSelectedTeam.value) {
-      activeTab.value = availableTabs.value.includes('joinableTeams')
-        ? 'joinableTeams'
-        : (availableTabs.value[0] || 'create')
+    if (typeof route.query.tab !== 'string') {
+      if (hasSelectedTeam.value && listScope.value !== 'history' && availableTabs.value.includes('members')) {
+        activeTab.value = 'members'
+      } else if (!hasSelectedTeam.value) {
+        activeTab.value = availableTabs.value.includes('joinableTeams')
+          ? 'joinableTeams'
+          : (availableTabs.value[0] || 'create')
+      }
     }
     await openRegistrationFromQuery().catch(() => undefined)
   }
@@ -488,7 +492,7 @@ async function setListScope(scope: TeamListScope) {
   await teamStore.loadCurrentTeams()
   if (teamStore.myTeamSummary?.teamId) {
     await teamStore.selectTeam(teamStore.myTeamSummary.teamId)
-    activeTab.value = 'overview'
+    activeTab.value = availableTabs.value.includes('members') ? 'members' : 'overview'
   } else {
     teamStore.teamDetail = null
     activeTab.value = availableTabs.value[0] || 'joinableTeams'

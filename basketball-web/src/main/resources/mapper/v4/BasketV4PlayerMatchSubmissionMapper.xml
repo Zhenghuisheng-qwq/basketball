@@ -21,6 +21,7 @@
             m.group_id as groupId,
             dg.group_name as groupName,
             m.round_no as roundNo,
+            (select max(mr.round_no) from basket_match mr where mr.stage_id = m.stage_id and mr.is_delete = 0) as stageMaxRoundNo,
             m.match_no as matchNo,
             m.match_time as matchTime,
             m.home_event_team_id as homeEventTeamId,
