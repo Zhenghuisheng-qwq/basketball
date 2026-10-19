@@ -201,13 +201,19 @@
     <!-- is_delete is TINYINT: cannot store series id. Use 1 + uniquify bracket_slot for UK. -->
     <update id="softDelete">
         update basket_match_series
-        set is_delete = 1, bracket_slot = id, update_time = now()
+        set is_delete = 1,
+            bracket_slot = id,
+            series_code = concat(left(series_code, 40), '#', id),
+            update_time = now()
         where id = #{id} and <include refid="NotDeleted"/>
     </update>
 
     <update id="softDeleteDraftByBatchId">
         update basket_match_series
-        set is_delete = 1, bracket_slot = id, update_time = now()
+        set is_delete = 1,
+            bracket_slot = id,
+            series_code = concat(left(series_code, 40), '#', id),
+            update_time = now()
         where schedule_batch_id = #{scheduleBatchId} and <include refid="NotDeleted"/>
     </update>
 
@@ -232,7 +238,10 @@
 
     <update id="softDeleteUnstartedByDivisionId">
         update basket_match_series
-        set is_delete = 1, bracket_slot = id, update_time = now()
+        set is_delete = 1,
+            bracket_slot = id,
+            series_code = concat(left(series_code, 40), '#', id),
+            update_time = now()
         where division_id = #{divisionId} and <include refid="NotDeleted"/>
           and (series_status is null or series_status not in ('RUNNING', 'COMPLETED'))
           and (resolution_type is null or resolution_type not in ('FORFEIT', 'MANUAL'))

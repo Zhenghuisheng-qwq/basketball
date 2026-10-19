@@ -83,6 +83,8 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
     @Autowired
     private BasketScheduleBatchMapper scheduleBatchMapper;
     @Autowired
+    private BasketMatchSubmissionMapper submissionMapper;
+    @Autowired
     private BasketStandingMapper standingMapper;
     @Autowired
     private V4PublicReadCachePublisher publicReadCachePublisher;
@@ -261,6 +263,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
                 throw new ServiceException("已锁定规则快照不允许应用标准模板");
             }
             supersededId = existing.getId();
+            abolishDownstreamDrafts(divisionId, divisionStageMapper.selectBySnapshotId(existing.getId()));
             supersedeSnapshot(existing);
         }
         doCreateSnapshotFromDefinition(division, template, supersededId, definition, context.getRegistrationMode());
@@ -333,9 +336,7 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         retireCurrentSnapshot(existing, false);
         doCreateSnapshotFromDefinition(division, template, previousId, definition, division.getRegistrationMode());
         lockSnapshot(divisionId, operatorId);
-        if (preview.isScheduleWillBeInvalidated()) {
-            invalidateUnstartedSchedule(divisionId);
-        }
+        abolishDownstreamDrafts(divisionId, divisionStageMapper.selectBySnapshotId(previousId));
         publicReadCachePublisher.divisionMutation(divisionId, division.getSeasonId());
         publicReadCachePublisher.scheduleMutation(divisionId, division.getSeasonId(), null);
         return getDivisionSnapshot(divisionId);
@@ -507,6 +508,79 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         division.setFormatSnapshotId(draft.getId());
         division.setUpdateTime(now);
         divisionMapper.updateById(division);
+    }
+
+    /**
+     * 规则或抽签等前一步变了，后面的未发布草稿全部作废，抽签、结构和排期都要重做。
+     * 已发布赛程和已开赛结果不删。
+     */
+    private void abolishDownstreamDrafts(Long divisionId, List<BasketDivisionStage> stages) {
+        if (matchMapper.countStartedByDivisionId(divisionId) > 0) {
+            throw new ServiceException("已有正式开赛、完赛或弃权比赛，不能改写后面的赛程");
+        }
+        if (submissionMapper.countByDivisionId(divisionId) > 0) {
+            throw new ServiceException("已有比赛数据提交，不能改写后面的赛程");
+        }
+        List<BasketScheduleBatch> batches = scheduleBatchMapper.selectByDivisionIds(List.of(divisionId));
+        for (BasketScheduleBatch batch : batches) {
+            if (batch == null || Integer.valueOf(1).equals(batch.getIsDelete())) {
+                continue;
+            }
+            if (PublishStatusEnum.PUBLISHED.getCode().equals(batch.getPublishStatus())) {
+                throw new ServiceException("当前赛段已发布，需要先撤回后再调整");
+            }
+        }
+        invalidateUnstartedSchedule(divisionId);
+        for (BasketScheduleBatch batch : batches) {
+            if (batch == null || Integer.valueOf(1).equals(batch.getIsDelete())) {
+                continue;
+            }
+            if (scheduleBatchMapper.softDelete(batch.getId()) != 1) {
+                throw new ServiceException("作废赛程批次失败");
+            }
+        }
+        if (stages == null) {
+            return;
+        }
+        Date now = new Date();
+        for (BasketDivisionStage stage : stages) {
+            if (stage == null || stage.getId() == null) {
+                continue;
+            }
+            BasketStagePairingExecution execution = pairingExecutionMapper.selectCurrentByStageId(stage.getId());
+            if (execution != null) {
+                pairingExecutionMapper.markSuperseded(execution.getId());
+            }
+            if (stage.getScheduleBatchId() != null
+                    || StageExecutionStatusEnum.SCHEDULE_GENERATED.getCode().equals(stage.getExecutionStatus())
+                    || StageExecutionStatusEnum.RUNNING.getCode().equals(stage.getExecutionStatus())) {
+                stage.setScheduleBatchId(null);
+                stage.setExecutionStatus(StageExecutionStatusEnum.READY.getCode());
+                stage.setUpdateTime(now);
+                divisionStageMapper.updateExecutionStatus(stage);
+            }
+        }
+    }
+
+    private boolean stageStructureChanged(BasketDivisionStage stage, BasketDivisionStageSaveReq req) {
+        return !same(stage.getBestOf(), req.getBestOf())
+                || !same(stage.getSemifinalBestOf(), req.getSemifinalBestOf())
+                || !same(stage.getFinalBestOf(), req.getFinalBestOf())
+                || !sameText(stage.getDrawRule(), req.getDrawRule())
+                || !sameText(stage.getSeedRule(), req.getSeedRule())
+                || !sameText(stage.getByeRule(), req.getByeRule())
+                || !sameText(stage.getPairingRule(), req.getPairingRule())
+                || !sameText(stage.getCompetitionFormat(), req.getCompetitionFormat());
+    }
+
+    private boolean same(Integer left, Integer right) {
+        return left == null ? right == null : left.equals(right);
+    }
+
+    private boolean sameText(String left, String right) {
+        String normalizedLeft = left == null ? "" : left.trim();
+        String normalizedRight = right == null ? "" : right.trim();
+        return normalizedLeft.equals(normalizedRight);
     }
 
     private void invalidateUnstartedSchedule(Long divisionId) {
@@ -700,6 +774,9 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         }
         List<BasketDivisionStage> stages = divisionStageMapper.selectBySnapshotId(snapshot.getId());
         assertStageCodeUnique(stages, req.getStageCode(), stageId);
+        if (stageStructureChanged(stage, req)) {
+            abolishDownstreamDrafts(divisionId, List.of(stage));
+        }
         applyStageReq(stage, req);
         boolean orderChanged = req.getStageOrder() != null && !req.getStageOrder().equals(stage.getStageOrder());
         if (orderChanged) {

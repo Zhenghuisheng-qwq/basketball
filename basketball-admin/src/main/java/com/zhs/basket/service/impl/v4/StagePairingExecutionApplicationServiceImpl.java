@@ -6,6 +6,7 @@ import com.zhs.basket.domain.v4.BasketDivisionStageTeam;
 import com.zhs.basket.domain.v4.BasketDivisionGroup;
 import com.zhs.basket.domain.v4.BasketDivisionGroupingBatch;
 import com.zhs.basket.domain.v4.BasketEventTeam;
+import com.zhs.basket.domain.v4.BasketMatchSeries;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
 import com.zhs.basket.domain.v4.BasketStagePairingEntry;
 import com.zhs.basket.domain.v4.BasketStagePairingExecution;
@@ -22,12 +23,15 @@ import com.zhs.basket.enums.v4.PairingRuleEnum;
 import com.zhs.basket.enums.v4.ParticipantResolutionStatusEnum;
 import com.zhs.basket.enums.v4.ParticipantSourceTypeEnum;
 import com.zhs.basket.enums.v4.PublishStatusEnum;
+import com.zhs.basket.enums.v4.StageExecutionStatusEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionGroupMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionGroupingBatchMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageTeamMapper;
 import com.zhs.basket.mapper.v4.BasketEventTeamMapper;
+import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
+import com.zhs.basket.mapper.v4.BasketMatchSubmissionMapper;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.mapper.v4.BasketStagePairingEntryMapper;
 import com.zhs.basket.mapper.v4.BasketStagePairingExecutionMapper;
@@ -98,6 +102,10 @@ public class StagePairingExecutionApplicationServiceImpl implements IStagePairin
     private BasketScheduleBatchMapper scheduleBatchMapper;
     @Autowired
     private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private BasketMatchSeriesMapper matchSeriesMapper;
+    @Autowired
+    private BasketMatchSubmissionMapper submissionMapper;
     @Autowired
     private IBasketV4StructureVersionService structureVersionService;
     @Autowired
@@ -449,12 +457,9 @@ public class StagePairingExecutionApplicationServiceImpl implements IStagePairin
         lockDivision(stage.getDivisionId());
         assertMutable(stage);
         BasketStagePairingExecution current = executionMapper.selectCurrentByStageIdForUpdate(stageId);
+        discardUnpublishedSchedule(stage);
         if (current != null) {
             executionMapper.markSuperseded(current.getId());
-        }
-        BasketScheduleBatch active = scheduleBatchMapper.selectActiveByStageId(stageId);
-        if (active != null) {
-            structureVersionService.markStale(active.getId());
         }
         BasketStagePairingExecution created = newDraft(stage);
         audit("REDRAW", stage, created, "重新抽签，旧执行保留为 SUPERSEDED");
@@ -504,10 +509,60 @@ public class StagePairingExecutionApplicationServiceImpl implements IStagePairin
         }
     }
 
+    /**
+     * 未发布、未开赛的草稿赛程在重新抽签时直接作废。已发布或已有正式结果的不删。
+     */
+    private void discardUnpublishedSchedule(BasketDivisionStage stage) {
+        if (scheduleBatchMapper.selectPublishedByStageId(stage.getId()) != null) {
+            throw new ServiceException("当前赛段已发布，需要先撤回后再调整");
+        }
+        if (matchMapper.countFinishedByStageId(stage.getId()) > 0) {
+            throw new ServiceException("赛事已产生正式比赛结果，不能重建结构");
+        }
+        java.util.Set<Long> batchIds = new LinkedHashSet<>();
+        if (stage.getScheduleBatchId() != null) {
+            batchIds.add(stage.getScheduleBatchId());
+        }
+        for (BasketMatchSeries series : matchSeriesMapper.selectByStageId(stage.getId())) {
+            if (series.getScheduleBatchId() != null) {
+                batchIds.add(series.getScheduleBatchId());
+            }
+        }
+        boolean removed = false;
+        for (Long batchId : batchIds) {
+            BasketScheduleBatch batch = scheduleBatchMapper.selectById(batchId);
+            if (batch == null || Integer.valueOf(1).equals(batch.getIsDelete())) {
+                continue;
+            }
+            if (PublishStatusEnum.PUBLISHED.getCode().equals(batch.getPublishStatus())) {
+                throw new ServiceException("当前赛段已发布，需要先撤回后再调整");
+            }
+            if (submissionMapper.countByScheduleBatchId(batchId) > 0) {
+                throw new ServiceException("该赛程已有比赛提交记录，无法作废");
+            }
+            matchMapper.softDeleteDraftByBatchId(batchId);
+            matchSeriesMapper.softDeleteDraftByBatchId(batchId);
+            if (scheduleBatchMapper.softDelete(batchId) != 1) {
+                throw new ServiceException("作废赛程批次失败");
+            }
+            removed = true;
+        }
+        if (removed || stage.getScheduleBatchId() != null) {
+            stage.setScheduleBatchId(null);
+            stage.setExecutionStatus(StageExecutionStatusEnum.READY.getCode());
+            stage.setUpdateTime(new Date());
+            if (stageMapper.updateExecutionStatus(stage) != 1) {
+                throw new ServiceException("更新阶段执行状态失败");
+            }
+        }
+    }
+
     private BasketStagePairingExecution requireDraftExecution(BasketDivisionStage stage) {
         BasketStagePairingExecution current = executionMapper.selectCurrentByStageId(stage.getId());
         if (current != null && PairingExecutionStatusEnum.CONFIRMED.getCode().equals(current.getStatus())) {
-            throw new ServiceException("抽签已确认，需要重新抽签后再修改");
+            discardUnpublishedSchedule(stage);
+            executionMapper.markSuperseded(current.getId());
+            return newDraft(stage);
         }
         if (current != null) {
             return current;
