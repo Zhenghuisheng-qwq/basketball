@@ -27,6 +27,8 @@ public class DivisionRuleMutableSpecification {
     private BasketV4MatchMapper matchMapper;
     @Autowired(required = false)
     private BasketPersonalRegistrationMapper personalRegistrationMapper;
+    @Autowired
+    private PublishedFormatRevisionGuard publishedFormatRevisionGuard;
 
     public void assertCanRebuild(BasketDivision division, BasketDivisionFormatSnapshot snapshot) {
         if (snapshot == null) {
@@ -39,7 +41,15 @@ public class DivisionRuleMutableSpecification {
         assertCanEditRules(division, snapshot);
     }
 
+    public boolean superAdminMayRewriteUnstarted(BasketDivision division) {
+        return com.zhs.common.utils.SecurityUtils.isAdmin()
+                && publishedFormatRevisionGuard.unstartedRewriteBlockers(division).isEmpty();
+    }
+
     public void assertCanEditRules(BasketDivision division, BasketDivisionFormatSnapshot snapshot) {
+        if (superAdminMayRewriteUnstarted(division)) {
+            return;
+        }
         if (!DivisionStatusEnum.DRAFT.getCode().equals(division.getDivisionStatus())) {
             throw new ServiceException("仅草稿状态 Division 可编辑规则");
         }
@@ -156,6 +166,9 @@ public class DivisionRuleMutableSpecification {
     }
 
     public void assertCanApplyStandardTemplate(BasketDivision division, BasketDivisionFormatSnapshot snapshot) {
+        if (superAdminMayRewriteUnstarted(division)) {
+            return;
+        }
         if (snapshot != null && SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond()) {
             throw new ServiceException("已锁定规则快照不允许应用标准模板");
         }

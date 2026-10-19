@@ -111,6 +111,14 @@ public class BasketV4FormatRuleController extends BaseController {
         return success(snapshotService.publishPublishedRevision(divisionId, req, SecurityUtils.getUserId()));
     }
 
+    @Log(title = "V4 超级管理员退回未开赛赛程", businessType = BusinessType.DELETE)
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_LOCK + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_EDIT + "')")
+    @PostMapping("/{divisionId}/format-snapshot/super-admin-rollback")
+    public AjaxResult rollbackUnstarted(@PathVariable Long divisionId) {
+        snapshotService.rollbackUnstartedForSuperAdmin(divisionId);
+        return success();
+    }
+
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_LOCK + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_OPEN + "')")
     @PostMapping("/{divisionId}/format-snapshot/lock")
     public AjaxResult lock(@PathVariable Long divisionId) {

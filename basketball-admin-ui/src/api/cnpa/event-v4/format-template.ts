@@ -82,6 +82,7 @@ export interface BasketDivisionFormatSnapshotVo {
   mutable?: boolean
   canApplyStandard?: boolean
   canRevisePublished?: boolean
+  superAdminRollback?: boolean
   revisionBlockReason?: string
   lockable?: boolean
   locked?: boolean
@@ -191,6 +192,10 @@ export function validateFormatPlan(data: BasketDivisionFormatPlanApplyReq): Prom
 
 export function lockFormatSnapshot(divisionId: number): Promise<AjaxResult> {
   return request({ url: `/basket/v4/divisions/${divisionId}/format-snapshot/lock`, method: 'post' })
+}
+
+export function rollbackUnstartedSchedule(divisionId: number): Promise<AjaxResult> {
+  return request({ url: `/basket/v4/divisions/${divisionId}/format-snapshot/super-admin-rollback`, method: 'post' })
 }
 
 export interface StandardTemplateOptionDefinition {

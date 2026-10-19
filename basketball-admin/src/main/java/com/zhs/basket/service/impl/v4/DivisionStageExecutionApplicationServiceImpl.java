@@ -355,6 +355,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                 || PublishStatusEnum.WITHDRAWN.getCode().equals(active.getPublishStatus()))) {
             structureVersionService.markStale(active.getId());
         }
+        discardUnpublishedStageSchedule(stageId);
 
         StageScheduleIntegrityValidator.validateBeforeGenerate(context);
         DivisionStageScheduleStrategy strategy = scheduleStrategyFactory.resolve(stage);
@@ -394,23 +395,63 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             throw new ServiceException("阶段无关联赛程批次");
         }
         BasketScheduleBatch batch = requireBatch(stage.getScheduleBatchId());
-        if (!PublishStatusEnum.DRAFT.getCode().equals(batch.getPublishStatus())) {
-            throw new ServiceException("仅草稿赛程可作废");
+        String publishStatus = batch.getPublishStatus();
+        if (PublishStatusEnum.PUBLISHED.getCode().equals(publishStatus)) {
+            throw new ServiceException("已发布的赛程请先撤回后再作废");
+        }
+        if (!PublishStatusEnum.DRAFT.getCode().equals(publishStatus)
+                && !PublishStatusEnum.WITHDRAWN.getCode().equals(publishStatus)) {
+            throw new ServiceException("仅草稿或已撤回的赛程可作废");
+        }
+        if (matchMapper.countFinishedByStageId(stageId) > 0) {
+            throw new ServiceException("赛事已产生正式比赛结果，不能作废");
         }
         if (submissionMapper.countByScheduleBatchId(batch.getId()) > 0) {
             throw new ServiceException("该赛程已有比赛提交记录，无法作废");
         }
-
-        matchMapper.softDeleteDraftByBatchId(batch.getId());
-        matchSeriesMapper.softDeleteDraftByBatchId(batch.getId());
-        if (scheduleBatchMapper.softDelete(batch.getId()) != 1) {
-            throw new ServiceException("作废赛程批次失败");
-        }
+        discardScheduleBatch(batch.getId());
 
         stage.setScheduleBatchId(null);
         stage.setExecutionStatus(StageExecutionStatusEnum.READY.getCode());
         stage.setUpdateTime(new Date());
         stageMapper.updateExecutionStatus(stage);
+    }
+
+    /**
+     * 重新生成前清掉已撤回或草稿留下的系列赛和比赛。已发布、已有正式结果或提交记录的不删。
+     */
+    private void discardUnpublishedStageSchedule(Long stageId) {
+        Set<Long> batchIds = new LinkedHashSet<>();
+        BasketDivisionStage stage = requireStage(stageId);
+        if (stage.getScheduleBatchId() != null) {
+            batchIds.add(stage.getScheduleBatchId());
+        }
+        for (BasketMatchSeries series : matchSeriesMapper.selectByStageId(stageId)) {
+            if (series.getScheduleBatchId() != null) {
+                batchIds.add(series.getScheduleBatchId());
+            }
+        }
+        for (Long batchId : batchIds) {
+            BasketScheduleBatch batch = scheduleBatchMapper.selectById(batchId);
+            if (batch == null || Integer.valueOf(1).equals(batch.getIsDelete())) {
+                continue;
+            }
+            if (PublishStatusEnum.PUBLISHED.getCode().equals(batch.getPublishStatus())) {
+                throw new ServiceException("当前赛段已发布，需要先撤回后再调整");
+            }
+            if (submissionMapper.countByScheduleBatchId(batchId) > 0) {
+                throw new ServiceException("该赛程已有比赛提交记录，无法作废");
+            }
+            discardScheduleBatch(batchId);
+        }
+    }
+
+    private void discardScheduleBatch(Long batchId) {
+        matchMapper.softDeleteDraftByBatchId(batchId);
+        matchSeriesMapper.softDeleteDraftByBatchId(batchId);
+        if (scheduleBatchMapper.softDelete(batchId) != 1) {
+            throw new ServiceException("作废赛程批次失败");
+        }
     }
 
     @Override

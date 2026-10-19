@@ -30,6 +30,7 @@ import com.zhs.basket.vo.v4.BasketDivisionTieBreakRuleVo;
 import com.zhs.basket.vo.v4.FormatPlanValidationResultVo;
 import com.zhs.basket.vo.v4.FormatRevisionPreviewVo;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.SecurityUtils;
 import com.zhs.common.utils.StringUtils;
 import com.zhs.common.utils.bean.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -145,8 +146,10 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         }).collect(Collectors.toList()));
         vo.setFormatSummary(V4FormatDisplaySupport.buildFormatSummary(vo));
         boolean mutable = ruleMutableSpecification.isMutable(division, snapshot);
-        vo.setMutable(mutable);
-        vo.setCanApplyStandard(mutable);
+        boolean superAdminRollback = ruleMutableSpecification.superAdminMayRewriteUnstarted(division);
+        vo.setMutable(mutable || superAdminRollback);
+        vo.setCanApplyStandard(mutable || superAdminRollback);
+        vo.setSuperAdminRollback(superAdminRollback);
         FormatRevisionPreviewVo revision = publishedFormatRevisionGuard.assess(division, snapshot);
         vo.setCanRevisePublished(revision.isAllowed());
         SnapshotStatusEnum snapshotStatus = SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus());
@@ -247,7 +250,8 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         ruleMutableSpecification.assertCanApplyStandardTemplate(division, existing);
         Long supersededId = null;
         if (existing != null) {
-            if (SnapshotStatusEnum.fromCode(existing.getSnapshotStatus()).isLockedOrBeyond()) {
+            if (SnapshotStatusEnum.fromCode(existing.getSnapshotStatus()).isLockedOrBeyond()
+                    && !ruleMutableSpecification.superAdminMayRewriteUnstarted(division)) {
                 throw new ServiceException("已锁定规则快照不允许应用标准模板");
             }
             supersededId = existing.getId();
@@ -350,6 +354,50 @@ public class BasketV4FormatSnapshotServiceImpl implements IBasketV4FormatSnapsho
         } catch (RuntimeException ex) {
             return null;
         }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void rollbackUnstartedForSuperAdmin(Long divisionId) {
+        if (!SecurityUtils.isAdmin()) {
+            throw new ServiceException("仅超级管理员可以退回未开赛赛程");
+        }
+        BasketDivision division = requireDivision(divisionId);
+        java.util.List<String> blockers = publishedFormatRevisionGuard.unstartedRewriteBlockers(division);
+        if (!blockers.isEmpty()) {
+            throw new ServiceException(String.join("；", blockers));
+        }
+        invalidateUnstartedSchedule(divisionId);
+        for (BasketScheduleBatch batch : scheduleBatchMapper.selectByDivisionIds(java.util.List.of(divisionId))) {
+            if (batch == null || Integer.valueOf(1).equals(batch.getIsDelete())) {
+                continue;
+            }
+            if (scheduleBatchMapper.softDelete(batch.getId()) != 1) {
+                throw new ServiceException("作废赛程批次失败");
+            }
+        }
+        Date now = new Date();
+        for (BasketDivisionStage stage : divisionStageMapper.selectByDivisionId(divisionId)) {
+            if (stage.getScheduleBatchId() == null
+                    && !StageExecutionStatusEnum.SCHEDULE_GENERATED.getCode().equals(stage.getExecutionStatus())
+                    && !StageExecutionStatusEnum.RUNNING.getCode().equals(stage.getExecutionStatus())) {
+                continue;
+            }
+            stage.setScheduleBatchId(null);
+            stage.setExecutionStatus(StageExecutionStatusEnum.READY.getCode());
+            stage.setUpdateTime(now);
+            divisionStageMapper.updateExecutionStatus(stage);
+        }
+        BasketDivisionFormatSnapshot snapshot = snapshotMapper.selectActiveByDivisionId(divisionId);
+        if (snapshot != null && SnapshotStatusEnum.fromCode(snapshot.getSnapshotStatus()).isLockedOrBeyond()) {
+            snapshot.setSnapshotStatus(SnapshotStatusEnum.DRAFT.getCode());
+            snapshot.setUpdateTime(now);
+            if (snapshotMapper.updateById(snapshot) != 1) {
+                throw new ServiceException("退回规则快照失败");
+            }
+        }
+        publicReadCachePublisher.divisionMutation(divisionId, division.getSeasonId());
+        publicReadCachePublisher.scheduleMutation(divisionId, division.getSeasonId(), null);
     }
 
     private void invalidateUnstartedSchedule(Long divisionId) {

@@ -39,4 +39,6 @@ public interface IBasketV4FormatSnapshotService {
     FormatRevisionPreviewVo previewPublishedRevision(Long divisionId, StandardTemplateApplyReq req);
 
     BasketDivisionFormatSnapshotVo publishPublishedRevision(Long divisionId, StandardTemplateApplyReq req, Long operatorId);
+
+    void rollbackUnstartedForSuperAdmin(Long divisionId);
 }

@@ -29,6 +29,8 @@ public class BasketDivisionFormatSnapshotVo {
     private Boolean canApplyStandard;
     /** 已发布且没有不可逆比赛事实时，允许生成新规则版本。 */
     private Boolean canRevisePublished;
+    /** 仅超级管理员，且没有正式开赛结果时，可以退回未开赛赛程并改规则。 */
+    private Boolean superAdminRollback;
     private String revisionBlockReason;
     private Boolean lockable;
     private Boolean locked;

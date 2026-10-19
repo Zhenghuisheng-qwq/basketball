@@ -36,6 +36,43 @@ public class PublishedFormatRevisionGuard {
     @Autowired
     private BasketMatchSubmissionMapper submissionMapper;
 
+    /**
+     * 还没有正式开赛结果时，超级管理员可以退回赛程并改规则。
+     * 草稿状态本身不在这里拦截。
+     */
+    public java.util.List<String> unstartedRewriteBlockers(BasketDivision division) {
+        java.util.List<String> blockers = new java.util.ArrayList<>();
+        if (division == null || division.getId() == null) {
+            blockers.add("赛区不存在");
+            return blockers;
+        }
+        String divisionStatus = division.getDivisionStatus();
+        if (DivisionStatusEnum.PLAYING.getCode().equals(divisionStatus)
+                || DivisionStatusEnum.FINISHED.getCode().equals(divisionStatus)
+                || DivisionStatusEnum.ARCHIVED.getCode().equals(divisionStatus)) {
+            blockers.add("赛区已进入比赛中、已结束或已归档，不能改写比赛历史");
+        }
+        Long divisionId = division.getId();
+        int started = matchMapper.countStartedByDivisionId(divisionId);
+        int irreversibleSeries = matchSeriesMapper.countIrreversibleByDivisionId(divisionId);
+        int playerStats = playerStatMapper.countByDivisionId(divisionId);
+        int teamStats = teamStatMapper.countByDivisionId(divisionId);
+        int submissions = submissionMapper.countByDivisionId(divisionId);
+        if (started > 0) {
+            blockers.add("已有 " + started + " 场正式开赛、完赛或弃权比赛，不能改写比赛历史");
+        }
+        if (irreversibleSeries > 0) {
+            blockers.add("已有系列赛进行中、完赛、弃权或人工结算，不能改写比赛历史");
+        }
+        if (playerStats > 0 || teamStats > 0) {
+            blockers.add("已产生比赛技术统计，不能改写比赛历史");
+        }
+        if (submissions > 0) {
+            blockers.add("已有比赛数据提交，不能改写比赛历史");
+        }
+        return blockers;
+    }
+
     public FormatRevisionPreviewVo assess(BasketDivision division, BasketDivisionFormatSnapshot snapshot) {
         return assess(division, snapshot, null, null);
     }
@@ -65,31 +102,7 @@ public class PublishedFormatRevisionGuard {
         if (snapshot.getIsCurrent() != null && snapshot.getIsCurrent() != 1) {
             preview.getBlockers().add("只能基于当前规则版本重新发布");
         }
-        String divisionStatus = division.getDivisionStatus();
-        if (DivisionStatusEnum.PLAYING.getCode().equals(divisionStatus)
-                || DivisionStatusEnum.FINISHED.getCode().equals(divisionStatus)
-                || DivisionStatusEnum.ARCHIVED.getCode().equals(divisionStatus)) {
-            preview.getBlockers().add("赛区已进入比赛中、已结束或已归档，不能改写比赛历史");
-        }
-
-        Long divisionId = division.getId();
-        int started = matchMapper.countStartedByDivisionId(divisionId);
-        int irreversibleSeries = matchSeriesMapper.countIrreversibleByDivisionId(divisionId);
-        int playerStats = playerStatMapper.countByDivisionId(divisionId);
-        int teamStats = teamStatMapper.countByDivisionId(divisionId);
-        int submissions = submissionMapper.countByDivisionId(divisionId);
-        if (started > 0) {
-            preview.getBlockers().add("已有 " + started + " 场正式开赛、完赛或弃权比赛，不能改写比赛历史");
-        }
-        if (irreversibleSeries > 0) {
-            preview.getBlockers().add("已有系列赛进行中、完赛、弃权或人工结算，不能改写比赛历史");
-        }
-        if (playerStats > 0 || teamStats > 0) {
-            preview.getBlockers().add("已产生比赛技术统计，不能改写比赛历史");
-        }
-        if (submissions > 0) {
-            preview.getBlockers().add("已有比赛数据提交，不能改写比赛历史");
-        }
+        preview.getBlockers().addAll(unstartedRewriteBlockers(division));
         if (req != null && StringUtils.isNotEmpty(req.getRegistrationMode())
                 && StringUtils.isNotEmpty(division.getRegistrationMode())
                 && !req.getRegistrationMode().equals(division.getRegistrationMode())) {
@@ -101,6 +114,8 @@ public class PublishedFormatRevisionGuard {
             preview.getBlockers().add("重新发布不能修改比赛模式");
         }
 
+        Long divisionId = division.getId();
+        int started = matchMapper.countStartedByDivisionId(divisionId);
         int matches = matchMapper.countByDivisionId(divisionId);
         int series = matchSeriesMapper.countByDivisionId(divisionId);
         int batches = scheduleBatchMapper.countByDivisionId(divisionId);

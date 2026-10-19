@@ -13,6 +13,7 @@
     <div v-if="snapshot" class="current-scheme-bar mb8">
       <span>{{ currentSchemeSummary }}</span>
       <el-button link type="primary" @click="handleRulesSectionTabChange('advanced')">查看技术信息</el-button>
+      <el-button v-if="snapshot.superAdminRollback" link type="danger" @click="rollbackUnstarted">退回未开赛赛程</el-button>
     </div>
 
     <el-tabs :model-value="rulesSectionTab" type="border-card" class="rules-section-tabs mb8" @tab-change="handleRulesSectionTabChange">
@@ -738,6 +739,7 @@ import {
   applyFormatPlan,
   deleteFormatStage,
   getFormatSnapshot,
+  rollbackUnstartedSchedule,
   listV4FormatTemplates,
   rebuildFormatSnapshot,
   reorderFormatStages,
@@ -1634,6 +1636,15 @@ async function loadFormatTemplates() {
   }
   const res = await listV4FormatTemplates(props.seriesId)
   formatTemplateList.value = res.data || []
+}
+
+function rollbackUnstarted() {
+  proxy.$modal.confirm('将删除本赛区尚未开赛的赛程和系列赛，并把规则退回可编辑。已开赛、已有统计或已有提交的比赛不会删除。确认退回？').then(() => {
+    return rollbackUnstartedSchedule(props.divisionId)
+  }).then(() => {
+    proxy.$modal.msgSuccess('已退回。可以修改规则，锁定后再重新抽签、生成赛程。')
+    return loadSnapshot()
+  }).catch(() => undefined)
 }
 
 async function loadSnapshot() {

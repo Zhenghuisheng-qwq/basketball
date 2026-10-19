@@ -15,6 +15,7 @@
       <div v-else>
         <el-alert v-if="structureHint" :type="structureHintType" :closable="false" show-icon class="mb8" :title="structureHint" />
         <el-alert v-if="hasStaleStructure" type="error" :closable="false" show-icon class="mb8" title="当前赛程结构已因参赛名单变化失效，请重新生成。" />
+        <el-button v-if="isSuperAdmin" class="mb8" type="danger" plain @click="rollbackUnstarted">退回未开赛赛程</el-button>
         <DoubleEliminationDemoPanel v-if="hasDoubleElim" class="mb8" />
 
     <div class="schedule-stage-panel">
@@ -290,6 +291,8 @@ import {
 import { getV4DivisionGroupingBatchDetail, listV4DivisionGroupingBatch } from '@/api/cnpa/event-v4/division-grouping'
 import { adjustV4Pairing, manualAdvanceV4, type PairingSlotReq } from '@/api/cnpa/event-v4/stage-exception'
 import { getV4ScheduleBatch } from '@/api/cnpa/event-v4/schedule-batch'
+import { rollbackUnstartedSchedule } from '@/api/cnpa/event-v4/format-template'
+import { checkRole } from '@/utils/permission'
 import { listV4MatchSeriesByStage } from '@/api/cnpa/event-v4/match-series'
 import {
   v4CompetitionFormatLabel,
@@ -301,6 +304,7 @@ import {
 
 const router = useRouter()
 const { divisionId, overview, blocked, selectDivision, clearDivision, loadOverview } = useDivisionWorkspace('structure')
+const isSuperAdmin = computed(() => checkRole(['admin']))
 const stageDivisionId = computed(() => divisionId.value)
 const hasStaleStructure = computed(() => (overview.value?.stages || []).some(s => s.structureStatus === 'STALE'))
 const hasDoubleElim = computed(() => (overview.value?.stages || []).some(s => s.competitionFormat === 'DOUBLE_ELIMINATION'))
@@ -498,8 +502,19 @@ function handleStageGenerate(row: BasketDivisionStageExecutionVo) {
   })
 }
 
+function rollbackUnstarted() {
+  if (!divisionId.value) return
+  ElMessageBox.confirm('将删除本赛区尚未开赛的赛程和系列赛，并把规则退回可编辑。已开赛、已有统计或已有提交的比赛不会删除。确认退回？', '提示', { type: 'warning' }).then(() => {
+    return rollbackUnstartedSchedule(Number(divisionId.value))
+  }).then(() => {
+    ElMessage.success('已退回。可以修改规则，锁定后再重新抽签、生成赛程。')
+    loadOverview()
+    loadStageList()
+  }).catch(() => undefined)
+}
+
 function handleStageCancel(row: BasketDivisionStageExecutionVo) {
-  ElMessageBox.confirm('确认作废草稿赛程？', '提示', { type: 'warning' }).then(() => {
+  ElMessageBox.confirm('确认作废该赛程？已撤回、且没有正式比赛结果的赛程也会删除。', '提示', { type: 'warning' }).then(() => {
     cancelV4StageDraftSchedule(row.stageId).then(() => {
       ElMessage.success('已作废')
       loadStageList()
