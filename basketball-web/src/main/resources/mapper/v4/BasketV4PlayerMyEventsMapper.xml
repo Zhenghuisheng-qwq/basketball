@@ -33,15 +33,24 @@
             q.qualification_status as qualificationStatus,
             q.qualification_status as qualificationStatusName,
             (select m.id from basket_match m
+              left join basket_match_series ms on ms.id = m.series_id and ms.is_delete = 0
               where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
                 and m.match_status not in ('FINISHED', 'CANCELLED', 'FORFEITED')
                 and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)
-              order by m.match_time asc, m.id asc limit 1) as nextMatchId,
-            (select m.match_time from basket_match m
+              order by coalesce(m.match_time, case
+                when ms.scheduled_date is not null and ms.scheduled_start_time is not null
+                then timestamp(ms.scheduled_date, ms.scheduled_start_time) else null end) asc, m.id asc limit 1) as nextMatchId,
+            (select coalesce(m.match_time, case
+                when ms.scheduled_date is not null and ms.scheduled_start_time is not null
+                then timestamp(ms.scheduled_date, ms.scheduled_start_time) else null end)
+              from basket_match m
+              left join basket_match_series ms on ms.id = m.series_id and ms.is_delete = 0
               where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
                 and m.match_status not in ('FINISHED', 'CANCELLED', 'FORFEITED')
                 and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)
-              order by m.match_time asc, m.id asc limit 1) as nextMatchTime,
+              order by coalesce(m.match_time, case
+                when ms.scheduled_date is not null and ms.scheduled_start_time is not null
+                then timestamp(ms.scheduled_date, ms.scheduled_start_time) else null end) asc, m.id asc limit 1) as nextMatchTime,
             (select m.id from basket_match m
               where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
                 and m.match_status in ('FINISHED', 'FORFEITED')

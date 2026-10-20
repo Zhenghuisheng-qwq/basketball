@@ -27,6 +27,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import jakarta.annotation.Resource;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 
 @Component
@@ -525,7 +527,7 @@ public class V4MatchSeriesDisplaySupport {
             game.setHomeScore(match.getHomeScore());
             game.setAwayScore(match.getAwayScore());
             game.setWinnerEventTeamId(match.getWinnerEventTeamId());
-            game.setScheduledTime(match.getMatchTime());
+            game.setScheduledTime(match.getMatchTime() != null ? match.getMatchTime() : seriesStart(series));
             game.setCurrentGame(currentMatchId != null && currentMatchId.equals(match.getId()));
             game.setReplayUrl(normalizeReplayUrl(match.getReplayUrl()));
             if ((seriesCompleted || seriesForfeit) && !isOfficialResult(match)) {
@@ -535,6 +537,21 @@ public class V4MatchSeriesDisplaySupport {
             games.add(game);
         }
         return games;
+    }
+
+    public Date resolveDisplayTime(BasketV4Match match, BasketMatchSeries series) {
+        if (match != null && match.getMatchTime() != null) {
+            return match.getMatchTime();
+        }
+        return seriesStart(series);
+    }
+
+    private Date seriesStart(BasketMatchSeries series) {
+        if (series == null || series.getScheduledDate() == null || series.getScheduledStartTime() == null) {
+            return null;
+        }
+        return Date.from(LocalDateTime.of(series.getScheduledDate(), series.getScheduledStartTime())
+                .atZone(ZoneId.of("Asia/Shanghai")).toInstant());
     }
 
     public Map<Long, BasketMatchSeries> loadSeriesMap(Collection<Long> seriesIds) {

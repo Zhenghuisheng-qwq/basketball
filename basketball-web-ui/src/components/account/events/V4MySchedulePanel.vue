@@ -439,6 +439,7 @@ watch(
               <article v-for="row in block.rows" :key="`${row.matchId}-${row.myEventTeamId}`" class="v4-series-game">
                 <div class="v4-series-game__meta">
                   <strong>Game {{ row.seriesGameNo }}</strong>
+                  <span>{{ formatMatchDate(row.matchTime) }} {{ formatMatchClock(row.matchTime) }}</span>
                   <span>{{ row.homeTeamName }} vs {{ row.awayTeamName }}</span>
                   <span v-if="showScore(row)">{{ formatCenterScore(row) }}</span>
                   <span v-else>{{ t('accountEvents.common.notStarted') }}</span>

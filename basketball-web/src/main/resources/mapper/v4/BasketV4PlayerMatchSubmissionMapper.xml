@@ -23,7 +23,10 @@
             m.round_no as roundNo,
             (select max(mr.round_no) from basket_match mr where mr.stage_id = m.stage_id and mr.is_delete = 0) as stageMaxRoundNo,
             m.match_no as matchNo,
-            m.match_time as matchTime,
+            coalesce(m.match_time, case
+                when ms.scheduled_date is not null and ms.scheduled_start_time is not null
+                then timestamp(ms.scheduled_date, ms.scheduled_start_time)
+                else null end) as matchTime,
             m.home_event_team_id as homeEventTeamId,
             ht.team_name_snapshot as homeTeamName,
             ht.team_short_name as homeTeamShortName,
@@ -110,7 +113,9 @@
         <if test="publishStatus != null and publishStatus != ''">and m.publish_status = #{publishStatus}</if>
         <if test="submissionStatus != null and submissionStatus != ''">and ls.submission_status = #{submissionStatus}</if>
         <if test="upcomingOnly != null and upcomingOnly">and m.match_status != 'FINISHED'</if>
-        order by m.match_time desc, m.id desc
+        order by coalesce(m.match_time, case
+            when ms.scheduled_date is not null and ms.scheduled_start_time is not null
+            then timestamp(ms.scheduled_date, ms.scheduled_start_time) else null end) desc, m.id desc
     </select>
 
     <select id="selectMySchedule" resultType="com.zhs.response.v4.V4MyScheduleResp">
@@ -123,7 +128,9 @@
         <if test="onlyPendingSubmit != null and onlyPendingSubmit">
             and (ls.submission_status is null or ls.submission_status in ('DRAFT', 'REJECTED'))
         </if>
-        order by m.match_time asc, m.id asc
+        order by coalesce(m.match_time, case
+            when ms.scheduled_date is not null and ms.scheduled_start_time is not null
+            then timestamp(ms.scheduled_date, ms.scheduled_start_time) else null end) asc, m.id asc
     </select>
 
     <select id="selectMySubmissions" resultType="com.zhs.response.v4.V4MySubmissionListResp">

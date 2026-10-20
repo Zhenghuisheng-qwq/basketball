@@ -12,6 +12,7 @@ import com.zhs.enums.v4.MatchStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
 import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketEventTeam;
+import com.zhs.model.v4.BasketMatchSeries;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketV4Match;
 import com.zhs.response.publicapi.PublicHomeDataFocusVo;
@@ -135,12 +136,13 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
                 .in(BasketV4Match::getSeasonId, publishedSeasonIds)
                 .in(BasketV4Match::getMatchStatus,
                         MatchStatusEnum.SCHEDULED.getCode(), MatchStatusEnum.PLAYING.getCode())
-                .ge(BasketV4Match::getMatchTime, now)
-                .orderByAsc(BasketV4Match::getMatchTime)
-                .orderByAsc(BasketV4Match::getRoundNo)
-                .orderByAsc(BasketV4Match::getId)
-                .last("limit " + size));
+                .isNotNull(BasketV4Match::getHomeEventTeamId)
+                .isNotNull(BasketV4Match::getAwayEventTeamId)
+                .apply(effectiveStartAtOrAfterNowSql(), now)
+                .apply(oneCardPerSeriesSql())
+                .last("order by " + effectiveStartExpr() + " asc, round_no asc, id asc limit " + size));
         upcoming = matchSeriesDisplaySupport.excludeRemainingUnplayed(upcoming);
+        stampSeriesStartWhenMatchTimeMissing(upcoming);
 
         List<BasketV4Match> finished = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
                 .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
@@ -169,6 +171,47 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
             return Collections.emptyList();
         }
         return matchService.enrichMatches(merged.stream().limit(size).collect(Collectors.toList()));
+    }
+
+    /** 子局未单独写 match_time 时，用系列赛开赛时间。 */
+    private static String effectiveStartExpr() {
+        return "coalesce(match_time, (select timestamp(s.scheduled_date, s.scheduled_start_time)"
+                + " from basket_match_series s where s.id = basket_match.series_id and s.is_delete = 0"
+                + " and s.scheduled_date is not null and s.scheduled_start_time is not null))";
+    }
+
+    private static String effectiveStartAtOrAfterNowSql() {
+        return "(match_status = 'PLAYING' or " + effectiveStartExpr() + " >= {0})";
+    }
+
+    /** 系列赛首页只出一张卡片，取尚未结束的最小局次。 */
+    private static String oneCardPerSeriesSql() {
+        return "(series_id is null or series_game_no is null or series_game_no = ("
+                + "select min(c.series_game_no) from basket_match c"
+                + " where c.series_id = basket_match.series_id and c.is_delete = 0"
+                + " and c.publish_status = 'PUBLISHED'"
+                + " and c.match_status in ('SCHEDULED','PLAYING')"
+                + " and c.home_event_team_id is not null and c.away_event_team_id is not null))";
+    }
+
+    private void stampSeriesStartWhenMatchTimeMissing(List<BasketV4Match> matches) {
+        if (CollectionUtils.isEmpty(matches)) {
+            return;
+        }
+        Set<Long> seriesIds = matches.stream()
+                .filter(match -> match.getMatchTime() == null && match.getSeriesId() != null)
+                .map(BasketV4Match::getSeriesId)
+                .collect(Collectors.toSet());
+        if (seriesIds.isEmpty()) {
+            return;
+        }
+        Map<Long, BasketMatchSeries> seriesMap = matchSeriesDisplaySupport.loadSeriesMap(seriesIds);
+        for (BasketV4Match match : matches) {
+            if (match.getMatchTime() != null) {
+                continue;
+            }
+            match.setMatchTime(matchSeriesDisplaySupport.resolveDisplayTime(match, seriesMap.get(match.getSeriesId())));
+        }
     }
 
     @Override

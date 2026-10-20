@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -114,6 +115,7 @@ public class ScheduleUnitResolver {
             if (matchSeriesMapper.updateSchedule(series) != 1) {
                 throw new ServiceException("更新系列赛排期失败");
             }
+            applySeriesTimeToChildMatches(unit.getUnitId(), date, time, source, status);
             return;
         }
         BasketV4Match match = matchMapper.selectById(unit.getUnitId());
@@ -122,6 +124,25 @@ public class ScheduleUnitResolver {
         match.setScheduleStatus(status);
         if (matchMapper.updateSchedule(match) != 1) {
             throw new ServiceException("更新比赛排期失败");
+        }
+    }
+
+    private void applySeriesTimeToChildMatches(Long seriesId, LocalDate date, LocalTime time, String source, String status) {
+        List<BasketV4Match> games = matchMapper.selectBySeriesId(seriesId);
+        if (games == null) {
+            return;
+        }
+        Date matchTime = ScheduleTimes.toDate(date, time);
+        for (BasketV4Match match : games) {
+            if (match == null || isStartedOrFinishedMatch(match.getMatchStatus())) {
+                continue;
+            }
+            match.setMatchTime(matchTime);
+            match.setScheduleSource(source);
+            match.setScheduleStatus(status);
+            if (matchMapper.updateSchedule(match) != 1) {
+                throw new ServiceException("更新系列赛子比赛时间失败");
+            }
         }
     }
 
