@@ -11,6 +11,7 @@ import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
 import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketEventTeam;
+import com.zhs.response.v4.V4MatchSubmissionEligiblePlayerResp;
 import com.zhs.response.v4.publicapi.V4PublicEventPlayerItemResp;
 import com.zhs.response.v4.publicapi.V4PublicEventTeamDetailResp;
 import com.zhs.response.v4.publicapi.V4PublicEventTeamItemResp;
@@ -307,6 +308,75 @@ public class PublicCurrentRosterSupport {
     public record CurrentTeamFace(String teamName, String shortName, Long logoFileId, String logoUrl) {
     }
 
+    /**
+     * 提交页球员下拉与球队页「本赛季阵容」使用同一套当前昵称和游戏 ID。
+     * 报名快照里的 CNPA 用户号不再当作队长认人的名字。
+     */
+    public void applyEligibleNames(List<BasketEventPlayer> players, List<V4MatchSubmissionEligiblePlayerResp> items) {
+        if (CollectionUtils.isEmpty(players) || CollectionUtils.isEmpty(items)) {
+            return;
+        }
+        Set<Long> playerIds = new HashSet<>();
+        for (BasketEventPlayer player : players) {
+            if (player != null && player.getSourcePlayerId() != null) {
+                playerIds.add(player.getSourcePlayerId());
+            }
+        }
+        if (playerIds.isEmpty()) {
+            return;
+        }
+        Map<Long, BasketPlayerProfile> profileMap = loadProfiles(playerIds);
+        Set<Long> memberIds = new HashSet<>();
+        for (BasketPlayerProfile profile : profileMap.values()) {
+            if (profile.getMemberId() != null) {
+                memberIds.add(profile.getMemberId());
+            }
+        }
+        Map<Long, BasketMemberProfile> memberMap = loadMembers(memberIds);
+        Map<Long, List<BasketPlayerPlatformAccount>> accounts = loadAccounts(playerIds);
+        Map<Long, BasketEventPlayer> byEventPlayerId = new HashMap<>();
+        for (BasketEventPlayer player : players) {
+            if (player != null && player.getId() != null) {
+                byEventPlayerId.put(player.getId(), player);
+            }
+        }
+        for (V4MatchSubmissionEligiblePlayerResp item : items) {
+            if (item == null || item.getEventPlayerId() == null) {
+                continue;
+            }
+            BasketEventPlayer eventPlayer = byEventPlayerId.get(item.getEventPlayerId());
+            if (eventPlayer == null || eventPlayer.getSourcePlayerId() == null) {
+                continue;
+            }
+            BasketPlayerProfile profile = profileMap.get(eventPlayer.getSourcePlayerId());
+            if (profile == null) {
+                continue;
+            }
+            BasketMemberProfile member = profile.getMemberId() == null ? null : memberMap.get(profile.getMemberId());
+            String name = member != null && StringUtils.hasText(member.getNickname())
+                    ? member.getNickname().trim()
+                    : profile.getGameNickname();
+            if (StringUtils.hasText(name)) {
+                item.setPlayerName(name.trim());
+            }
+            String gameId = currentGameId(accounts.get(profile.getId()), eventPlayer.getPlatformCode());
+            if (StringUtils.hasText(gameId)) {
+                item.setGameId(gameId);
+            }
+        }
+    }
+
+    private Map<Long, BasketPlayerProfile> loadProfiles(Collection<Long> playerIds) {
+        Map<Long, BasketPlayerProfile> profileMap = new HashMap<>();
+        List<BasketPlayerProfile> profiles = playerProfileDao.selectList(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .in(BasketPlayerProfile::getId, playerIds)
+                .eq(BasketPlayerProfile::getIsDelete, BasketPublicConstants.NOT_DELETED));
+        for (BasketPlayerProfile profile : profiles) {
+            profileMap.put(profile.getId(), profile);
+        }
+        return profileMap;
+    }
+
     private void overlayPlayers(List<V4PublicEventPlayerItemResp> players) {
         if (CollectionUtils.isEmpty(players)) {
             return;
@@ -320,13 +390,9 @@ public class PublicCurrentRosterSupport {
         if (playerIds.isEmpty()) {
             return;
         }
-        List<BasketPlayerProfile> profiles = playerProfileDao.selectList(new LambdaQueryWrapper<BasketPlayerProfile>()
-                .in(BasketPlayerProfile::getId, playerIds)
-                .eq(BasketPlayerProfile::getIsDelete, BasketPublicConstants.NOT_DELETED));
-        Map<Long, BasketPlayerProfile> profileMap = new HashMap<>();
+        Map<Long, BasketPlayerProfile> profileMap = loadProfiles(playerIds);
         Set<Long> memberIds = new HashSet<>();
-        for (BasketPlayerProfile profile : profiles) {
-            profileMap.put(profile.getId(), profile);
+        for (BasketPlayerProfile profile : profileMap.values()) {
             if (profile.getMemberId() != null) {
                 memberIds.add(profile.getMemberId());
             }

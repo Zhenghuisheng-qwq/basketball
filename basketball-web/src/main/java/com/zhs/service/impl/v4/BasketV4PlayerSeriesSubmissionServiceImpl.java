@@ -37,6 +37,7 @@ import com.zhs.response.v4.V4SeriesSubmissionGameResp;
 import com.zhs.response.v4.V4SeriesSubmissionWorkspaceResp;
 import com.zhs.service.v4.IBasketV4PlayerSeriesSubmissionService;
 import com.zhs.support.v4.EventTeamCaptainAuthorization;
+import com.zhs.support.v4.PublicCurrentRosterSupport;
 import com.zhs.support.v4.FullMatchSubmissionRules;
 import com.zhs.support.v4.FullMatchSubmissionSupport;
 import jakarta.annotation.Resource;
@@ -79,6 +80,8 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
     private EventTeamCaptainAuthorization eventTeamCaptainAuthorization;
     @Resource
     private FullMatchSubmissionSupport fullMatchSubmissionSupport;
+    @Resource
+    private PublicCurrentRosterSupport currentRosterSupport;
     @Resource
     private com.zhs.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
 
@@ -524,6 +527,7 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
             item.setIsCaptain(player.getIsCaptain());
             result.add(item);
         }
+        currentRosterSupport.applyEligibleNames(players, result);
         return result;
     }
 

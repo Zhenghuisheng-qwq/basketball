@@ -77,7 +77,9 @@ defineExpose({ validation, homeAgg, awayAgg })
 function playerLabel(player: V4MatchSubmissionEligiblePlayer) {
   const no = player.jerseyNo ? `#${player.jerseyNo}` : ''
   const name = player.playerName || player.gameId || t('accountEvents.common.unnamedPlayer')
-  return [no, name].filter(Boolean).join(' ')
+  const game = player.gameId && player.gameId !== name ? player.gameId : ''
+  const title = game ? `${name}（${game}）` : name
+  return [no, title].filter(Boolean).join(' ')
 }
 
 function findPlayer(side: 'home' | 'away', id: string | number | undefined) {

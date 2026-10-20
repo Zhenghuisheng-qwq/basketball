@@ -87,7 +87,10 @@
             m.series_game_no,
             ms.series_code,
             ms.best_of,
-            m.match_time,
+            coalesce(m.match_time, case
+                when ms.scheduled_date is not null and ms.scheduled_start_time is not null
+                then timestamp(ms.scheduled_date, ms.scheduled_start_time)
+                else null end) as match_time,
             m.home_event_team_id,
             ht.team_name_snapshot as home_team_name,
             m.away_event_team_id,
@@ -143,7 +146,13 @@
         <if test="teamName != null and teamName != ''">
             and (ht.team_name_snapshot like concat('%', #{teamName}, '%') or at.team_name_snapshot like concat('%', #{teamName}, '%'))
         </if>
-        order by m.round_no asc, m.match_time asc, m.id asc
+        order by m.round_no asc,
+            coalesce(m.match_time, case
+                when ms.scheduled_date is not null and ms.scheduled_start_time is not null
+                then timestamp(ms.scheduled_date, ms.scheduled_start_time)
+                else null end) asc,
+            ifnull(m.series_game_no, 1) asc,
+            m.id asc
     </select>
 
     <select id="countByBatchId" resultType="int">

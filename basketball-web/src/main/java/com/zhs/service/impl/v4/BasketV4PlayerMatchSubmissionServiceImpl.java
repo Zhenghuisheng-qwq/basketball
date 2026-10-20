@@ -18,6 +18,7 @@ import com.zhs.request.v4.*;
 import com.zhs.response.v4.*;
 import com.zhs.service.v4.IBasketV4PlayerMatchSubmissionService;
 import com.zhs.support.v4.EventTeamCaptainAuthorization;
+import com.zhs.support.v4.PublicCurrentRosterSupport;
 import com.zhs.support.v4.FullMatchSubmissionRules;
 import com.zhs.support.v4.FullMatchSubmissionSupport;
 import com.zhs.support.v4.MatchSubmissionPlayerStatRules;
@@ -69,6 +70,8 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
     private FullMatchSubmissionSupport fullMatchSubmissionSupport;
     @Resource
     private com.zhs.support.v4.EventTeamParticipationGuard eventTeamParticipationGuard;
+    @Resource
+    private PublicCurrentRosterSupport currentRosterSupport;
 
     private static final int MAX_MATERIAL_COUNT = 9;
     private static final String EVENT_PLAYER_STATUS_ACTIVE = "ACTIVE";
@@ -729,6 +732,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
             item.setIsCaptain(player.getIsCaptain());
             result.add(item);
         }
+        currentRosterSupport.applyEligibleNames(players, result);
         return result;
     }
 

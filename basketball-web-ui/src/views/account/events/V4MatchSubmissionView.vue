@@ -156,7 +156,8 @@ function emptyPlayerRow(): V4MatchSubmissionPlayerStat {
 
 function playerLabel(player: V4MatchSubmissionEligiblePlayer): string {
   const name = player.playerName || player.gameId || t('accountEvents.common.unnamedPlayer')
-  const extra = [player.jerseyNo ? `#${player.jerseyNo}` : '', player.isCaptain ? t('accountEvents.common.captain') : '']
+  const game = player.gameId && player.gameId !== name ? player.gameId : ''
+  const extra = [game, player.jerseyNo ? `#${player.jerseyNo}` : '', player.isCaptain ? t('accountEvents.common.captain') : '']
     .filter(Boolean)
     .join(' · ')
   return extra ? `${name}（${extra}）` : name
