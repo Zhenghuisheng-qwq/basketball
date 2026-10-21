@@ -76,9 +76,10 @@ defineExpose({ validation, homeAgg, awayAgg })
 
 function playerLabel(player: V4MatchSubmissionEligiblePlayer) {
   const no = player.jerseyNo ? `#${player.jerseyNo}` : ''
-  const name = player.playerName || player.gameId || t('accountEvents.common.unnamedPlayer')
-  const game = player.gameId && player.gameId !== name ? player.gameId : ''
-  const title = game ? `${name}（${game}）` : name
+  const game = player.gameId?.trim() || ''
+  const name = player.playerName?.trim() || ''
+  const nickname = name && name !== game && !name.startsWith('CNPA用户') ? name : ''
+  const title = game ? (nickname ? `${game}（${nickname}）` : game) : (name || t('accountEvents.common.unnamedPlayer'))
   return [no, title].filter(Boolean).join(' ')
 }
 

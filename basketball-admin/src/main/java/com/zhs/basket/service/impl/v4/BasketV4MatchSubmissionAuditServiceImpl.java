@@ -23,7 +23,9 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSubmissionAuditService {
@@ -44,6 +46,8 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
     private BasketEventTeamMapper eventTeamMapper;
     @Autowired
     private BasketEventPlayerMapper eventPlayerMapper;
+    @Autowired
+    private com.zhs.basket.support.v4.CurrentPlayerNameSupport currentPlayerNameSupport;
     @Autowired
     private IBasketV4StatsSettlementService statsSettlementService;
     @Autowired
@@ -101,15 +105,18 @@ public class BasketV4MatchSubmissionAuditServiceImpl implements IBasketV4MatchSu
             vo.setTeamStat(tsVo);
         }
         List<BasketMatchSubmissionPlayerStatVo> playerStats = new ArrayList<>();
+        Map<Long, Long> eventPlayerToSource = new java.util.HashMap<>();
         for (BasketMatchSubmissionPlayerStat ps : submissionPlayerStatMapper.selectBySubmissionId(submissionId)) {
             BasketMatchSubmissionPlayerStatVo psVo = new BasketMatchSubmissionPlayerStatVo();
             BeanUtils.copyProperties(ps, psVo);
             BasketEventPlayer ep = eventPlayerMapper.selectById(ps.getEventPlayerId());
             if (ep != null) {
                 psVo.setPlayerName(ep.getPlayerNameSnapshot());
+                currentPlayerNameSupport.rememberSource(eventPlayerToSource, ep);
             }
             playerStats.add(psVo);
         }
+        currentPlayerNameSupport.overlaySubmissionNames(playerStats, eventPlayerToSource);
         vo.setPlayerStats(playerStats);
         if (isWinnerFullMatch(submission.getSubmissionMode())) {
             for (BasketMatchSubmissionTeamStat ts : submissionTeamStatMapper.selectListBySubmissionId(submissionId)) {

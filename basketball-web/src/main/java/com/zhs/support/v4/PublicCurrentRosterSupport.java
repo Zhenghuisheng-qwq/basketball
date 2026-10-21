@@ -312,6 +312,45 @@ public class PublicCurrentRosterSupport {
      * 提交页球员下拉与球队页「本赛季阵容」使用同一套当前昵称和游戏 ID。
      * 报名快照里的 CNPA 用户号不再当作队长认人的名字。
      */
+    /** 与球队总览同一套：会员昵称优先，其次游戏昵称。昵称改了，这里下次读取就是新的。 */
+    public Map<Long, String> loadCurrentNames(Collection<BasketEventPlayer> players) {
+        Map<Long, String> result = new HashMap<>();
+        if (CollectionUtils.isEmpty(players)) {
+            return result;
+        }
+        Set<Long> sourceIds = new HashSet<>();
+        for (BasketEventPlayer player : players) {
+            if (player != null && player.getSourcePlayerId() != null) {
+                sourceIds.add(player.getSourcePlayerId());
+            }
+        }
+        Map<Long, BasketPlayerProfile> profiles = sourceIds.isEmpty() ? Map.of() : loadProfiles(sourceIds);
+        Set<Long> memberIds = new HashSet<>();
+        for (BasketPlayerProfile profile : profiles.values()) {
+            if (profile.getMemberId() != null) {
+                memberIds.add(profile.getMemberId());
+            }
+        }
+        Map<Long, BasketMemberProfile> members = loadMembers(memberIds);
+        for (BasketEventPlayer player : players) {
+            if (player == null || player.getId() == null || player.getSourcePlayerId() == null) {
+                continue;
+            }
+            BasketPlayerProfile profile = profiles.get(player.getSourcePlayerId());
+            if (profile == null) {
+                continue;
+            }
+            BasketMemberProfile member = profile.getMemberId() == null ? null : members.get(profile.getMemberId());
+            String name = member != null && StringUtils.hasText(member.getNickname())
+                    ? member.getNickname().trim()
+                    : profile.getGameNickname();
+            if (StringUtils.hasText(name)) {
+                result.put(player.getId(), name.trim());
+            }
+        }
+        return result;
+    }
+
     public Map<Long, String> loadCurrentAvatarUrls(Collection<BasketEventPlayer> players) {
         Map<Long, String> result = new HashMap<>();
         if (CollectionUtils.isEmpty(players)) {

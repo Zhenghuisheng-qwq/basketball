@@ -1032,6 +1032,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         }
         Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
         Map<Long, String> avatarUrls = currentRosterSupport.loadCurrentAvatarUrls(playerMap.values());
+        Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(playerMap.values());
         Map<Long, PlayerBoxTotals> playerBoxes = loadPlayerBoxTotals(divisionId);
         for (V4PublicPlayerStatItemResp vo : result) {
             CurrentTeamFace face = faces.get(vo.getEventTeamId());
@@ -1042,6 +1043,10 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setTeamLogoUrl(face.logoUrl());
             }
             vo.setAvatarUrl(avatarUrls.get(vo.getEventPlayerId()));
+            String currentName = currentNames.get(vo.getEventPlayerId());
+            if (StringUtils.hasText(currentName)) {
+                vo.setPlayerName(currentName);
+            }
             PlayerBoxTotals box = playerBoxes.get(vo.getEventPlayerId());
             if (box != null) {
                 vo.setFoul(box.foul);
@@ -1103,6 +1108,13 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 }
             }
             result.add(vo);
+        }
+        Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(playerMap.values());
+        for (V4PublicRankItemResp vo : result) {
+            String currentName = currentNames.get(vo.getEventPlayerId());
+            if (StringUtils.hasText(currentName)) {
+                vo.setPlayerName(currentName);
+            }
         }
         Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
         for (V4PublicRankItemResp vo : result) {
@@ -1836,8 +1848,13 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             result.add(vo);
         }
         Map<Long, String> avatarUrls = currentRosterSupport.loadCurrentAvatarUrls(playerMap.values());
+        Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(playerMap.values());
         for (V4PublicMatchPlayerStatItemResp vo : result) {
             vo.setAvatarUrl(avatarUrls.get(vo.getEventPlayerId()));
+            String currentName = currentNames.get(vo.getEventPlayerId());
+            if (StringUtils.hasText(currentName)) {
+                vo.setPlayerName(currentName);
+            }
         }
         return result;
     }

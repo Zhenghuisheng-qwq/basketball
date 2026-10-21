@@ -66,6 +66,8 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
     private BasketV4MatchPlayerStatDao matchPlayerStatDao;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private com.zhs.support.v4.PublicCurrentRosterSupport currentRosterSupport;
 
     @Override
     public IPage<PublicMatchItemVo> pageSchedule(Long seasonId, Integer currentPage, Integer pageSize,
@@ -461,6 +463,7 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
         }
         Map<Long, BasketEventPlayer> playerMap = loadEventPlayerMap(
                 stats.stream().map(BasketV4MatchPlayerStat::getEventPlayerId).collect(Collectors.toSet()));
+        Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(playerMap.values());
         List<PublicMatchPlayerStatVo> vos = new ArrayList<>(stats.size());
         for (BasketV4MatchPlayerStat stat : stats) {
             BasketEventPlayer player = playerMap.get(stat.getEventPlayerId());
@@ -469,7 +472,9 @@ public class BasketPublicMatchServiceImpl implements IBasketPublicMatchService {
             }
             PublicMatchPlayerStatVo vo = new PublicMatchPlayerStatVo();
             vo.setPlayerId(stat.getEventPlayerId());
-            vo.setPlayerName(player.getPlayerNameSnapshot());
+            String currentName = currentNames.get(player.getId());
+            vo.setPlayerName(org.springframework.util.StringUtils.hasText(currentName)
+                    ? currentName : player.getPlayerNameSnapshot());
             vo.setTeamId(stat.getEventTeamId());
             BasketEventTeam team = teamMap.get(stat.getEventTeamId());
             if (team != null) {

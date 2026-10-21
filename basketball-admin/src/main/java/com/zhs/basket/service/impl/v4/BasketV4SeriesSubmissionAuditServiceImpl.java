@@ -45,7 +45,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class BasketV4SeriesSubmissionAuditServiceImpl implements IBasketV4SeriesSubmissionAuditService {
@@ -70,6 +72,8 @@ public class BasketV4SeriesSubmissionAuditServiceImpl implements IBasketV4Series
     private BasketEventTeamMapper eventTeamMapper;
     @Autowired
     private BasketEventPlayerMapper eventPlayerMapper;
+    @Autowired
+    private com.zhs.basket.support.v4.CurrentPlayerNameSupport currentPlayerNameSupport;
     @Autowired
     private IBasketV4StatsSettlementService statsSettlementService;
     @Autowired
@@ -250,19 +254,24 @@ public class BasketV4SeriesSubmissionAuditServiceImpl implements IBasketV4Series
         }
         List<BasketMatchSubmissionPlayerStatVo> homePlayers = new ArrayList<>();
         List<BasketMatchSubmissionPlayerStatVo> awayPlayers = new ArrayList<>();
+        List<BasketMatchSubmissionPlayerStatVo> namedPlayers = new ArrayList<>();
+        Map<Long, Long> eventPlayerToSource = new java.util.HashMap<>();
         for (BasketMatchSubmissionPlayerStat ps : submissionPlayerStatMapper.selectBySubmissionId(submission.getId())) {
             BasketMatchSubmissionPlayerStatVo psVo = new BasketMatchSubmissionPlayerStatVo();
             BeanUtils.copyProperties(ps, psVo);
             BasketEventPlayer ep = eventPlayerMapper.selectById(ps.getEventPlayerId());
             if (ep != null) {
                 psVo.setPlayerName(ep.getPlayerNameSnapshot());
+                currentPlayerNameSupport.rememberSource(eventPlayerToSource, ep);
             }
+            namedPlayers.add(psVo);
             if (ps.getEventTeamId() != null && ps.getEventTeamId().equals(homeId)) {
                 homePlayers.add(psVo);
             } else {
                 awayPlayers.add(psVo);
             }
         }
+        currentPlayerNameSupport.overlaySubmissionNames(namedPlayers, eventPlayerToSource);
         vo.setHomePlayerStats(homePlayers);
         vo.setAwayPlayerStats(awayPlayers);
         List<BasketMatchSubmissionPeriodScoreVo> periods = new ArrayList<>();

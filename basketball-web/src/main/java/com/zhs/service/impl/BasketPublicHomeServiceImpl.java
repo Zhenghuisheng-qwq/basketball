@@ -90,6 +90,8 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
     private BasketEventTeamDao eventTeamDao;
     @Resource
     private V4MatchSeriesDisplaySupport matchSeriesDisplaySupport;
+    @Resource
+    private com.zhs.support.v4.PublicCurrentRosterSupport currentRosterSupport;
 
     @Override
     public PublicHomeVo getHome() {
@@ -337,13 +339,17 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
             }
         }
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(fileIds);
+        Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(playerMap.values());
         for (PublicHomePlayerLeaderVo leader : present) {
             BasketEventPlayer player = playerMap.get(leader.getEventPlayerId());
             if (player != null) {
                 if (leader.getSourcePlayerId() == null) {
                     leader.setSourcePlayerId(player.getSourcePlayerId());
                 }
-                if (!StringUtils.hasText(leader.getPlayerName())) {
+                String currentName = currentNames.get(player.getId());
+                if (org.springframework.util.StringUtils.hasText(currentName)) {
+                    leader.setPlayerName(currentName);
+                } else if (!StringUtils.hasText(leader.getPlayerName())) {
                     leader.setPlayerName(player.getPlayerNameSnapshot());
                 }
                 leader.setAvatarUrl(urlMap.get(player.getAvatarFileId()));

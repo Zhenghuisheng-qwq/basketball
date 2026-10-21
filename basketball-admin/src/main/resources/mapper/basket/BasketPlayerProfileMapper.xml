@@ -57,6 +57,15 @@
           )
         order by p.certified_time desc
     </select>
+    <select id="selectCurrentNicknames" resultType="com.zhs.basket.vo.EligibleCaptainVo">
+        select p.id as playerId,
+               nullif(trim(mp.nickname), '') as nickname,
+               nullif(trim(p.game_nickname), '') as gameNickname
+        from basket_player_profile p
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        where p.is_delete = 0 and p.id in
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
     <select id="selectAvatarFileIdByMemberId" resultType="java.lang.Long">
         select avatar_file_id from basket_member_profile
         where member_id = #{memberId} and is_delete = 0 limit 1

@@ -44,6 +44,7 @@ import com.zhs.service.IBasketPublicPlayerService;
 import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicHonorSupport;
 import com.zhs.service.support.BasketPublicSupport;
+import com.zhs.support.v4.PublicCurrentRosterSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -88,6 +89,8 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
     private BasketSeriesDao seriesDao;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private PublicCurrentRosterSupport currentRosterSupport;
     @Resource
     private BasketPublicHonorSupport honorSupport;
     @Resource
@@ -393,6 +396,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
 
         Map<Long, String> profileAvatarMap = publicSupport.loadPlayerAvatarUrlMap(Collections.singletonList(player));
         Map<Long, OfficialShootingTotals> shootingByEventPlayer = loadOfficialShootingTotals(eventPlayerIds, seasonId);
+        Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(eventPlayerMap.values());
 
         List<PublicPlayerSeasonStatVo> rows = new ArrayList<>();
         for (BasketPlayerStat stat : stats) {
@@ -433,9 +437,12 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             vo.setPlayerId(playerId);
             vo.setSourcePlayerId(playerId);
             vo.setEventPlayerId(eventPlayer.getId());
-            vo.setPlayerName(eventPlayer.getPlayerNameSnapshot() != null
+            String currentName = currentNames.get(eventPlayer.getId());
+            vo.setPlayerName(org.springframework.util.StringUtils.hasText(currentName)
+                    ? currentName
+                    : (eventPlayer.getPlayerNameSnapshot() != null
                     ? eventPlayer.getPlayerNameSnapshot()
-                    : publicSupport.resolveDisplayName(player));
+                    : publicSupport.resolveDisplayName(player)));
             String avatar = urlMap.get(eventPlayer.getAvatarFileId());
             if (avatar == null) {
                 avatar = com.zhs.support.MemberAvatarSupport.resolve(profileAvatarMap.get(player.getId()));
