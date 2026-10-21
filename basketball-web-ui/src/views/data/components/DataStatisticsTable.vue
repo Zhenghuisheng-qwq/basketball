@@ -34,6 +34,11 @@ const columns = computed(() =>
 
 const isAverage = computed(() => props.statisticType === 'average')
 
+function formatOptionalStat(value: number | null | undefined, average: boolean): string {
+  if (value === null || value === undefined) return '--'
+  return formatStatNumber(value, average)
+}
+
 function isTeamRow(row: TeamStatistics | PlayerStatistics): row is TeamStatistics {
   return 'teamAbbr' in row && !('playerName' in row)
 }
@@ -56,10 +61,6 @@ function handleLogoError(key: string) {
 
 function showLogo(url: string | undefined, key: string): boolean {
   return Boolean(url?.trim()) && !logoBroken(key)
-}
-
-function placeholderText(abbr: string): string {
-  return abbr.replace(/\s+/g, '').slice(0, 2).toUpperCase() || '--'
 }
 
 function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string {
@@ -109,6 +110,8 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
         return row.position || '--'
       case 'games':
         return String(row.games)
+      case 'fouls':
+        return formatOptionalStat(isAverage.value ? row.averageFouls : row.totalFouls, isAverage.value)
       case 'points':
         return formatStatNumber(isAverage.value ? row.averagePoints : row.totalPoints, isAverage.value)
       case 'rebounds':
@@ -183,20 +186,21 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
                   class="data-table__logo-img"
                   @error="handleLogoError(`team-${row.id}`)"
                 />
-                <div
-                  v-else
-                  class="data-table__logo-placeholder"
-                  :style="{ background: row.logoColor }"
-                  aria-hidden="true"
-                >
-                  {{ placeholderText(row.teamAbbr) }}
-                </div>
                 <span class="data-table__name">{{ row.teamName }}</span>
               </router-link>
             </template>
 
             <template v-else-if="column.key === 'player' && isPlayerRow(row)">
-              <PlayerLink :player-id="row.playerId" :player-name="row.playerName" tab="data" />
+              <div class="data-table__team">
+                <img
+                  v-if="showLogo(row.avatarUrl, `player-avatar-${row.id}`)"
+                  :src="row.avatarUrl"
+                  :alt="row.playerName"
+                  class="data-table__logo-img data-table__logo-img--avatar"
+                  @error="handleLogoError(`player-avatar-${row.id}`)"
+                />
+                <PlayerLink :player-id="row.playerId" :player-name="row.playerName" tab="data" />
+              </div>
             </template>
 
             <template v-else-if="column.key === 'team' && isPlayerRow(row)">
@@ -208,14 +212,6 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
                   class="data-table__logo-img"
                   @error="handleLogoError(`player-team-${row.id}`)"
                 />
-                <div
-                  v-else
-                  class="data-table__logo-placeholder"
-                  :style="{ background: row.logoColor }"
-                  aria-hidden="true"
-                >
-                  {{ placeholderText(row.teamAbbr) }}
-                </div>
                 <span class="data-table__name">{{ row.teamAbbr }}</span>
               </div>
             </template>
@@ -339,6 +335,11 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
   display: block;
   object-fit: contain;
   background: transparent;
+
+  &--avatar {
+    object-fit: cover;
+    border-radius: 50%;
+  }
 }
 
 .data-table__logo-placeholder {

@@ -224,6 +224,7 @@ export interface V4PublicMatchPlayerStatItem {
   eventPlayerId: string
   sourcePlayerId?: string
   playerName?: string
+  avatarUrl?: string
   eventTeamId?: string
   teamName?: string
   points?: number | null
@@ -438,6 +439,8 @@ export interface V4PublicPlayerStatItem {
   playerName?: string
   avatarUrl?: string
   teamName?: string
+  teamLogoUrl?: string
+  position?: string
   matchCount?: number
   points?: number
   avgPoints?: number

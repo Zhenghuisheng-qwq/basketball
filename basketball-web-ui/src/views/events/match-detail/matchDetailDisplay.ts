@@ -238,6 +238,12 @@ export function toBoxScoreRow(row: V4PublicMatchPlayerStatItem): BoxScoreRow {
   }
 }
 
+function countedFoul(teamFoul: number | null | undefined, summed: number | null): number | null {
+  if (!isPresent(teamFoul)) return summed
+  if (Number(teamFoul) === 0 && isPresent(summed) && summed > 0) return summed
+  return Number(teamFoul)
+}
+
 function sumNullable(values: Array<number | null>): number | null {
   let total = 0
   let seen = false
@@ -281,7 +287,7 @@ export function officialTeamTotal(
     assist: isPresent(teamStat.assist) ? Number(teamStat.assist) : summed.assist,
     steal: isPresent(teamStat.steal) ? Number(teamStat.steal) : summed.steal,
     block: isPresent(teamStat.block) ? Number(teamStat.block) : summed.block,
-    foul: isPresent(teamStat.foul) ? Number(teamStat.foul) : summed.foul,
+    foul: countedFoul(teamStat.foul, summed.foul),
     turnover: isPresent(teamStat.turnover) ? Number(teamStat.turnover) : summed.turnover,
     fieldGoalMade: isPresent(teamStat.fieldGoalMade) ? Number(teamStat.fieldGoalMade) : summed.fieldGoalMade,
     fieldGoalAttempt: isPresent(teamStat.fieldGoalAttempt) ? Number(teamStat.fieldGoalAttempt) : summed.fieldGoalAttempt,

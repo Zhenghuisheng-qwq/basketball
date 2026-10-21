@@ -25,6 +25,10 @@ public class V4PublicPlayerStatItemResp {
 
     private String teamName;
 
+    private String teamLogoUrl;
+
+    private String position;
+
     private Integer matchCount;
 
     private Integer points;
@@ -44,4 +48,18 @@ public class V4PublicPlayerStatItemResp {
     private Integer block;
 
     private Integer turnover;
+
+    private Integer foul;
+
+    private Integer fieldGoalMade;
+
+    private Integer fieldGoalAttempt;
+
+    private Integer threePointMade;
+
+    private Integer threePointAttempt;
+
+    private Integer freeThrowMade;
+
+    private Integer freeThrowAttempt;
 }

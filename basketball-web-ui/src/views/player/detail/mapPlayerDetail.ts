@@ -221,7 +221,7 @@ export function mapPublicPlayerSeasonStats(
     steals: toNumber(row.avgSteals ?? row.steals, 0),
     blocks: toNumber(row.avgBlocks ?? row.blocks, 0),
     turnovers: toNumber(row.avgTurnovers ?? row.turnovers, 0),
-    fouls: toNumber(row.fouls, 0),
+    fouls: toNumber(row.avgFouls ?? row.fouls, 0),
     fieldGoalMade: nullableInt(row.fieldGoalMade),
     fieldGoalAttempted: nullableInt(row.fieldGoalAttempt),
     threePointsMade: nullableInt(row.threePointMade),

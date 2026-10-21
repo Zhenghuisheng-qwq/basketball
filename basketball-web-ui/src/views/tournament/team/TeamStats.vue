@@ -14,7 +14,7 @@ import type {
 } from '@/types/team'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
-import { displayText, initials } from '@/utils/publicDisplay'
+import { displayText } from '@/utils/publicDisplay'
 import { mapTeamSeasonAverages } from '@/utils/publicTeamMap'
 import {
   PUBLIC_TEAM_PAGE_KEY,
@@ -120,16 +120,6 @@ const seasonStatItems = computed(() => {
     { key: 'fouls', label: t('publicPages.team.fouls'), value: seasonStats.value.fouls, tier: 'tertiary' as MetricTier },
     { key: 'turnovers', label: t('publicPages.team.turnovers'), value: seasonStats.value.turnovers, tier: 'tertiary' as MetricTier },
   ]
-})
-
-const rosterJerseyMap = computed(() => {
-  const map = new Map<string, string>()
-  for (const item of ctx.roster.value) {
-    if (item.playerId && item.jerseyNo) {
-      map.set(String(item.playerId), String(item.jerseyNo))
-    }
-  }
-  return map
 })
 
 const summaryPlayerStats = computed(() => {
@@ -340,13 +330,6 @@ function isSingleMax(row: TeamSingleMatchPlayerStat, col: (typeof singleNumericC
   return row[col] === maxValue
 }
 
-function getPlayerNumber(row: { playerId: string; nickname: string }): string {
-  const jersey = rosterJerseyMap.value.get(row.playerId)
-  if (jersey) return jersey.padStart(2, '0')
-  const match = row.nickname.match(/(\d+)$/)
-  return match ? match[1].padStart(2, '0') : initials(row.nickname)
-}
-
 function formatMetric(value: number | null | undefined): string {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return '—'
   return Number(value).toFixed(1)
@@ -511,9 +494,6 @@ function showSingleTable() {
                       :alt="row.nickname"
                       class="player-cell__avatar-img"
                     />
-                    <span v-else class="player-cell__avatar-placeholder">
-                      {{ getPlayerNumber(row) }}
-                    </span>
                   </div>
                   <PlayerLink
                     class="player-cell__name"
@@ -607,9 +587,6 @@ function showSingleTable() {
                         :alt="row.nickname"
                         class="player-cell__avatar-img"
                       />
-                      <span v-else class="player-cell__avatar-placeholder">
-                        {{ getPlayerNumber(row) }}
-                      </span>
                     </div>
                     <PlayerLink
                       class="player-cell__name"

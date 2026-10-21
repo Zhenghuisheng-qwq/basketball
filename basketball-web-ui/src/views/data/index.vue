@@ -104,12 +104,13 @@ function mapPlayerRow(item: V4PublicPlayerStatItem, index: number): PlayerStatis
     playerId: sourcePlayerId,
     rank: index + 1,
     playerName: displayText(item.playerName, t('publicPages.data.unknownPlayer')),
-    teamId: '',
+    avatarUrl: item.avatarUrl?.trim() || '',
+    teamId: String(item.eventTeamId || ''),
     teamName,
     teamAbbr: teamName.slice(0, 6),
-    teamLogoUrl: '',
+    teamLogoUrl: item.teamLogoUrl?.trim() || '',
     logoColor: '#333',
-    position: '--',
+    position: item.position?.trim() || '--',
     games,
     averagePoints: toNumber(item.avgPoints, 0),
     averageRebounds: toNumber(item.avgRebound, 0),
@@ -123,10 +124,11 @@ function mapPlayerRow(item: V4PublicPlayerStatItem, index: number): PlayerStatis
     totalSteals: toNumber(item.steal, 0),
     totalBlocks: toNumber(item.block, 0),
     totalTurnovers: toNumber(item.turnover, 0),
-    // 球员级投篮：正式 PlayerStat / MatchPlayerStat 无 FG/3P/FT 字段
-    fieldGoalPct: null,
-    threePointPct: null,
-    freeThrowPct: null,
+    averageFouls: item.foul != null ? avgOrZero(toNumber(item.foul, 0), games) : null,
+    totalFouls: item.foul != null ? toNumber(item.foul, 0) : null,
+    fieldGoalPct: teamShootingPct(item.fieldGoalMade, item.fieldGoalAttempt),
+    threePointPct: teamShootingPct(item.threePointMade, item.threePointAttempt),
+    freeThrowPct: teamShootingPct(item.freeThrowMade, item.freeThrowAttempt),
   }
 }
 

@@ -57,6 +57,7 @@ export interface PlayerStatistics {
   playerId: string
   rank: number
   playerName: string
+  avatarUrl: string
   teamId: string
   teamName: string
   teamAbbr: string
@@ -76,6 +77,8 @@ export interface PlayerStatistics {
   totalSteals: number
   totalBlocks: number
   totalTurnovers: number
+  averageFouls: number | null
+  totalFouls: number | null
   fieldGoalPct: number | null
   threePointPct: number | null
   freeThrowPct: number | null
@@ -137,6 +140,7 @@ export function getPlayerColumns(statisticType: StatisticType): TableColumn[] {
     { key: 'assists', label: dataColumn(isAverage ? 'avgAssists' : 'totalAssists'), width: '78px' },
     { key: 'steals', label: dataColumn(isAverage ? 'avgSteals' : 'totalSteals'), width: '78px' },
     { key: 'blocks', label: dataColumn(isAverage ? 'avgBlocks' : 'totalBlocks'), width: '78px' },
+    { key: 'fouls', label: dataColumn(isAverage ? 'avgFouls' : 'totalFouls'), width: '78px' },
     { key: 'fieldGoals', label: dataColumn('fgPct'), width: '72px' },
     { key: 'threePoints', label: dataColumn('tpPct'), width: '72px' },
     { key: 'freeThrows', label: dataColumn('ftPct'), width: '72px' },

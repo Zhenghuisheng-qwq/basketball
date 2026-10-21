@@ -881,8 +881,39 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         return totals;
     }
 
+    private Map<Long, PlayerBoxTotals> loadPlayerBoxTotals(Long divisionId) {
+        List<BasketV4Match> finished = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getDivisionId, divisionId)
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode())
+                .eq(BasketV4Match::getMatchStatus, MatchStatusEnum.FINISHED.getCode()));
+        if (CollectionUtils.isEmpty(finished)) {
+            return Collections.emptyMap();
+        }
+        Set<Long> matchIds = finished.stream().map(BasketV4Match::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (matchIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketV4MatchPlayerStat> rows = matchPlayerStatDao.selectList(new LambdaQueryWrapper<BasketV4MatchPlayerStat>()
+                .eq(BasketV4MatchPlayerStat::getDivisionId, divisionId)
+                .eq(BasketV4MatchPlayerStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .in(BasketV4MatchPlayerStat::getMatchId, matchIds));
+        Map<Long, PlayerBoxTotals> totals = new HashMap<>();
+        for (BasketV4MatchPlayerStat row : rows) {
+            if (row.getEventPlayerId() == null) {
+                continue;
+            }
+            totals.computeIfAbsent(row.getEventPlayerId(), PlayerBoxTotals::new).add(row);
+        }
+        return totals;
+    }
+
     private void applyTeamShooting(V4PublicTeamStatItemResp vo, TeamShootingTotals shooting) {
-        if (vo == null || shooting == null || !shooting.hasAttempt()) {
+        if (vo == null || shooting == null) {
+            return;
+        }
+        vo.setFoul(shooting.foul);
+        if (!shooting.hasAttempt()) {
             return;
         }
         vo.setFieldGoalMade(shooting.fieldGoalMade);
@@ -893,6 +924,29 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         vo.setFreeThrowAttempt(shooting.freeThrowAttempt);
     }
 
+    private static final class PlayerBoxTotals {
+        private int foul;
+        private int fieldGoalMade;
+        private int fieldGoalAttempt;
+        private int threePointMade;
+        private int threePointAttempt;
+        private int freeThrowMade;
+        private int freeThrowAttempt;
+
+        private PlayerBoxTotals(Long ignored) {
+        }
+
+        private void add(BasketV4MatchPlayerStat row) {
+            foul += row.getFoul() == null ? 0 : row.getFoul();
+            fieldGoalMade += row.getFieldGoalMade() == null ? 0 : row.getFieldGoalMade();
+            fieldGoalAttempt += row.getFieldGoalAttempt() == null ? 0 : row.getFieldGoalAttempt();
+            threePointMade += row.getThreePointMade() == null ? 0 : row.getThreePointMade();
+            threePointAttempt += row.getThreePointAttempt() == null ? 0 : row.getThreePointAttempt();
+            freeThrowMade += row.getFreeThrowMade() == null ? 0 : row.getFreeThrowMade();
+            freeThrowAttempt += row.getFreeThrowAttempt() == null ? 0 : row.getFreeThrowAttempt();
+        }
+    }
+
     private static final class TeamShootingTotals {
         private int fieldGoalMade;
         private int fieldGoalAttempt;
@@ -900,6 +954,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         private int threePointAttempt;
         private int freeThrowMade;
         private int freeThrowAttempt;
+        private int foul;
 
         private TeamShootingTotals(Long ignored) {
         }
@@ -911,6 +966,7 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             threePointAttempt += nvl(row.getThreePointAttempt());
             freeThrowMade += nvl(row.getFreeThrowMade());
             freeThrowAttempt += nvl(row.getFreeThrowAttempt());
+            foul += nvl(row.getFoul());
         }
 
         private boolean hasAttempt() {
@@ -942,6 +998,8 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 rows.stream().map(BasketPlayerStat::getEventPlayerId).collect(Collectors.toList()));
         Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(
                 rows.stream().map(BasketPlayerStat::getEventTeamId).collect(Collectors.toList()));
+        Map<Long, String> teamLogoUrls = publicSupport.loadAccessUrlMap(teamMap.values().stream()
+                .map(BasketEventTeam::getTeamLogoFileId).filter(Objects::nonNull).collect(Collectors.toSet()));
         List<V4PublicPlayerStatItemResp> result = new ArrayList<>();
         for (BasketPlayerStat row : rows) {
             V4PublicPlayerStatItemResp vo = new V4PublicPlayerStatItemResp();
@@ -961,21 +1019,39 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             if (player != null) {
                 vo.setSourcePlayerId(player.getSourcePlayerId());
                 vo.setPlayerName(player.getPlayerNameSnapshot());
+                if (StringUtils.hasText(player.getPosition())) {
+                    vo.setPosition(player.getPosition().trim());
+                }
             }
             BasketEventTeam team = teamMap.get(row.getEventTeamId());
             if (team != null) {
                 vo.setTeamName(team.getTeamNameSnapshot());
+                vo.setTeamLogoUrl(teamLogoUrls.get(team.getTeamLogoFileId()));
             }
             result.add(vo);
         }
         Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
         Map<Long, String> avatarUrls = currentRosterSupport.loadCurrentAvatarUrls(playerMap.values());
+        Map<Long, PlayerBoxTotals> playerBoxes = loadPlayerBoxTotals(divisionId);
         for (V4PublicPlayerStatItemResp vo : result) {
             CurrentTeamFace face = faces.get(vo.getEventTeamId());
             if (face != null && face.teamName() != null) {
                 vo.setTeamName(face.teamName());
             }
+            if (face != null && face.logoUrl() != null) {
+                vo.setTeamLogoUrl(face.logoUrl());
+            }
             vo.setAvatarUrl(avatarUrls.get(vo.getEventPlayerId()));
+            PlayerBoxTotals box = playerBoxes.get(vo.getEventPlayerId());
+            if (box != null) {
+                vo.setFoul(box.foul);
+                vo.setFieldGoalMade(box.fieldGoalMade);
+                vo.setFieldGoalAttempt(box.fieldGoalAttempt);
+                vo.setThreePointMade(box.threePointMade);
+                vo.setThreePointAttempt(box.threePointAttempt);
+                vo.setFreeThrowMade(box.freeThrowMade);
+                vo.setFreeThrowAttempt(box.freeThrowAttempt);
+            }
         }
         return result;
     }
@@ -1758,6 +1834,10 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setTeamName(team.getTeamNameSnapshot());
             }
             result.add(vo);
+        }
+        Map<Long, String> avatarUrls = currentRosterSupport.loadCurrentAvatarUrls(playerMap.values());
+        for (V4PublicMatchPlayerStatItemResp vo : result) {
+            vo.setAvatarUrl(avatarUrls.get(vo.getEventPlayerId()));
         }
         return result;
     }

@@ -18,6 +18,8 @@ public class V4PublicMatchPlayerStatItemResp {
 
     private String playerName;
 
+    private String avatarUrl;
+
     @JsonSerialize(using = ToStringSerializer.class)
     private Long eventTeamId;
 

@@ -64,6 +64,8 @@ export default {
       totalBlocks: 'Total BLK',
       avgTurnovers: 'Avg TOV',
       totalTurnovers: 'Total TOV',
+      avgFouls: 'Avg PF',
+      totalFouls: 'Total PF',
       rebounds: 'REB',
       assists: 'AST',
       fgPct: 'FG%',

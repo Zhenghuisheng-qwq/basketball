@@ -64,6 +64,8 @@ export default {
       totalBlocks: '总盖帽',
       avgTurnovers: '场均失误',
       totalTurnovers: '总失误',
+      avgFouls: '场均犯规',
+      totalFouls: '总犯规',
       rebounds: '篮板',
       assists: '助攻',
       fgPct: '投篮%',

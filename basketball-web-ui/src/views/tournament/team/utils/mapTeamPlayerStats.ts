@@ -41,7 +41,7 @@ export function mapV4PlayerStatToAverage(item: V4PublicPlayerStatItem): TeamPlay
   return {
     playerId: publicPlayerRouteId(item),
     nickname: displayText(item.playerName, translate('publicPages.team.unknownPlayer')),
-    avatar: '',
+    avatar: item.avatarUrl?.trim() || '',
     games,
     points: item.avgPoints != null ? toNumber(item.avgPoints, 0) : calculateAverage(item.points, games),
     rebounds: item.avgRebound != null ? toNumber(item.avgRebound, 0) : calculateAverage(item.rebound, games),
@@ -60,7 +60,7 @@ export function mapV4PlayerStatToTotal(item: V4PublicPlayerStatItem): TeamPlayer
   return {
     playerId: publicPlayerRouteId(item),
     nickname: displayText(item.playerName, translate('publicPages.team.unknownPlayer')),
-    avatar: '',
+    avatar: item.avatarUrl?.trim() || '',
     games: toNumber(item.matchCount, 0),
     points: toNumber(item.points, 0),
     rebounds: toNumber(item.rebound, 0),
@@ -79,7 +79,7 @@ function mapV4MatchPlayerStat(item: V4PublicMatchDetail['playerStats'][number]):
   return {
     playerId: publicPlayerRouteId(item),
     nickname: displayText(item.playerName, translate('publicPages.team.unknownPlayer')),
-    avatar: '',
+    avatar: item.avatarUrl?.trim() || '',
     grade: '—',
     points: toNumber(item.points, 0),
     rebounds: toNumber(item.rebound, 0),

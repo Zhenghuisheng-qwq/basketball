@@ -90,7 +90,7 @@ export function buildTeamCompareFromV4Stats(
         avgPerGame(right?.turnover, rightGames),
         false,
       ),
-      createBarStat('fouls', translate('publicPages.team.avgFouls'), 0, 0, false),
+      createBarStat('fouls', translate('publicPages.team.avgFouls'), avgPerGame(left?.foul, leftGames), avgPerGame(right?.foul, rightGames), false),
     ],
     shooting: [
       createBarStat('fgPct', translate('publicPages.team.fgRate'), shootingRate(left?.fieldGoalMade, left?.fieldGoalAttempt), shootingRate(right?.fieldGoalMade, right?.fieldGoalAttempt), true),

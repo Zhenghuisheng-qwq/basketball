@@ -43,6 +43,8 @@ public class V4PublicTeamStatItemResp {
 
     private Integer turnover;
 
+    private Integer foul;
+
     private Integer fieldGoalMade;
 
     private Integer fieldGoalAttempt;

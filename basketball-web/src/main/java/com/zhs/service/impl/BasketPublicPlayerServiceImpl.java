@@ -458,7 +458,12 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             vo.setAvgBlocks(avgOf(stat.getBlock(), games));
             vo.setAvgTurnovers(avgOf(stat.getTurnover(), games));
 
-            applyOfficialShooting(vo, shootingByEventPlayer.get(stat.getEventPlayerId()));
+            OfficialShootingTotals shooting = shootingByEventPlayer.get(stat.getEventPlayerId());
+            applyOfficialShooting(vo, shooting);
+            if (shooting != null) {
+                vo.setFouls(shooting.foul);
+                vo.setAvgFouls(avgOf(shooting.foul, games));
+            }
 
             rows.add(vo);
         }
@@ -555,6 +560,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         private int threePointAttempt;
         private int freeThrowMade;
         private int freeThrowAttempt;
+        private int foul;
 
         private void add(BasketV4MatchPlayerStat row) {
             fieldGoalMade += nvl(row.getFieldGoalMade());
@@ -563,6 +569,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             threePointAttempt += nvl(row.getThreePointAttempt());
             freeThrowMade += nvl(row.getFreeThrowMade());
             freeThrowAttempt += nvl(row.getFreeThrowAttempt());
+            foul += nvl(row.getFoul());
         }
 
         private static int nvl(Integer value) {
