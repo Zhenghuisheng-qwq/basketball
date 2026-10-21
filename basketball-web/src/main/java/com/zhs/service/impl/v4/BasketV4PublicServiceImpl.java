@@ -846,10 +846,80 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             result.add(vo);
         }
         Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
+        Map<Long, TeamShootingTotals> shooting = loadTeamShooting(divisionId);
         for (V4PublicTeamStatItemResp vo : result) {
             PublicCurrentRosterSupport.applyTeamStat(vo, faces.get(vo.getEventTeamId()));
+            applyTeamShooting(vo, shooting.get(vo.getEventTeamId()));
         }
         return result;
+    }
+
+    private Map<Long, TeamShootingTotals> loadTeamShooting(Long divisionId) {
+        List<BasketV4Match> finished = matchDao.selectList(new LambdaQueryWrapper<BasketV4Match>()
+                .eq(BasketV4Match::getDivisionId, divisionId)
+                .eq(BasketV4Match::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(BasketV4Match::getPublishStatus, MatchPublishStatusEnum.PUBLISHED.getCode())
+                .eq(BasketV4Match::getMatchStatus, MatchStatusEnum.FINISHED.getCode()));
+        if (CollectionUtils.isEmpty(finished)) {
+            return Collections.emptyMap();
+        }
+        Set<Long> matchIds = finished.stream().map(BasketV4Match::getId).filter(Objects::nonNull).collect(Collectors.toSet());
+        if (matchIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketV4MatchPlayerStat> rows = matchPlayerStatDao.selectList(new LambdaQueryWrapper<BasketV4MatchPlayerStat>()
+                .eq(BasketV4MatchPlayerStat::getDivisionId, divisionId)
+                .eq(BasketV4MatchPlayerStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .in(BasketV4MatchPlayerStat::getMatchId, matchIds));
+        Map<Long, TeamShootingTotals> totals = new HashMap<>();
+        for (BasketV4MatchPlayerStat row : rows) {
+            if (row.getEventTeamId() == null) {
+                continue;
+            }
+            totals.computeIfAbsent(row.getEventTeamId(), TeamShootingTotals::new).add(row);
+        }
+        return totals;
+    }
+
+    private void applyTeamShooting(V4PublicTeamStatItemResp vo, TeamShootingTotals shooting) {
+        if (vo == null || shooting == null || !shooting.hasAttempt()) {
+            return;
+        }
+        vo.setFieldGoalMade(shooting.fieldGoalMade);
+        vo.setFieldGoalAttempt(shooting.fieldGoalAttempt);
+        vo.setThreePointMade(shooting.threePointMade);
+        vo.setThreePointAttempt(shooting.threePointAttempt);
+        vo.setFreeThrowMade(shooting.freeThrowMade);
+        vo.setFreeThrowAttempt(shooting.freeThrowAttempt);
+    }
+
+    private static final class TeamShootingTotals {
+        private int fieldGoalMade;
+        private int fieldGoalAttempt;
+        private int threePointMade;
+        private int threePointAttempt;
+        private int freeThrowMade;
+        private int freeThrowAttempt;
+
+        private TeamShootingTotals(Long ignored) {
+        }
+
+        private void add(BasketV4MatchPlayerStat row) {
+            fieldGoalMade += nvl(row.getFieldGoalMade());
+            fieldGoalAttempt += nvl(row.getFieldGoalAttempt());
+            threePointMade += nvl(row.getThreePointMade());
+            threePointAttempt += nvl(row.getThreePointAttempt());
+            freeThrowMade += nvl(row.getFreeThrowMade());
+            freeThrowAttempt += nvl(row.getFreeThrowAttempt());
+        }
+
+        private boolean hasAttempt() {
+            return fieldGoalAttempt > 0 || threePointAttempt > 0 || freeThrowAttempt > 0;
+        }
+
+        private static int nvl(Integer value) {
+            return value == null ? 0 : value;
+        }
     }
 
     @Override
@@ -899,11 +969,13 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             result.add(vo);
         }
         Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
+        Map<Long, String> avatarUrls = currentRosterSupport.loadCurrentAvatarUrls(playerMap.values());
         for (V4PublicPlayerStatItemResp vo : result) {
             CurrentTeamFace face = faces.get(vo.getEventTeamId());
             if (face != null && face.teamName() != null) {
                 vo.setTeamName(face.teamName());
             }
+            vo.setAvatarUrl(avatarUrls.get(vo.getEventPlayerId()));
         }
         return result;
     }

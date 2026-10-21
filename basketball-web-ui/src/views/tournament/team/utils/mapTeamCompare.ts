@@ -39,6 +39,12 @@ function avgPerGame(total: unknown, games: number): number {
   return toNumber(total, 0) / games
 }
 
+function shootingRate(made?: number | null, attempt?: number | null): number {
+  const attempts = toNumber(attempt, 0)
+  if (attempts <= 0) return 0
+  return (toNumber(made, 0) / attempts) * 100
+}
+
 export function buildTeamCompareFromV4Stats(
   left?: V4PublicTeamStatItem | null,
   right?: V4PublicTeamStatItem | null,
@@ -87,9 +93,9 @@ export function buildTeamCompareFromV4Stats(
       createBarStat('fouls', translate('publicPages.team.avgFouls'), 0, 0, false),
     ],
     shooting: [
-      createBarStat('fgPct', translate('publicPages.team.fgRate'), 0, 0, true),
-      createBarStat('tpPct', translate('publicPages.team.tpRate'), 0, 0, true),
-      createBarStat('ftPct', translate('publicPages.team.ftRate'), 0, 0, true),
+      createBarStat('fgPct', translate('publicPages.team.fgRate'), shootingRate(left?.fieldGoalMade, left?.fieldGoalAttempt), shootingRate(right?.fieldGoalMade, right?.fieldGoalAttempt), true),
+      createBarStat('tpPct', translate('publicPages.team.tpRate'), shootingRate(left?.threePointMade, left?.threePointAttempt), shootingRate(right?.threePointMade, right?.threePointAttempt), true),
+      createBarStat('ftPct', translate('publicPages.team.ftRate'), shootingRate(left?.freeThrowMade, left?.freeThrowAttempt), shootingRate(right?.freeThrowMade, right?.freeThrowAttempt), true),
     ],
   }
 }

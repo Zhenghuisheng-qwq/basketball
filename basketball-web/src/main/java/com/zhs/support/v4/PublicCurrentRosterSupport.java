@@ -312,6 +312,61 @@ public class PublicCurrentRosterSupport {
      * 提交页球员下拉与球队页「本赛季阵容」使用同一套当前昵称和游戏 ID。
      * 报名快照里的 CNPA 用户号不再当作队长认人的名字。
      */
+    public Map<Long, String> loadCurrentAvatarUrls(Collection<BasketEventPlayer> players) {
+        Map<Long, String> result = new HashMap<>();
+        if (CollectionUtils.isEmpty(players)) {
+            return result;
+        }
+        Set<Long> sourceIds = new HashSet<>();
+        Set<Long> fileIds = new HashSet<>();
+        for (BasketEventPlayer player : players) {
+            if (player == null) {
+                continue;
+            }
+            if (player.getSourcePlayerId() != null) {
+                sourceIds.add(player.getSourcePlayerId());
+            }
+            if (player.getAvatarFileId() != null) {
+                fileIds.add(player.getAvatarFileId());
+            }
+        }
+        Map<Long, BasketPlayerProfile> profiles = sourceIds.isEmpty() ? Map.of() : loadProfiles(sourceIds);
+        Set<Long> memberIds = new HashSet<>();
+        for (BasketPlayerProfile profile : profiles.values()) {
+            if (profile.getMemberId() != null) {
+                memberIds.add(profile.getMemberId());
+            }
+        }
+        Map<Long, BasketMemberProfile> members = loadMembers(memberIds);
+        for (BasketMemberProfile member : members.values()) {
+            if (member.getAvatarFileId() != null) {
+                fileIds.add(member.getAvatarFileId());
+            }
+        }
+        Map<Long, String> urls = publicSupport.loadAccessUrlMap(fileIds);
+        for (BasketEventPlayer player : players) {
+            if (player == null || player.getId() == null) {
+                continue;
+            }
+            Long fileId = null;
+            BasketPlayerProfile profile = player.getSourcePlayerId() == null ? null : profiles.get(player.getSourcePlayerId());
+            if (profile != null && profile.getMemberId() != null) {
+                BasketMemberProfile member = members.get(profile.getMemberId());
+                if (member != null) {
+                    fileId = member.getAvatarFileId();
+                }
+            }
+            if (fileId == null) {
+                fileId = player.getAvatarFileId();
+            }
+            String url = fileId == null ? null : urls.get(fileId);
+            if (StringUtils.hasText(url)) {
+                result.put(player.getId(), url.trim());
+            }
+        }
+        return result;
+    }
+
     public void applyEligibleNames(List<BasketEventPlayer> players, List<V4MatchSubmissionEligiblePlayerResp> items) {
         if (CollectionUtils.isEmpty(players) || CollectionUtils.isEmpty(items)) {
             return;

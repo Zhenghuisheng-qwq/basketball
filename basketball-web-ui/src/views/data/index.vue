@@ -49,6 +49,12 @@ function avgOrZero(totalValue: number, games: number) {
   return games > 0 ? totalValue / games : 0
 }
 
+function teamShootingPct(made?: number | null, attempt?: number | null): number | null {
+  const attempts = toNumber(attempt, 0)
+  if (attempts <= 0) return null
+  return (toNumber(made, 0) / attempts) * 100
+}
+
 function mapTeamRow(item: V4PublicTeamStatItem, index: number): TeamStatistics {
   const name = displayText(item.teamName, t('publicPages.data.unknownTeam'))
   const games = toNumber(item.matchCount, 0)
@@ -83,10 +89,9 @@ function mapTeamRow(item: V4PublicTeamStatItem, index: number): TeamStatistics {
     totalSteals: steal,
     totalBlocks: block,
     totalTurnovers: turnover,
-    // 球队级投篮：当前 TeamStat 无 FG/3P/FT 正式字段
-    fieldGoalPct: null,
-    threePointPct: null,
-    freeThrowPct: null,
+    fieldGoalPct: teamShootingPct(item.fieldGoalMade, item.fieldGoalAttempt),
+    threePointPct: teamShootingPct(item.threePointMade, item.threePointAttempt),
+    freeThrowPct: teamShootingPct(item.freeThrowMade, item.freeThrowAttempt),
   }
 }
 

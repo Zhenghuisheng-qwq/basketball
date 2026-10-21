@@ -421,6 +421,12 @@ export interface V4PublicTeamStatItem {
   steal?: number
   block?: number
   turnover?: number
+  fieldGoalMade?: number
+  fieldGoalAttempt?: number
+  threePointMade?: number
+  threePointAttempt?: number
+  freeThrowMade?: number
+  freeThrowAttempt?: number
   /** 当前 V4 Public team-stat VO 未下发 */
   foul?: number | null
 }
@@ -430,6 +436,7 @@ export interface V4PublicPlayerStatItem {
   sourcePlayerId?: string
   eventTeamId?: string
   playerName?: string
+  avatarUrl?: string
   teamName?: string
   matchCount?: number
   points?: number

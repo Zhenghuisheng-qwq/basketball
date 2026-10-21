@@ -198,12 +198,6 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
         }
         FullMatchSubmissionRules.assertValidSeriesScore(nvl(series.getBestOf()),
                 header.getDeclaredHomeWinCount(), header.getDeclaredAwayWinCount());
-        Long declaredWinner = FullMatchSubmissionRules.declaredWinner(
-                series.getHomeEventTeamId(), series.getAwayEventTeamId(),
-                header.getDeclaredHomeWinCount(), header.getDeclaredAwayWinCount());
-        if (!side.eventTeamId.equals(declaredWinner)) {
-            throw new ServiceException("系列赛数据应由获胜球队队长提交。");
-        }
         int actual = FullMatchSubmissionRules.actualGameCount(nvl(series.getBestOf()),
                 header.getDeclaredHomeWinCount(), header.getDeclaredAwayWinCount());
         List<BasketV4Match> games = listSeriesGames(series.getId());

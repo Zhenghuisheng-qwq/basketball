@@ -232,12 +232,6 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         if (fullMatchSubmissionSupport.isFullMatch(submission)) {
             BasketV4Match match = requirePublishedMatch(submission.getMatchId());
             fullMatchSubmissionSupport.validatePersistedComplete(submission, match, "本场");
-            Long winnerId = FullMatchSubmissionRules.declaredWinner(
-                    match.getHomeEventTeamId(), match.getAwayEventTeamId(),
-                    submission.getHomeScore(), submission.getAwayScore());
-            if (!submission.getSubmitEventTeamId().equals(winnerId)) {
-                throw new ServiceException("本场数据应由获胜球队队长提交。");
-            }
         }
         Date now = new Date();
         submission.setSubmissionStatus(SubmissionStatusEnum.PENDING_REVIEW.getCode());

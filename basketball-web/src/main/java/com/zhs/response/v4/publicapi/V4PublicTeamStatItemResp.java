@@ -42,4 +42,16 @@ public class V4PublicTeamStatItemResp {
     private Integer block;
 
     private Integer turnover;
+
+    private Integer fieldGoalMade;
+
+    private Integer fieldGoalAttempt;
+
+    private Integer threePointMade;
+
+    private Integer threePointAttempt;
+
+    private Integer freeThrowMade;
+
+    private Integer freeThrowAttempt;
 }

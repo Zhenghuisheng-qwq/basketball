@@ -104,31 +104,83 @@
           <el-descriptions-item label="备注" :span="2">{{ detail.submitRemark || '-' }}</el-descriptions-item>
           <el-descriptions-item v-if="detail.rejectReason" label="驳回原因" :span="2">{{ detail.rejectReason }}</el-descriptions-item>
         </el-descriptions>
-        <el-divider content-position="left">本方球队统计</el-divider>
-        <el-descriptions v-if="detail.teamStat" :column="4" border size="small">
-          <el-descriptions-item label="得分">{{ detail.teamStat.score }}</el-descriptions-item>
-          <el-descriptions-item label="篮板">{{ detail.teamStat.rebound }}</el-descriptions-item>
-          <el-descriptions-item label="助攻">{{ detail.teamStat.assist }}</el-descriptions-item>
-          <el-descriptions-item label="抢断">{{ detail.teamStat.steal }}</el-descriptions-item>
-          <el-descriptions-item label="盖帽">{{ detail.teamStat.block }}</el-descriptions-item>
-          <el-descriptions-item label="失误">{{ detail.teamStat.turnover }}</el-descriptions-item>
-          <el-descriptions-item label="犯规">{{ detail.teamStat.foul }}</el-descriptions-item>
-          <el-descriptions-item label="FGM/FGA">{{ detail.teamStat.fieldGoalMade ?? 0 }}/{{ detail.teamStat.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
-          <el-descriptions-item label="3PM/3PA">{{ detail.teamStat.threePointMade ?? 0 }}/{{ detail.teamStat.threePointAttempt ?? 0 }}</el-descriptions-item>
-          <el-descriptions-item label="FTM/FTA">{{ detail.teamStat.freeThrowMade ?? 0 }}/{{ detail.teamStat.freeThrowAttempt ?? 0 }}</el-descriptions-item>
-        </el-descriptions>
+        <template v-if="splitRoster">
+          <el-divider content-position="left">{{ detail.homeTeamName || '主队' }} 球队统计</el-divider>
+          <el-descriptions v-if="detail.homeTeamStat" :column="4" border size="small">
+            <el-descriptions-item label="得分">{{ detail.homeTeamStat.score }}</el-descriptions-item>
+            <el-descriptions-item label="篮板">{{ detail.homeTeamStat.rebound }}</el-descriptions-item>
+            <el-descriptions-item label="助攻">{{ detail.homeTeamStat.assist }}</el-descriptions-item>
+            <el-descriptions-item label="抢断">{{ detail.homeTeamStat.steal }}</el-descriptions-item>
+            <el-descriptions-item label="盖帽">{{ detail.homeTeamStat.block }}</el-descriptions-item>
+            <el-descriptions-item label="失误">{{ detail.homeTeamStat.turnover }}</el-descriptions-item>
+            <el-descriptions-item label="犯规">{{ detail.homeTeamStat.foul }}</el-descriptions-item>
+            <el-descriptions-item label="FGM/FGA">{{ detail.homeTeamStat.fieldGoalMade ?? 0 }}/{{ detail.homeTeamStat.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="3PM/3PA">{{ detail.homeTeamStat.threePointMade ?? 0 }}/{{ detail.homeTeamStat.threePointAttempt ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="FTM/FTA">{{ detail.homeTeamStat.freeThrowMade ?? 0 }}/{{ detail.homeTeamStat.freeThrowAttempt ?? 0 }}</el-descriptions-item>
+          </el-descriptions>
+          <el-divider content-position="left">{{ detail.homeTeamName || '主队' }} 球员统计</el-divider>
+          <el-table :data="detail.homePlayerStats || []" size="small" border>
+            <el-table-column label="球员" prop="playerName" min-width="120" />
+            <el-table-column label="PTS" prop="points" width="70" />
+            <el-table-column label="REB" prop="rebound" width="70" />
+            <el-table-column label="AST" prop="assist" width="70" />
+            <el-table-column label="STL" prop="steal" width="70" />
+            <el-table-column label="BLK" prop="block" width="70" />
+            <el-table-column label="FLS" prop="foul" width="70" />
+            <el-table-column label="TO" prop="turnover" width="70" />
+          </el-table>
+          <el-divider content-position="left">{{ detail.awayTeamName || '客队' }} 球队统计</el-divider>
+          <el-descriptions v-if="detail.awayTeamStat" :column="4" border size="small">
+            <el-descriptions-item label="得分">{{ detail.awayTeamStat.score }}</el-descriptions-item>
+            <el-descriptions-item label="篮板">{{ detail.awayTeamStat.rebound }}</el-descriptions-item>
+            <el-descriptions-item label="助攻">{{ detail.awayTeamStat.assist }}</el-descriptions-item>
+            <el-descriptions-item label="抢断">{{ detail.awayTeamStat.steal }}</el-descriptions-item>
+            <el-descriptions-item label="盖帽">{{ detail.awayTeamStat.block }}</el-descriptions-item>
+            <el-descriptions-item label="失误">{{ detail.awayTeamStat.turnover }}</el-descriptions-item>
+            <el-descriptions-item label="犯规">{{ detail.awayTeamStat.foul }}</el-descriptions-item>
+            <el-descriptions-item label="FGM/FGA">{{ detail.awayTeamStat.fieldGoalMade ?? 0 }}/{{ detail.awayTeamStat.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="3PM/3PA">{{ detail.awayTeamStat.threePointMade ?? 0 }}/{{ detail.awayTeamStat.threePointAttempt ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="FTM/FTA">{{ detail.awayTeamStat.freeThrowMade ?? 0 }}/{{ detail.awayTeamStat.freeThrowAttempt ?? 0 }}</el-descriptions-item>
+          </el-descriptions>
+          <el-divider content-position="left">{{ detail.awayTeamName || '客队' }} 球员统计</el-divider>
+          <el-table :data="detail.awayPlayerStats || []" size="small" border>
+            <el-table-column label="球员" prop="playerName" min-width="120" />
+            <el-table-column label="PTS" prop="points" width="70" />
+            <el-table-column label="REB" prop="rebound" width="70" />
+            <el-table-column label="AST" prop="assist" width="70" />
+            <el-table-column label="STL" prop="steal" width="70" />
+            <el-table-column label="BLK" prop="block" width="70" />
+            <el-table-column label="FLS" prop="foul" width="70" />
+            <el-table-column label="TO" prop="turnover" width="70" />
+          </el-table>
+        </template>
+        <template v-else>
+          <el-divider content-position="left">本方球队统计</el-divider>
+          <el-descriptions v-if="detail.teamStat" :column="4" border size="small">
+            <el-descriptions-item label="得分">{{ detail.teamStat.score }}</el-descriptions-item>
+            <el-descriptions-item label="篮板">{{ detail.teamStat.rebound }}</el-descriptions-item>
+            <el-descriptions-item label="助攻">{{ detail.teamStat.assist }}</el-descriptions-item>
+            <el-descriptions-item label="抢断">{{ detail.teamStat.steal }}</el-descriptions-item>
+            <el-descriptions-item label="盖帽">{{ detail.teamStat.block }}</el-descriptions-item>
+            <el-descriptions-item label="失误">{{ detail.teamStat.turnover }}</el-descriptions-item>
+            <el-descriptions-item label="犯规">{{ detail.teamStat.foul }}</el-descriptions-item>
+            <el-descriptions-item label="FGM/FGA">{{ detail.teamStat.fieldGoalMade ?? 0 }}/{{ detail.teamStat.fieldGoalAttempt ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="3PM/3PA">{{ detail.teamStat.threePointMade ?? 0 }}/{{ detail.teamStat.threePointAttempt ?? 0 }}</el-descriptions-item>
+            <el-descriptions-item label="FTM/FTA">{{ detail.teamStat.freeThrowMade ?? 0 }}/{{ detail.teamStat.freeThrowAttempt ?? 0 }}</el-descriptions-item>
+          </el-descriptions>
+          <el-divider content-position="left">本方球员统计</el-divider>
+          <el-table :data="detail.playerStats || []" size="small" border>
+            <el-table-column label="球员" prop="playerName" min-width="120" />
+            <el-table-column label="PTS" prop="points" width="70" />
+            <el-table-column label="REB" prop="rebound" width="70" />
+            <el-table-column label="AST" prop="assist" width="70" />
+            <el-table-column label="STL" prop="steal" width="70" />
+            <el-table-column label="BLK" prop="block" width="70" />
+            <el-table-column label="FLS" prop="foul" width="70" />
+            <el-table-column label="TO" prop="turnover" width="70" />
+          </el-table>
+        </template>
         <p v-if="detail.periodScores?.length" class="mb8">节比分：{{ detail.periodScores.map(p => `Q${p.periodNo} ${p.homeScore}:${p.awayScore}`).join(' / ') }}</p>
-        <el-divider content-position="left">本方球员统计</el-divider>
-        <el-table :data="detail.playerStats || []" size="small" border>
-          <el-table-column label="球员" prop="playerName" min-width="120" />
-          <el-table-column label="PTS" prop="points" width="70" />
-          <el-table-column label="REB" prop="rebound" width="70" />
-          <el-table-column label="AST" prop="assist" width="70" />
-          <el-table-column label="STL" prop="steal" width="70" />
-          <el-table-column label="BLK" prop="block" width="70" />
-          <el-table-column label="FLS" prop="foul" width="70" />
-          <el-table-column label="TO" prop="turnover" width="70" />
-        </el-table>
         <el-divider content-position="left">比赛截图</el-divider>
         <div v-if="detail.materials?.length" class="audit-shots">
           <template v-for="item in detail.materials" :key="item.fileId">
@@ -292,7 +344,7 @@
 </template>
 
 <script setup lang="ts" name="CnpaEventV4MatchSubmissionAudit">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   approveV4MatchSubmissionAudit,
@@ -337,6 +389,7 @@ const dataList = ref<V4MatchSubmissionAuditListVo[]>([])
 const queryParams = reactive({ pageNum: 1, pageSize: 10, seasonId: undefined, divisionId: undefined, matchId: undefined, submissionStatus: undefined, teamName: undefined, matchNo: undefined })
 const detailOpen = ref(false)
 const detail = ref<V4MatchSubmissionAuditDetailVo | null>(null)
+const splitRoster = computed(() => Boolean(detail.value?.homePlayerStats?.length || detail.value?.awayPlayerStats?.length))
 const previewVisible = ref(false)
 const previewIndex = ref(0)
 const materialUrls = ref<Record<string, string>>({})

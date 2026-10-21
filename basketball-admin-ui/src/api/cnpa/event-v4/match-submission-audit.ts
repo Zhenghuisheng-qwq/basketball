@@ -64,6 +64,11 @@ export interface V4MatchSubmissionAuditDetailVo {
   rejectReason?: string
   teamStat?: Record<string, number>
   playerStats?: Array<Record<string, unknown>>
+  homeTeamStat?: Record<string, number>
+  awayTeamStat?: Record<string, number>
+  homePlayerStats?: Array<Record<string, unknown>>
+  awayPlayerStats?: Array<Record<string, unknown>>
+  periodScores?: Array<{ periodNo: number; homeScore?: number; awayScore?: number }>
   materials?: Array<{ fileId: number; fileName?: string; materialType?: string; accessUrl?: string }>
   historyVersions?: Array<{ submissionId: number; versionNo: number; submissionStatus: string; submitTime: string }>
   seriesContext?: BasketMatchSeriesDetailVo | null
