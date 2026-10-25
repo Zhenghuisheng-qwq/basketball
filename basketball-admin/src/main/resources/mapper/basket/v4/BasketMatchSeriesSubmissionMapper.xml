@@ -81,6 +81,19 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <delete id="deleteTombstone">
+        delete from basket_match_series_submission
+        where match_series_id = #{matchSeriesId}
+          and version_no = #{versionNo}
+          and is_delete = 1
+    </delete>
+
+    <update id="softDelete">
+        update basket_match_series_submission
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
     <resultMap type="com.zhs.basket.vo.v4.BasketSeriesSubmissionAuditListVo" id="AuditListVoResult">
         <id property="seriesSubmissionId" column="series_submission_id" />
         <result property="matchSeriesId" column="match_series_id" />

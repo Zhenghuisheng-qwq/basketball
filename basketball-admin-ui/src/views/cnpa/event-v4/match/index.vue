@@ -434,9 +434,9 @@ function canReopenSubmission(row: any) {
 const reopenHint = computed(() => {
   const row = reopenRow.value
   if (row?.seriesId || (row?.bestOf && row.bestOf > 1)) {
-    return '这场属于系列赛。退回会撤销整个系列赛已经生效的比分、球员明细和积分。队长原来填的内容还在，改完要重新提交，再由后台审核。你在后台改过的大比分也会一起撤销。下一轮已经开打时不能退回。'
+    return '这场属于系列赛。退回会删掉整个系列赛里队长已通过的提交，并撤销已经生效的比分、球员明细和积分。队长再打开是空白表，需要重新填写后提交。下一轮已经开打时不能退回。'
   }
-  return '退回后，本场正式比分、球员明细和积分会撤销。队长原来填的内容还在，可以修改每个球员的数据后重新提交。你在后台改过的大比分也会一起撤销。'
+  return '退回会删掉队长这份已通过的提交，并撤销本场正式比分、球员明细和积分。队长再打开是空白表，需要重新填写后提交。'
 })
 
 function canForfeitRow(row: any) {
@@ -647,7 +647,7 @@ function submitReopen() {
   }
   const series = Boolean(reopenRow.value.seriesId || (reopenRow.value.bestOf && reopenRow.value.bestOf > 1))
   ElMessageBox.confirm(
-    series ? '确认退回整个系列赛？正式结果会撤销，队长可以改完再交。' : '确认退回本场？正式结果会撤销，队长可以改完再交。',
+    series ? '确认删除整个系列赛的队长提交？正式结果会一起撤销，队长需要重新填写。' : '确认删除本场队长提交？正式结果会一起撤销，队长需要重新填写。',
     '二次确认',
     { type: 'warning' }
   ).then(() => {
@@ -656,7 +656,7 @@ function submitReopen() {
       matchId: reopenRow.value.id,
       reason: reopenReason.value.trim()
     }).then(() => {
-      ElMessage.success('已退回。请让队长修改后重新提交，再审核通过。')
+      ElMessage.success('已删除原提交。请让队长重新填写并提交，再审核通过。')
       reopenVisible.value = false
       loadList()
     }).finally(() => {

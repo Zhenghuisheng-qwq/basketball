@@ -23,6 +23,8 @@ public interface BasketMatchSubmissionMapper {
     int updateById(BasketMatchSubmission entity);
     int softDelete(@Param("id") Long id);
 
+    int deleteTombstone(@Param("matchId") Long matchId, @Param("submitEventTeamId") Long submitEventTeamId, @Param("versionNo") Integer versionNo);
+
     int countByScheduleBatchId(@Param("scheduleBatchId") Long scheduleBatchId);
 
     int countByDivisionId(@Param("divisionId") Long divisionId);

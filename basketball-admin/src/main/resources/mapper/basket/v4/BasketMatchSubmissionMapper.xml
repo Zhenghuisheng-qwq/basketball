@@ -89,6 +89,14 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <delete id="deleteTombstone">
+        delete from basket_match_submission
+        where match_id = #{matchId}
+          and submit_event_team_id = #{submitEventTeamId}
+          and version_no = #{versionNo}
+          and is_delete = 1
+    </delete>
+
     <select id="selectLatestByMatchAndTeam" resultMap="BasketMatchSubmissionResult">
         select <include refid="BaseColumns" /> from basket_match_submission
         where match_id = #{matchId} and submit_event_team_id = #{submitEventTeamId} and is_delete = 0

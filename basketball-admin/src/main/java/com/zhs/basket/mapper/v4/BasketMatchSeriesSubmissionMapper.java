@@ -14,4 +14,6 @@ public interface BasketMatchSeriesSubmissionMapper {
     List<BasketSeriesSubmissionAuditListVo> selectAuditVoList(BasketSeriesSubmissionAuditQuery query);
     int insert(BasketMatchSeriesSubmission entity);
     int updateById(BasketMatchSeriesSubmission entity);
+    int deleteTombstone(@Param("matchSeriesId") Long matchSeriesId, @Param("versionNo") Integer versionNo);
+    int softDelete(@Param("id") Long id);
 }

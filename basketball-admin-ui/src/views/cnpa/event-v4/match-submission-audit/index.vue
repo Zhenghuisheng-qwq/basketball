@@ -563,7 +563,7 @@ function handleSeriesApprove(row: V4SeriesSubmissionAuditListVo) {
 
 function handleReopenMatch(row: V4MatchSubmissionAuditListVo) {
   ElMessageBox.prompt(
-    '退回后本场正式比分和球员明细会撤销。若这场属于系列赛，整个系列赛会一起退回。队长原来填的内容还在，改完重新提交后再审核。',
+    '会删掉队长这份已通过的提交，正式比分和球员明细一起撤销。若属于系列赛，整个系列赛的提交都会删掉。队长需要重新填写后再交。',
     '退回重传',
     { inputType: 'textarea', inputPlaceholder: '退回原因，必填', confirmButtonText: '确认退回', type: 'warning' }
   ).then(({ value }) => {
@@ -574,7 +574,7 @@ function handleReopenMatch(row: V4MatchSubmissionAuditListVo) {
     }
     return reopenV4ApprovedSubmission({ matchId: row.matchId, reason })
   }).then(() => {
-    ElMessage.success('已退回，队长可以修改后重新提交')
+    ElMessage.success('已删除原提交，队长可以重新填写')
     getList()
     getSeriesList()
   }).catch(() => { /* 取消或原因不足 */ })
@@ -582,7 +582,7 @@ function handleReopenMatch(row: V4MatchSubmissionAuditListVo) {
 
 function handleReopenSeries(row: V4SeriesSubmissionAuditListVo) {
   ElMessageBox.prompt(
-    '将撤销整个系列赛已经生效的比分、球员明细和积分。队长原来填的内容还在，改完重新提交后再审核。后台改过的大比分也会一起撤销。',
+    '会删掉整个系列赛里队长已通过的提交，正式比分、球员明细和积分一起撤销。队长需要重新填写后再交。',
     '退回系列赛重传',
     { inputType: 'textarea', inputPlaceholder: '退回原因，必填', confirmButtonText: '确认退回', type: 'warning' }
   ).then(({ value }) => {
@@ -593,7 +593,7 @@ function handleReopenSeries(row: V4SeriesSubmissionAuditListVo) {
     }
     return reopenV4ApprovedSubmission({ seriesSubmissionId: row.seriesSubmissionId, reason })
   }).then(() => {
-    ElMessage.success('已退回，队长可以修改后重新提交')
+    ElMessage.success('已删除原提交，队长可以重新填写')
     getSeriesList()
   }).catch(() => { /* 取消或原因不足 */ })
 }

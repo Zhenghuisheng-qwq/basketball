@@ -570,30 +570,15 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
             }
         }
         officialMatchResultSettlementService.revertFinishedResults(matchIds);
-        Date now = new Date();
-        header.setStatus(SubmissionStatusEnum.REJECTED.getCode());
-        header.setRejectReason(reason);
-        header.setAuditUserId(SecurityUtils.getUserId());
-        header.setAuditUserName(SecurityUtils.getUsername());
-        header.setAuditTime(now);
-        header.setUpdateTime(now);
-        if (seriesSubmissionMapper.updateById(header) != 1) {
-            throw new ServiceException("退回系列赛提交失败");
-        }
         if (games != null) {
             for (BasketMatchSubmission game : games) {
-                game.setSubmissionStatus(SubmissionStatusEnum.DRAFT.getCode());
-                game.setRejectReason(reason);
-                game.setUpdateTime(now);
-                if (submissionMapper.updateById(game) != 1) {
-                    throw new ServiceException("退回系列赛对局提交失败");
-                }
+                removeSubmission(game);
             }
         }
+        removeSeriesHeader(header);
         auditWriter.writeAudit("V4_STAGE", "MATCH_SERIES_SUBMISSION", header.getId(), "REOPEN_SUBMISSION",
-                "退回已通过的系列赛提交，队长可修改后重新提交", reason, List.of(
-                        AuditFieldInput.of("status", "提交状态", SubmissionStatusEnum.APPROVED.getCode(),
-                                SubmissionStatusEnum.REJECTED.getCode()),
+                "删除已通过的系列赛提交，队长可重新填写", reason, List.of(
+                        AuditFieldInput.of("status", "提交状态", SubmissionStatusEnum.APPROVED.getCode(), "DELETED"),
                         AuditFieldInput.of("matchSeriesId", "系列赛", null, header.getMatchSeriesId())
                 ));
     }
@@ -604,28 +589,34 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
         if (match.getSeriesId() != null) {
             assertSeriesResultCanRevert(requireSeries(match.getSeriesId()));
         }
-        Date now = new Date();
         for (BasketMatchSubmission submission : submissions) {
             BasketMatchSubmission current = submissionMapper.selectById(submission.getId());
             if (current == null || !SubmissionStatusEnum.APPROVED.getCode().equals(current.getSubmissionStatus())) {
                 throw new ServiceException("提交状态已变化，请刷新后重试");
             }
-            current.setSubmissionStatus(SubmissionStatusEnum.REJECTED.getCode());
-            current.setRejectReason(reason);
-            current.setAuditUserId(SecurityUtils.getUserId());
-            current.setAuditUserName(SecurityUtils.getUsername());
-            current.setAuditTime(now);
-            current.setUpdateTime(now);
-            if (submissionMapper.updateById(current) != 1) {
-                throw new ServiceException("退回比赛提交失败");
-            }
+            removeSubmission(current);
         }
         officialMatchResultSettlementService.revertFinishedResults(List.of(matchId));
         auditWriter.writeAudit("V4_STAGE", "MATCH", matchId, "REOPEN_SUBMISSION",
-                "退回已通过的比赛提交，队长可修改后重新提交", reason, List.of(
-                        AuditFieldInput.of("submissionStatus", "提交状态", SubmissionStatusEnum.APPROVED.getCode(),
-                                SubmissionStatusEnum.REJECTED.getCode())
+                "删除已通过的比赛提交，队长可重新填写", reason, List.of(
+                        AuditFieldInput.of("submissionStatus", "提交状态", SubmissionStatusEnum.APPROVED.getCode(), "DELETED")
                 ));
+    }
+
+    private void removeSubmission(BasketMatchSubmission submission) {
+        int versionNo = submission.getVersionNo() == null ? 1 : submission.getVersionNo();
+        submissionMapper.deleteTombstone(submission.getMatchId(), submission.getSubmitEventTeamId(), versionNo);
+        if (submissionMapper.softDelete(submission.getId()) != 1) {
+            throw new ServiceException("删除队长提交失败");
+        }
+    }
+
+    private void removeSeriesHeader(BasketMatchSeriesSubmission header) {
+        int versionNo = header.getVersionNo() == null ? 1 : header.getVersionNo();
+        seriesSubmissionMapper.deleteTombstone(header.getMatchSeriesId(), versionNo);
+        if (seriesSubmissionMapper.softDelete(header.getId()) != 1) {
+            throw new ServiceException("删除系列赛提交失败");
+        }
     }
 
     private void assertSeriesResultCanRevert(BasketMatchSeries series) {
