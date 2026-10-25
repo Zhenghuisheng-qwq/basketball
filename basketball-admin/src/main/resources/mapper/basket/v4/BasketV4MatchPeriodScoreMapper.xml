@@ -72,4 +72,9 @@
         where match_id = #{matchId} and is_delete = 0
     </update>
 
+    <delete id="deleteTombstonesByMatchId">
+        delete from basket_match_period_score
+        where match_id = #{matchId} and is_delete = 1
+    </delete>
+
 </mapper>

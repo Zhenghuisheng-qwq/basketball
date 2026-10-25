@@ -95,6 +95,11 @@
         where match_id = #{matchId} and is_delete = 0
     </update>
 
+    <delete id="deleteTombstonesByMatchId">
+        delete from basket_match_team_stat
+        where match_id = #{matchId} and is_delete = 1
+    </delete>
+
     <select id="selectByMatchAndEventTeam" resultMap="BasketV4MatchTeamStatResult">
         select <include refid="BaseColumns" /> from basket_match_team_stat
         where match_id = #{matchId} and event_team_id = #{eventTeamId} and is_delete = 0

@@ -17,5 +17,7 @@ public interface BasketV4MatchPeriodScoreMapper {
     List<BasketV4MatchPeriodScore> selectByMatchId(@Param("matchId") Long matchId);
     int softDeleteByMatchId(@Param("matchId") Long matchId);
 
+    int deleteTombstonesByMatchId(@Param("matchId") Long matchId);
+
     int countByDivisionId(@Param("divisionId") Long divisionId);
 }

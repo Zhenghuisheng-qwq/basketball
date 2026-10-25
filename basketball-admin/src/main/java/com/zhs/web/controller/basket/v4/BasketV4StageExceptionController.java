@@ -6,6 +6,7 @@ import com.zhs.basket.dto.v4.BasketAdminResultCorrectionReq;
 import com.zhs.basket.dto.v4.BasketManualAdvanceReq;
 import com.zhs.basket.dto.v4.BasketMatchForfeitReq;
 import com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq;
+import com.zhs.basket.dto.v4.BasketMatchReopenSubmissionReq;
 import com.zhs.basket.dto.v4.BasketSeriesRevokeResolutionReq;
 import com.zhs.basket.dto.v4.BasketPairingAdjustReq;
 import com.zhs.basket.dto.v4.BasketSeriesForfeitReq;
@@ -90,6 +91,14 @@ public class BasketV4StageExceptionController extends BaseController {
     @PostMapping("/match-result-correction")
     public AjaxResult correctOfficialResult(@RequestBody BasketAdminResultCorrectionReq req) {
         exceptionService.correctOfficialResult(req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_EXCEPTION + "')")
+    @Log(title = "V4 ReopenSubmission", businessType = BusinessType.UPDATE)
+    @PostMapping("/match-reopen-submission")
+    public AjaxResult reopenApprovedSubmission(@RequestBody BasketMatchReopenSubmissionReq req) {
+        exceptionService.reopenApprovedSubmission(req);
         return success();
     }
 

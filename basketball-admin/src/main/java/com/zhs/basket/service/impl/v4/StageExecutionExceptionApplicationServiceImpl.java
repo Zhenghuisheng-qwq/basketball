@@ -4,6 +4,8 @@ import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketDivisionStageQualification;
 import com.zhs.basket.domain.v4.BasketDivisionStageTeam;
 import com.zhs.basket.domain.v4.BasketMatchSeries;
+import com.zhs.basket.domain.v4.BasketMatchSeriesSubmission;
+import com.zhs.basket.domain.v4.BasketMatchSubmission;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
 import com.zhs.basket.domain.v4.BasketV4Match;
 import com.zhs.basket.dto.v4.BasketAdminOfficialResultReq;
@@ -11,6 +13,7 @@ import com.zhs.basket.dto.v4.BasketAdminResultCorrectionReq;
 import com.zhs.basket.dto.v4.BasketManualAdvanceReq;
 import com.zhs.basket.dto.v4.BasketMatchForfeitReq;
 import com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq;
+import com.zhs.basket.dto.v4.BasketMatchReopenSubmissionReq;
 import com.zhs.basket.dto.v4.BasketPairingAdjustReq;
 import com.zhs.basket.dto.v4.BasketPairingSlotReq;
 import com.zhs.basket.dto.v4.BasketSeriesForfeitReq;
@@ -26,6 +29,7 @@ import com.zhs.basket.support.v4.settlement.OfficialMatchResultSettlementService
 import com.zhs.basket.enums.v4.OfficialResultSource;
 import com.zhs.basket.enums.v4.MatchSeriesStatusEnum;
 import com.zhs.basket.enums.v4.MatchStatusEnum;
+import com.zhs.basket.enums.v4.SubmissionStatusEnum;
 import com.zhs.basket.enums.v4.PublishStatusEnum;
 import com.zhs.basket.enums.v4.QualificationRecordStatusEnum;
 import com.zhs.basket.enums.v4.QualificationTypeEnum;
@@ -35,6 +39,8 @@ import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageQualificationMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageTeamMapper;
 import com.zhs.basket.mapper.v4.BasketMatchSeriesMapper;
+import com.zhs.basket.mapper.v4.BasketMatchSeriesSubmissionMapper;
+import com.zhs.basket.mapper.v4.BasketMatchSubmissionMapper;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.service.v4.IBasketMatchSeriesService;
@@ -53,6 +59,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -68,6 +75,10 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
     private BasketV4MatchMapper matchMapper;
     @Autowired
     private BasketMatchSeriesMapper seriesMapper;
+    @Autowired
+    private BasketMatchSubmissionMapper submissionMapper;
+    @Autowired
+    private BasketMatchSeriesSubmissionMapper seriesSubmissionMapper;
     @Autowired
     private BasketDivisionStageMapper stageMapper;
     @Autowired
@@ -491,6 +502,140 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
                         AuditFieldInput.of("winnerEventTeamId", "胜者", match.getWinnerEventTeamId(), newWinner),
                         AuditFieldInput.of("matchStatus", "比赛状态", match.getMatchStatus(), MatchStatusEnum.FINISHED.getCode())
                 ));
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void reopenApprovedSubmission(BasketMatchReopenSubmissionReq req) {
+        if (req == null) {
+            throw new ServiceException("请指定要退回的比赛或系列赛提交");
+        }
+        requireReason(req.getReason());
+        String reason = req.getReason().trim();
+        if (reason.length() > 500) {
+            throw new ServiceException("退回原因不能超过500字");
+        }
+        if (req.getSeriesSubmissionId() != null) {
+            reopenSeriesSubmission(req.getSeriesSubmissionId(), reason);
+            return;
+        }
+        if (req.getMatchId() == null) {
+            throw new ServiceException("请指定要退回的比赛或系列赛提交");
+        }
+        List<BasketMatchSubmission> approved = submissionMapper.selectApprovedByMatchId(req.getMatchId());
+        if (approved == null || approved.isEmpty()) {
+            throw new ServiceException("这场没有已通过的队长提交，不能退回重传");
+        }
+        Long seriesSubmissionId = null;
+        List<BasketMatchSubmission> standalone = new ArrayList<>();
+        for (BasketMatchSubmission submission : approved) {
+            if (submission.getSeriesSubmissionId() != null) {
+                if (seriesSubmissionId != null && !seriesSubmissionId.equals(submission.getSeriesSubmissionId())) {
+                    throw new ServiceException("本场关联了多份系列赛提交，请从系列赛审核里退回");
+                }
+                seriesSubmissionId = submission.getSeriesSubmissionId();
+            } else {
+                standalone.add(submission);
+            }
+        }
+        if (seriesSubmissionId != null) {
+            reopenSeriesSubmission(seriesSubmissionId, reason);
+            return;
+        }
+        reopenStandaloneSubmissions(req.getMatchId(), standalone, reason);
+    }
+
+    private void reopenSeriesSubmission(Long seriesSubmissionId, String reason) {
+        BasketMatchSeriesSubmission probed = seriesSubmissionMapper.selectById(seriesSubmissionId);
+        if (probed == null) {
+            throw new ServiceException("系列赛提交不存在");
+        }
+        if (!SubmissionStatusEnum.APPROVED.getCode().equals(probed.getStatus())) {
+            throw new ServiceException("只有已通过的系列赛提交可以退回重传");
+        }
+        divisionMapper.selectByIdForUpdate(probed.getDivisionId());
+        BasketMatchSeriesSubmission header = seriesSubmissionMapper.selectByIdForUpdate(seriesSubmissionId);
+        if (header == null || !SubmissionStatusEnum.APPROVED.getCode().equals(header.getStatus())) {
+            throw new ServiceException("只有已通过的系列赛提交可以退回重传");
+        }
+        BasketMatchSeries series = requireSeries(header.getMatchSeriesId());
+        assertSeriesResultCanRevert(series);
+        List<BasketMatchSubmission> games = submissionMapper.selectBySeriesSubmissionId(header.getId());
+        List<Long> matchIds = new ArrayList<>();
+        if (games != null) {
+            for (BasketMatchSubmission game : games) {
+                if (game.getMatchId() != null) {
+                    matchIds.add(game.getMatchId());
+                }
+            }
+        }
+        officialMatchResultSettlementService.revertFinishedResults(matchIds);
+        Date now = new Date();
+        header.setStatus(SubmissionStatusEnum.REJECTED.getCode());
+        header.setRejectReason(reason);
+        header.setAuditUserId(SecurityUtils.getUserId());
+        header.setAuditUserName(SecurityUtils.getUsername());
+        header.setAuditTime(now);
+        header.setUpdateTime(now);
+        if (seriesSubmissionMapper.updateById(header) != 1) {
+            throw new ServiceException("退回系列赛提交失败");
+        }
+        if (games != null) {
+            for (BasketMatchSubmission game : games) {
+                game.setSubmissionStatus(SubmissionStatusEnum.DRAFT.getCode());
+                game.setRejectReason(reason);
+                game.setUpdateTime(now);
+                if (submissionMapper.updateById(game) != 1) {
+                    throw new ServiceException("退回系列赛对局提交失败");
+                }
+            }
+        }
+        auditWriter.writeAudit("V4_STAGE", "MATCH_SERIES_SUBMISSION", header.getId(), "REOPEN_SUBMISSION",
+                "退回已通过的系列赛提交，队长可修改后重新提交", reason, List.of(
+                        AuditFieldInput.of("status", "提交状态", SubmissionStatusEnum.APPROVED.getCode(),
+                                SubmissionStatusEnum.REJECTED.getCode()),
+                        AuditFieldInput.of("matchSeriesId", "系列赛", null, header.getMatchSeriesId())
+                ));
+    }
+
+    private void reopenStandaloneSubmissions(Long matchId, List<BasketMatchSubmission> submissions, String reason) {
+        BasketV4Match match = requireMatch(matchId);
+        divisionMapper.selectByIdForUpdate(match.getDivisionId());
+        if (match.getSeriesId() != null) {
+            assertSeriesResultCanRevert(requireSeries(match.getSeriesId()));
+        }
+        Date now = new Date();
+        for (BasketMatchSubmission submission : submissions) {
+            BasketMatchSubmission current = submissionMapper.selectById(submission.getId());
+            if (current == null || !SubmissionStatusEnum.APPROVED.getCode().equals(current.getSubmissionStatus())) {
+                throw new ServiceException("提交状态已变化，请刷新后重试");
+            }
+            current.setSubmissionStatus(SubmissionStatusEnum.REJECTED.getCode());
+            current.setRejectReason(reason);
+            current.setAuditUserId(SecurityUtils.getUserId());
+            current.setAuditUserName(SecurityUtils.getUsername());
+            current.setAuditTime(now);
+            current.setUpdateTime(now);
+            if (submissionMapper.updateById(current) != 1) {
+                throw new ServiceException("退回比赛提交失败");
+            }
+        }
+        officialMatchResultSettlementService.revertFinishedResults(List.of(matchId));
+        auditWriter.writeAudit("V4_STAGE", "MATCH", matchId, "REOPEN_SUBMISSION",
+                "退回已通过的比赛提交，队长可修改后重新提交", reason, List.of(
+                        AuditFieldInput.of("submissionStatus", "提交状态", SubmissionStatusEnum.APPROVED.getCode(),
+                                SubmissionStatusEnum.REJECTED.getCode())
+                ));
+    }
+
+    private void assertSeriesResultCanRevert(BasketMatchSeries series) {
+        if (SeriesResolutionTypeEnum.FORFEIT.getCode().equals(series.getResolutionType())
+                || SeriesResolutionTypeEnum.MANUAL.getCode().equals(series.getResolutionType())) {
+            throw new ServiceException("系列赛已被判负或管理员裁决，请先撤销裁决再退回提交");
+        }
+        if (MatchSeriesStatusEnum.COMPLETED.getCode().equals(series.getSeriesStatus())) {
+            winnerOfSeriesAdvanceSupport.assertDownstreamNotStarted(series);
+        }
     }
 
     @Override

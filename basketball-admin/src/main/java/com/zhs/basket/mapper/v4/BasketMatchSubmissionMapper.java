@@ -14,6 +14,8 @@ public interface BasketMatchSubmissionMapper {
     BasketMatchSubmission selectById(@Param("id") Long id);
     List<BasketMatchSubmission> selectList(BasketMatchSubmission query);
     BasketMatchSubmission selectLatestByMatchAndTeam(@Param("matchId") Long matchId, @Param("submitEventTeamId") Long submitEventTeamId);
+
+    List<BasketMatchSubmission> selectApprovedByMatchId(@Param("matchId") Long matchId);
     Integer selectMaxVersionNo(@Param("matchId") Long matchId, @Param("submitEventTeamId") Long submitEventTeamId);
     List<BasketMatchSubmission> selectVersionsByMatchAndTeam(@Param("matchId") Long matchId, @Param("submitEventTeamId") Long submitEventTeamId);
     List<BasketMatchSubmissionAuditListVo> selectAuditVoList(BasketMatchSubmissionAuditQuery query);

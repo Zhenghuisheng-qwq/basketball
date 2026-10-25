@@ -93,7 +93,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="420" fixed="right">
+      <el-table-column label="操作" width="500" fixed="right">
         <template #default="scope">
           <el-button link type="primary" @click="openEdit(scope.row)">
             {{ scope.row.publishStatus === 'DRAFT' ? '编辑' : '详情' }}
@@ -124,6 +124,13 @@
             v-hasPermi="['basket:v4Stage:exception']"
             @click="openResult(scope.row, 'correct')"
           >修正比赛结果</el-button>
+          <el-button
+            link
+            type="danger"
+            v-if="canReopenSubmission(scope.row)"
+            v-hasPermi="['basket:v4Stage:exception']"
+            @click="openReopen(scope.row)"
+          >退回重传</el-button>
           <el-button
             link
             type="warning"
@@ -226,7 +233,7 @@
         show-icon
         class="mb8"
         :title="resultMode === 'correct'
-          ? '修正后将重新计算积分、统计和系列赛进度。原队长提交材料不会被删除。'
+          ? '修正只会改两队总分，并清掉已入库的球员明细。原队长提交还在。要改每个球员的数据，请改用「退回重传」。'
           : '管理员录入后将直接形成正式比赛结果，并重新计算相关积分、统计和系列赛进度。'"
       />
       <el-form label-width="110px">
@@ -260,13 +267,29 @@
         <el-button type="primary" @click="submitResult">{{ resultMode === 'correct' ? '确认修正' : '确认录入' }}</el-button>
       </template>
     </el-dialog>
+
+    <el-dialog v-model="reopenVisible" title="退回队长重传" width="560px">
+      <el-alert type="warning" :closable="false" show-icon class="mb8" :title="reopenHint" />
+      <el-form label-width="100px">
+        <el-form-item label="比赛">{{ reopenRow?.matchNo || reopenRow?.id || '-' }}</el-form-item>
+        <el-form-item label="对阵">{{ reopenRow?.homeTeamName || '-' }} vs {{ reopenRow?.awayTeamName || '-' }}</el-form-item>
+        <el-form-item label="当前比分">{{ formatV4MatchScore(reopenRow?.homeScore, reopenRow?.awayScore) }}</el-form-item>
+        <el-form-item label="退回原因" required>
+          <el-input v-model="reopenReason" type="textarea" rows="3" placeholder="必填，例如：误通过，需队长按正确数据重交" />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="reopenVisible = false">取消</el-button>
+        <el-button type="danger" :loading="reopenSaving" @click="submitReopen">确认退回</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts" name="CnpaEventV4Match">
-import { onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { correctV4OfficialResult, enterV4OfficialResult, forfeitV4Match, revokeV4MatchForfeit } from '@/api/cnpa/event-v4/stage-exception'
+import { correctV4OfficialResult, enterV4OfficialResult, forfeitV4Match, reopenV4ApprovedSubmission, revokeV4MatchForfeit } from '@/api/cnpa/event-v4/stage-exception'
 import { deleteV4Match, getV4Match, listV4Match, updateV4Match } from '@/api/cnpa/event-v4/schedule-batch'
 import { listV4StageExecution, rescheduleV4StageSchedule } from '@/api/cnpa/event-v4/stage-execution'
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
@@ -316,6 +339,10 @@ const adjustRow = ref<any>()
 const adjustDate = ref('')
 const adjustTime = ref('')
 const adjustReason = ref('')
+const reopenVisible = ref(false)
+const reopenSaving = ref(false)
+const reopenRow = ref<any>()
+const reopenReason = ref('')
 
 watch(viewMode, () => {
   if (viewMode.value === 'series') {
@@ -399,6 +426,18 @@ function canCorrectResult(row: any) {
   if (row?.canCorrectOfficialResult != null) return Boolean(row.canCorrectOfficialResult)
   return row?.publishStatus === 'PUBLISHED' && row?.matchStatus === 'FINISHED'
 }
+
+function canReopenSubmission(row: any) {
+  return row?.publishStatus === 'PUBLISHED' && row?.matchStatus === 'FINISHED'
+}
+
+const reopenHint = computed(() => {
+  const row = reopenRow.value
+  if (row?.seriesId || (row?.bestOf && row.bestOf > 1)) {
+    return '这场属于系列赛。退回会撤销整个系列赛已经生效的比分、球员明细和积分。队长原来填的内容还在，改完要重新提交，再由后台审核。你在后台改过的大比分也会一起撤销。下一轮已经开打时不能退回。'
+  }
+  return '退回后，本场正式比分、球员明细和积分会撤销。队长原来填的内容还在，可以修改每个球员的数据后重新提交。你在后台改过的大比分也会一起撤销。'
+})
 
 function canForfeitRow(row: any) {
   if (row?.matchStatus === 'FORFEITED') return false
@@ -593,6 +632,37 @@ function submitForfeit() {
       loadList()
     })
   })
+}
+
+function openReopen(row: any) {
+  reopenRow.value = row
+  reopenReason.value = ''
+  reopenVisible.value = true
+}
+
+function submitReopen() {
+  if (!reopenRow.value?.id || reopenReason.value.trim().length < 2) {
+    ElMessage.warning('请填写退回原因')
+    return
+  }
+  const series = Boolean(reopenRow.value.seriesId || (reopenRow.value.bestOf && reopenRow.value.bestOf > 1))
+  ElMessageBox.confirm(
+    series ? '确认退回整个系列赛？正式结果会撤销，队长可以改完再交。' : '确认退回本场？正式结果会撤销，队长可以改完再交。',
+    '二次确认',
+    { type: 'warning' }
+  ).then(() => {
+    reopenSaving.value = true
+    reopenV4ApprovedSubmission({
+      matchId: reopenRow.value.id,
+      reason: reopenReason.value.trim()
+    }).then(() => {
+      ElMessage.success('已退回。请让队长修改后重新提交，再审核通过。')
+      reopenVisible.value = false
+      loadList()
+    }).finally(() => {
+      reopenSaving.value = false
+    })
+  }).catch(() => { /* 取消二次确认 */ })
 }
 
 function openRevokeForfeit(row: any) {

@@ -96,6 +96,12 @@
         limit 1
     </select>
 
+    <select id="selectApprovedByMatchId" resultMap="BasketMatchSubmissionResult">
+        select <include refid="BaseColumns" /> from basket_match_submission
+        where match_id = #{matchId} and submission_status = 'APPROVED' and is_delete = 0
+        order by version_no desc, id desc
+    </select>
+
     <select id="selectMaxVersionNo" resultType="java.lang.Integer">
         select max(version_no) from basket_match_submission
         where match_id = #{matchId} and submit_event_team_id = #{submitEventTeamId} and is_delete = 0

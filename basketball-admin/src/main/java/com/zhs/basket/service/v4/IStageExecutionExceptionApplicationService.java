@@ -5,6 +5,7 @@ import com.zhs.basket.dto.v4.BasketAdminResultCorrectionReq;
 import com.zhs.basket.dto.v4.BasketManualAdvanceReq;
 import com.zhs.basket.dto.v4.BasketMatchForfeitReq;
 import com.zhs.basket.dto.v4.BasketMatchForfeitRevokeReq;
+import com.zhs.basket.dto.v4.BasketMatchReopenSubmissionReq;
 import com.zhs.basket.dto.v4.BasketPairingAdjustReq;
 import com.zhs.basket.dto.v4.BasketSeriesForfeitReq;
 import com.zhs.basket.dto.v4.BasketSeriesManualResolutionReq;
@@ -31,6 +32,8 @@ public interface IStageExecutionExceptionApplicationService {
     void enterOfficialResult(BasketAdminOfficialResultReq req);
 
     void correctOfficialResult(BasketAdminResultCorrectionReq req);
+
+    void reopenApprovedSubmission(BasketMatchReopenSubmissionReq req);
 
     void resolveSeriesManually(BasketSeriesManualResolutionReq req);
 }

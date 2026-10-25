@@ -30,8 +30,12 @@ import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 统一正式比赛结果结算：Match → 本场 Team Stat → Series → Standing / 派生统计。
@@ -162,6 +166,58 @@ public class OfficialMatchResultSettlementService {
         matchPlayerStatMapper.softDeleteByMatchId(locked.getId());
         matchTeamStatMapper.softDeleteByMatchId(locked.getId());
         rebuildDownstream(locked);
+    }
+
+    /**
+     * 撤销已结束比赛的正式比分、球队/球员/节次统计，并重算系列赛与积分。
+     * 未结束的场次跳过；判负场次拒绝，避免和撤销判负抢同一条回退路径。
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void revertFinishedResults(List<Long> matchIds) {
+        if (matchIds == null || matchIds.isEmpty()) {
+            return;
+        }
+        LinkedHashMap<Long, BasketV4Match> seriesAnchors = new LinkedHashMap<>();
+        List<BasketV4Match> standalone = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+        for (Long matchId : matchIds) {
+            if (matchId == null || !seen.add(matchId)) {
+                continue;
+            }
+            BasketV4Match locked = requireMatchForUpdate(matchId);
+            if (MatchStatusEnum.FORFEITED.getCode().equals(locked.getMatchStatus())) {
+                throw new ServiceException("存在已判负的比赛，请先撤销判负再退回提交");
+            }
+            if (!MatchStatusEnum.FINISHED.getCode().equals(locked.getMatchStatus())) {
+                continue;
+            }
+            if (matchMapper.clearOfficialResult(locked.getId(), MatchStatusEnum.SCHEDULED.getCode()) != 1) {
+                throw new ServiceException("撤销正式比分失败");
+            }
+            // 唯一键含 is_delete，同一场只能留一条已删除记录。先清掉旧墓碑，再软删当前正式统计。
+            matchPlayerStatMapper.deleteTombstonesByMatchId(locked.getId());
+            matchTeamStatMapper.deleteTombstonesByMatchId(locked.getId());
+            matchPeriodScoreMapper.deleteTombstonesByMatchId(locked.getId());
+            matchPlayerStatMapper.softDeleteByMatchId(locked.getId());
+            matchTeamStatMapper.softDeleteByMatchId(locked.getId());
+            matchPeriodScoreMapper.softDeleteByMatchId(locked.getId());
+            locked.setHomeScore(null);
+            locked.setAwayScore(null);
+            locked.setWinnerEventTeamId(null);
+            locked.setLoserEventTeamId(null);
+            locked.setMatchStatus(MatchStatusEnum.SCHEDULED.getCode());
+            if (locked.getSeriesId() != null) {
+                seriesAnchors.putIfAbsent(locked.getSeriesId(), locked);
+            } else {
+                standalone.add(locked);
+            }
+        }
+        for (BasketV4Match anchor : seriesAnchors.values()) {
+            rebuildDownstream(anchor);
+        }
+        for (BasketV4Match anchor : standalone) {
+            rebuildDownstream(anchor);
+        }
     }
 
     private void applyLocked(BasketV4Match match, OfficialMatchResultCommand command) {

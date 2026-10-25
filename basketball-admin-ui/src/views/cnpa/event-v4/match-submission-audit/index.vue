@@ -53,11 +53,12 @@
       <el-table-column label="提交时间" prop="submitTime" width="160">
         <template #default="scope">{{ parseTime(scope.row.submitTime) }}</template>
       </el-table-column>
-      <el-table-column label="操作" width="220" fixed="right">
+      <el-table-column label="操作" width="300" fixed="right">
         <template #default="scope">
           <el-button link type="primary" @click="openDetail(scope.row)" v-hasPermi="['basket:v4MatchSubmissionAudit:query']">详情</el-button>
           <el-button link type="success" @click="handleApprove(scope.row)" v-hasPermi="['basket:v4MatchSubmissionAudit:approve']" v-if="scope.row.submissionStatus === 'PENDING_REVIEW'">通过</el-button>
           <el-button link type="danger" @click="openReject(scope.row)" v-hasPermi="['basket:v4MatchSubmissionAudit:reject']" v-if="scope.row.submissionStatus === 'PENDING_REVIEW'">驳回</el-button>
+          <el-button link type="warning" v-if="scope.row.submissionStatus === 'APPROVED'" v-hasPermi="['basket:v4Stage:exception']" @click="handleReopenMatch(scope.row)">退回重传</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -239,11 +240,12 @@
             <el-tag :type="v4SubmissionStatusTagType(scope.row.status)" size="small">{{ v4SubmissionStatusLabel(scope.row.status) }}</el-tag>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="240">
+        <el-table-column label="操作" width="320">
           <template #default="scope">
             <el-button link type="primary" @click="openSeriesDetail(scope.row)">详情</el-button>
             <el-button link type="success" v-if="scope.row.status === 'PENDING_REVIEW'" @click="handleSeriesApprove(scope.row)">通过系列赛</el-button>
             <el-button link type="danger" v-if="scope.row.status === 'PENDING_REVIEW'" @click="openSeriesReject(scope.row)">驳回系列赛</el-button>
+            <el-button link type="warning" v-if="scope.row.status === 'APPROVED'" v-hasPermi="['basket:v4Stage:exception']" @click="handleReopenSeries(scope.row)">退回重传</el-button>
           </template>
         </el-table-column>
       </el-table>
@@ -363,6 +365,7 @@ import {
   type V4SeriesSubmissionAuditListVo
 } from '@/api/cnpa/event-v4/series-submission-audit'
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
+import { reopenV4ApprovedSubmission } from '@/api/cnpa/event-v4/stage-exception'
 import {
   V4_SUBMISSION_STATUS_FILTER_OPTIONS,
   formatV4MatchScore,
@@ -556,6 +559,43 @@ function handleSeriesApprove(row: V4SeriesSubmissionAuditListVo) {
     ElMessage.success('系列赛已通过')
     getSeriesList()
   })
+}
+
+function handleReopenMatch(row: V4MatchSubmissionAuditListVo) {
+  ElMessageBox.prompt(
+    '退回后本场正式比分和球员明细会撤销。若这场属于系列赛，整个系列赛会一起退回。队长原来填的内容还在，改完重新提交后再审核。',
+    '退回重传',
+    { inputType: 'textarea', inputPlaceholder: '退回原因，必填', confirmButtonText: '确认退回', type: 'warning' }
+  ).then(({ value }) => {
+    const reason = (value || '').trim()
+    if (reason.length < 2) {
+      ElMessage.warning('请填写退回原因')
+      return Promise.reject(new Error('reason'))
+    }
+    return reopenV4ApprovedSubmission({ matchId: row.matchId, reason })
+  }).then(() => {
+    ElMessage.success('已退回，队长可以修改后重新提交')
+    getList()
+    getSeriesList()
+  }).catch(() => { /* 取消或原因不足 */ })
+}
+
+function handleReopenSeries(row: V4SeriesSubmissionAuditListVo) {
+  ElMessageBox.prompt(
+    '将撤销整个系列赛已经生效的比分、球员明细和积分。队长原来填的内容还在，改完重新提交后再审核。后台改过的大比分也会一起撤销。',
+    '退回系列赛重传',
+    { inputType: 'textarea', inputPlaceholder: '退回原因，必填', confirmButtonText: '确认退回', type: 'warning' }
+  ).then(({ value }) => {
+    const reason = (value || '').trim()
+    if (reason.length < 2) {
+      ElMessage.warning('请填写退回原因')
+      return Promise.reject(new Error('reason'))
+    }
+    return reopenV4ApprovedSubmission({ seriesSubmissionId: row.seriesSubmissionId, reason })
+  }).then(() => {
+    ElMessage.success('已退回，队长可以修改后重新提交')
+    getSeriesList()
+  }).catch(() => { /* 取消或原因不足 */ })
 }
 
 function openSeriesReject(row: V4SeriesSubmissionAuditListVo) {

@@ -77,6 +77,10 @@ export function correctV4OfficialResult(data: AdminOfficialResultReq) {
   return request({ url: '/basket/v4/admin/stage-exception/match-result-correction', method: 'post', data })
 }
 
+export function reopenV4ApprovedSubmission(data: { matchId?: number; seriesSubmissionId?: number; reason: string }) {
+  return request({ url: '/basket/v4/admin/stage-exception/match-reopen-submission', method: 'post', data })
+}
+
 export function resolveV4SeriesManually(data: SeriesManualResolutionReq) {
   return request({ url: '/basket/v4/admin/stage-exception/series-manual-resolution', method: 'post', data })
 }

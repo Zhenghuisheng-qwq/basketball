@@ -22,4 +22,6 @@ public interface BasketV4MatchPlayerStatMapper {
     int softDelete(@Param("id") Long id);
 
     int softDeleteByMatchId(@Param("matchId") Long matchId);
+
+    int deleteTombstonesByMatchId(@Param("matchId") Long matchId);
 }

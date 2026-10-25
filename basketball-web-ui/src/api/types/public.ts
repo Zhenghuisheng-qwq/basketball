@@ -494,6 +494,7 @@ export interface PublicPlayerSeasonStatVo {
   avgSteals?: number | string | null
   avgBlocks?: number | string | null
   avgTurnovers?: number | string | null
+  avgFouls?: number | string | null
   fieldGoalMade?: number | null
   fieldGoalAttempt?: number | null
   fieldGoalPct?: number | string | null
