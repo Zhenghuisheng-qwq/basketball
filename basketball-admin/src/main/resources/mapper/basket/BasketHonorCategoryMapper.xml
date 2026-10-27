@@ -36,4 +36,23 @@
         where is_delete = 0 and honor_status = 1
         order by display_order, id
     </select>
+
+    <insert id="upsertBuiltin">
+        insert into basket_honor_category (
+            honor_code, honor_name, honor_scope, recipient_type, description,
+            display_order, honor_status, create_time, update_time, is_delete
+        ) values (
+            #{honorCode}, #{honorName}, #{honorScope}, #{recipientType}, #{description},
+            #{displayOrder}, 1, now(), now(), 0
+        )
+        on duplicate key update
+            honor_name = values(honor_name),
+            honor_scope = values(honor_scope),
+            recipient_type = values(recipient_type),
+            description = values(description),
+            display_order = values(display_order),
+            honor_status = 1,
+            is_delete = 0,
+            update_time = now()
+    </insert>
 </mapper>

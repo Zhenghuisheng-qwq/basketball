@@ -11,4 +11,6 @@ public interface BasketHonorCategoryMapper {
     BasketHonorCategory selectByCode(@Param("honorCode") String honorCode);
 
     List<BasketHonorCategory> selectActiveList();
+
+    int upsertBuiltin(BasketHonorCategory category);
 }

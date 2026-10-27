@@ -8,7 +8,6 @@ import com.zhs.basket.domain.v4.BasketSeries;
 import com.zhs.basket.enums.HonorCodeEnum;
 import com.zhs.basket.enums.HonorDisplayStatusEnum;
 import com.zhs.basket.enums.PlayerRankTypeEnum;
-import com.zhs.basket.mapper.BasketHonorCategoryMapper;
 import com.zhs.basket.mapper.BasketHonorGenerationBatchMapper;
 import com.zhs.basket.mapper.BasketHonorRecordMapper;
 import com.zhs.basket.mapper.BasketPlayerRankAdminMapper;
@@ -20,6 +19,7 @@ import com.zhs.basket.resp.HonorGenerationBatchResp;
 import com.zhs.basket.resp.HonorGenerationPreviewItemResp;
 import com.zhs.basket.resp.HonorGenerationPreviewResp;
 import com.zhs.basket.service.IBasketHonorGenerationService;
+import com.zhs.basket.support.BasketHonorCategoryCatalog;
 import com.zhs.basket.support.BasketPublicCacheCleaner;
 import com.zhs.basket.vo.PlayerRankListVo;
 import com.zhs.common.exception.ServiceException;
@@ -53,7 +53,7 @@ public class BasketHonorGenerationServiceImpl implements IBasketHonorGenerationS
 
     @Autowired private BasketHonorGenerationBatchMapper generationBatchMapper;
     @Autowired private BasketHonorRecordMapper honorRecordMapper;
-    @Autowired private BasketHonorCategoryMapper honorCategoryMapper;
+    @Autowired private BasketHonorCategoryCatalog honorCategoryCatalog;
     @Autowired private BasketPlayerRankAdminMapper playerRankAdminMapper;
     @Autowired private BasketSeasonMapper seasonMapper;
     @Autowired private BasketSeriesMapper seriesMapper;
@@ -128,10 +128,7 @@ public class BasketHonorGenerationServiceImpl implements IBasketHonorGenerationS
 
         int created = 0;
         for (HonorGenerationPreviewItemResp item : selected) {
-            BasketHonorCategory category = honorCategoryMapper.selectByCode(item.getHonorCode());
-            if (category == null) {
-                continue;
-            }
+            BasketHonorCategory category = honorCategoryCatalog.requireByCode(item.getHonorCode());
             BasketHonorRecord record = new BasketHonorRecord();
             record.setSeriesId(season.getSeriesId());
             record.setSeasonId(seasonId);
@@ -192,15 +189,13 @@ public class BasketHonorGenerationServiceImpl implements IBasketHonorGenerationS
         HonorGenerationPreviewItemResp item = new HonorGenerationPreviewItemResp();
         item.setHonorCode(honorCode.getCode());
         item.setHonorName(honorCode.getName());
-        BasketHonorCategory category = honorCategoryMapper.selectByCode(honorCode.getCode());
-        if (category != null) {
-            item.setHonorCategoryId(category.getId());
-            int exists = honorRecordMapper.countActiveUnique(season.getId(), category.getId(), null, null, null);
-            if (exists > 0) {
-                item.setSkipReason("该赛季已存在同类型荣誉");
-                item.setSelected(false);
-                return item;
-            }
+        BasketHonorCategory category = honorCategoryCatalog.requireByCode(honorCode.getCode());
+        item.setHonorCategoryId(category.getId());
+        int exists = honorRecordMapper.countActiveUnique(season.getId(), category.getId(), null, null, null);
+        if (exists > 0) {
+            item.setSkipReason("该赛季已存在同类型荣誉");
+            item.setSelected(false);
+            return item;
         }
         PlayerRankListVo top = findTopPlayer(season.getId(), honorCode);
         if (top == null || top.getPlayerId() == null) {

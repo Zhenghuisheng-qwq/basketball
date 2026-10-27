@@ -25,6 +25,7 @@ import com.zhs.basket.resp.HonorRecordDetailResp;
 import com.zhs.basket.resp.HonorRecordListResp;
 import com.zhs.basket.resp.PlayerHonorCandidateResp;
 import com.zhs.basket.service.IBasketHonorRecordService;
+import com.zhs.basket.support.BasketHonorCategoryCatalog;
 import com.zhs.basket.support.BasketPublicCacheCleaner;
 import com.zhs.basket.vo.PlayerRankListVo;
 import com.zhs.common.exception.ServiceException;
@@ -53,6 +54,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
 
     @Autowired private BasketHonorRecordMapper honorRecordMapper;
     @Autowired private BasketHonorCategoryMapper honorCategoryMapper;
+    @Autowired private BasketHonorCategoryCatalog honorCategoryCatalog;
     @Autowired private BasketHonorLineupMapper honorLineupMapper;
     @Autowired private BasketSeasonMapper seasonMapper;
     @Autowired private BasketPlayerRankAdminMapper playerRankAdminMapper;
@@ -406,7 +408,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         if (categoryId != null) {
             category = honorCategoryMapper.selectById(categoryId);
         } else if (StringUtils.isNotEmpty(honorCode)) {
-            category = honorCategoryMapper.selectByCode(honorCode.trim());
+            return honorCategoryCatalog.requireByCode(honorCode);
         }
         if (category == null) {
             throw new ServiceException("荣誉分类不存在");
