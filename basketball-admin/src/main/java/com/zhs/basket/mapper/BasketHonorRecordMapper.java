@@ -42,6 +42,10 @@ public interface BasketHonorRecordMapper {
 
     int softDelete(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses);
 
+    int countAnyTeamHonor(@Param("seasonId") Long seasonId,
+                          @Param("honorCategoryId") Long honorCategoryId,
+                          @Param("teamId") Long teamId);
+
     int countActiveUnique(@Param("seasonId") Long seasonId,
                           @Param("honorCategoryId") Long honorCategoryId,
                           @Param("teamId") Long teamId,
@@ -49,6 +53,7 @@ public interface BasketHonorRecordMapper {
                           @Param("excludeId") Long excludeId);
 
     int countActiveWeekly(@Param("seasonId") Long seasonId,
+                          @Param("seriesId") Long seriesId,
                           @Param("honorCategoryId") Long honorCategoryId,
                           @Param("playerId") Long playerId,
                           @Param("awardDate") java.util.Date awardDate,

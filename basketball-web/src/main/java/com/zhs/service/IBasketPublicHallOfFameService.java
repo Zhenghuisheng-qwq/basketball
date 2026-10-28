@@ -11,15 +11,15 @@ public interface IBasketPublicHallOfFameService {
 
     IPage<PublicHonorItemResp> pageTournamentHonors(Integer currentPage, Integer pageSize,
                                                     Long tournamentId, Long seasonId, String keyword,
-                                                    String sortField, String sortOrder);
+                                                    String sortField, String sortOrder, String honorCodes);
 
     IPage<PublicHonorItemResp> pagePlayerHonors(Integer currentPage, Integer pageSize,
                                                 Long tournamentId, Long seasonId, String keyword,
-                                                String sortField, String sortOrder);
+                                                String sortField, String sortOrder, String honorCodes);
 
     IPage<PublicHonorItemResp> pageTeamHonors(Integer currentPage, Integer pageSize,
                                               Long tournamentId, Long seasonId, String keyword,
-                                              String sortField, String sortOrder);
+                                              String sortField, String sortOrder, String honorCodes);
 
     PublicHonorDetailResp getHonorDetail(Long honorId);
 }

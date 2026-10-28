@@ -40,9 +40,10 @@ public class BasketPublicHallOfFameController {
             @RequestParam(required = false) Long seasonId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String sortField,
-            @RequestParam(required = false) String sortOrder) {
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(required = false) String honorCodes) {
         return R.ok(hallOfFameService.pageTournamentHonors(
-                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder));
+                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder, honorCodes));
     }
 
     @ApiOperation("球员荣誉分页")
@@ -54,9 +55,10 @@ public class BasketPublicHallOfFameController {
             @RequestParam(required = false) Long seasonId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String sortField,
-            @RequestParam(required = false) String sortOrder) {
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(required = false) String honorCodes) {
         return R.ok(hallOfFameService.pagePlayerHonors(
-                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder));
+                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder, honorCodes));
     }
 
     @ApiOperation("球队荣誉分页")
@@ -68,9 +70,10 @@ public class BasketPublicHallOfFameController {
             @RequestParam(required = false) Long seasonId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String sortField,
-            @RequestParam(required = false) String sortOrder) {
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(required = false) String honorCodes) {
         return R.ok(hallOfFameService.pageTeamHonors(
-                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder));
+                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder, honorCodes));
     }
 
     @ApiOperation("荣誉详情（含冠军阵容）")

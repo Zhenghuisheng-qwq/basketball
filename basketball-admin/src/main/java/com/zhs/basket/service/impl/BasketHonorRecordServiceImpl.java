@@ -15,7 +15,10 @@ import com.zhs.basket.mapper.BasketPlayerProfileMapper;
 import com.zhs.basket.mapper.BasketPlayerRankAdminMapper;
 import com.zhs.basket.mapper.BasketStatChangeRecordMapper;
 import com.zhs.basket.domain.v4.BasketSeason;
+import com.zhs.basket.mapper.v4.BasketEventPlayerMapper;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
+import com.zhs.basket.query.v4.BasketEventPlayerQuery;
+import com.zhs.basket.vo.v4.BasketEventPlayerListVo;
 import com.zhs.basket.query.RankingQuery;
 import com.zhs.basket.req.HonorLineupSaveReq;
 import com.zhs.basket.req.HonorRecordAddReq;
@@ -63,6 +66,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
     @Autowired private BasketHonorCategoryCatalog honorCategoryCatalog;
     @Autowired private BasketHonorLineupMapper honorLineupMapper;
     @Autowired private BasketSeasonMapper seasonMapper;
+    @Autowired private BasketEventPlayerMapper eventPlayerMapper;
     @Autowired private BasketPlayerRankAdminMapper playerRankAdminMapper;
     @Autowired private BasketStatChangeRecordMapper statChangeRecordMapper;
     @Autowired private BasketPublicCacheCleaner publicCacheCleaner;
@@ -113,7 +117,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         }
         Date now = new Date();
         Date awardDate = req.getAwardDate() == null ? now : req.getAwardDate();
-        ensureUnique(category, req.getSeasonId(), req.getTeamId(), req.getPlayerId(), awardDate, null);
+        ensureUnique(category, req.getTournamentId(), req.getSeasonId(), req.getTeamId(), req.getPlayerId(), awardDate, null);
         BasketHonorRecord record = new BasketHonorRecord();
         record.setSeriesId(req.getTournamentId());
         record.setSeasonId(req.getSeasonId());
@@ -159,7 +163,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         String remark = req.getRemark() != null ? req.getRemark() : existing.getRemark();
         validateManualRemark(category, remark);
         Date awardDate = req.getAwardDate() != null ? req.getAwardDate() : existing.getAwardDate();
-        ensureUnique(category, existing.getSeasonId(), teamId, playerId, awardDate, id);
+        ensureUnique(category, existing.getSeriesId(), existing.getSeasonId(), teamId, playerId, awardDate, id);
 
         existing.setHonorCategoryId(category.getId());
         existing.setTeamId(teamId);
@@ -212,7 +216,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         if (category == null) {
             throw new ServiceException("荣誉分类不存在");
         }
-        ensureUnique(category, existing.getSeasonId(), existing.getTeamId(), existing.getPlayerId(),
+        ensureUnique(category, existing.getSeriesId(), existing.getSeasonId(), existing.getTeamId(), existing.getPlayerId(),
                 existing.getAwardDate(), id);
         if (honorRecordMapper.updateDisplayStatusIfMatch(id, existing.getDisplayStatus(),
                 HonorDisplayStatusEnum.PUBLISHED.getCode()) != 1) {
@@ -292,6 +296,13 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         if (category == null || !HonorCodeEnum.CHAMPION.getCode().equalsIgnoreCase(category.getHonorCode())) {
             throw new ServiceException("仅冠军记录可以维护冠军阵容");
         }
+        HonorDisplayStatusEnum status = HonorDisplayStatusEnum.fromCode(existing.getDisplayStatus());
+        if (status == HonorDisplayStatusEnum.PUBLISHED || status == HonorDisplayStatusEnum.REVOKED) {
+            throw new ServiceException("已发布或已撤销的冠军不能直接修改阵容，请先下线");
+        }
+        if (existing.getSeasonId() == null) {
+            throw new ServiceException("冠军记录缺少赛季，无法校验参赛名单");
+        }
         List<HonorLineupSaveReq> rows = items == null ? List.of() : items;
         Set<Long> playerIds = new HashSet<>();
         Date now = new Date();
@@ -307,6 +318,13 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
             BasketPlayerProfile player = playerProfileMapper.selectById(item.getPlayerId());
             if (player == null || player.getMemberId() == null) {
                 throw new ServiceException("球员不存在或未关联会员，无法写入冠军阵容");
+            }
+            BasketEventPlayerQuery rosterQuery = new BasketEventPlayerQuery();
+            rosterQuery.setSeasonId(existing.getSeasonId());
+            rosterQuery.setSourcePlayerId(item.getPlayerId());
+            List<BasketEventPlayerListVo> roster = eventPlayerMapper.selectVoList(rosterQuery);
+            if (roster == null || roster.isEmpty()) {
+                throw new ServiceException("球员不在该赛季参赛名单中，不能写入冠军阵容");
             }
             BasketHonorLineup row = new BasketHonorLineup();
             row.setHonorRecordId(id);
@@ -493,20 +511,20 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         }
     }
 
-    private void ensureUnique(BasketHonorCategory category, Long seasonId, Long teamId, Long playerId,
+    private void ensureUnique(BasketHonorCategory category, Long seriesId, Long seasonId, Long teamId, Long playerId,
                               Date awardDate, Long excludeId) {
         if (seasonId == null || category == null || category.getId() == null) {
             return;
         }
         int count;
         if (HonorCodeEnum.WEEKLY_BEST.getCode().equalsIgnoreCase(category.getHonorCode())) {
-            count = honorRecordMapper.countActiveWeekly(seasonId, category.getId(), playerId, awardDate, excludeId);
+            count = honorRecordMapper.countActiveWeekly(seasonId, seriesId, category.getId(), playerId, awardDate, excludeId);
         } else {
             count = honorRecordMapper.countActiveUnique(seasonId, category.getId(), teamId, playerId, excludeId);
         }
         if (count > 0) {
             throw new ServiceException(HonorCodeEnum.WEEKLY_BEST.getCode().equalsIgnoreCase(category.getHonorCode())
-                    ? "同一球员在该赛季的同一授予日期已有周最佳，请改日期或先撤销旧记录"
+                    ? "同一球员在该赛事赛季的同一授予日期已有周最佳。比赛周没有独立字段，同一天不能再记一条"
                     : "同赛季同荣誉分类下已存在未撤销记录，不能重复授予");
         }
     }

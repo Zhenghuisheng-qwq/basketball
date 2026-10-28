@@ -93,8 +93,9 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="500" fixed="right">
+      <el-table-column label="操作" width="280" fixed="right" align="right" class-name="match-ops-col">
         <template #default="scope">
+          <div class="match-ops">
           <el-button link type="primary" @click="openEdit(scope.row)">
             {{ scope.row.publishStatus === 'DRAFT' ? '编辑' : '详情' }}
           </el-button>
@@ -146,6 +147,7 @@
             @click="openRevokeForfeit(scope.row)"
           >撤销判负</el-button>
           <el-button link type="danger" v-if="scope.row.publishStatus === 'DRAFT'" @click="handleDelete(scope.row)">删除</el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -700,4 +702,17 @@ onMounted(async () => {
 <style scoped>
 .mb8 { margin-bottom: 8px; }
 .nowrap-tag { white-space: nowrap; }
+.match-ops {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+  gap: 2px;
+  white-space: nowrap;
+}
+:deep(.match-ops-col) {
+  background: var(--el-bg-color, #fff);
+}
+:deep(.match-ops-col .cell) {
+  overflow: hidden;
+}
 </style>

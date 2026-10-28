@@ -191,13 +191,14 @@ function openTeam(record: PublicHonorItemResp) {
   router.push(`/tournament/team/${teamId}/overview`)
 }
 
-function openEventHonor(tournamentId?: string | null, showRoster = false) {
+function openEventHonor(tournamentId?: string | null, showRoster = false, seasonId?: string | number | null) {
   if (!tournamentId) return
   router.replace({
     path: '/hall-of-fame',
     query: {
       tab: 'event',
       tournamentId,
+      ...(seasonId ? { seasonId: String(seasonId) } : {}),
       ...(showRoster ? { showRoster: '1' } : {}),
     },
   })
@@ -247,7 +248,10 @@ function teamNameText(record: PublicHonorItemResp) {
     </HallPanelHead>
 
     <div v-if="state === 'loading'" class="hall-empty">{{ t('publicPages.hall.loading') }}</div>
-    <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
+    <div v-else-if="state === 'error'" class="hall-empty">
+      <p>{{ errorMessage }}</p>
+      <button type="button" @click="loadAll">{{ t('publicPages.hall.retry') }}</button>
+    </div>
     <div v-else-if="state === 'empty' || filtered.length === 0" class="hall-empty">
       {{ t('publicPages.hall.noChampions') }}
     </div>
@@ -275,12 +279,12 @@ function teamNameText(record: PublicHonorItemResp) {
                 <strong>{{ awardDateText(record.awardDate) }}</strong>
               </p>
               <div class="past-champion-card__actions">
-                <button type="button" @click="openEventHonor(record.tournamentId, true)">
+                <button type="button" @click="openEventHonor(record.tournamentId, true, record.seasonId)">
                   {{ t('publicPages.hall.viewChampionRoster') }}
                   <span aria-hidden="true">→</span>
                 </button>
                 <span class="past-champion-card__divider" aria-hidden="true" />
-                <button type="button" @click="openEventHonor(record.tournamentId, false)">
+                <button type="button" @click="openEventHonor(record.tournamentId, false, record.seasonId)">
                   {{ t('publicPages.hall.enterEventHonors') }}
                   <span aria-hidden="true">→</span>
                 </button>

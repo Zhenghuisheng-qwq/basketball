@@ -1459,6 +1459,35 @@ export type SeasonListResult = AjaxResult<SeasonListItem[]>
 export type EligibleCaptainListResult = AjaxResult<EligibleCaptain[]>
 export type RegistrationPlayerListResult = AjaxResult<RegistrationPlayer[]>
 
+export interface HonorGenerationPreviewItem {
+  honorCode?: string
+  honorName?: string
+  honorCategoryId?: number
+  playerId?: number
+  playerName?: string
+  teamId?: number
+  teamName?: string
+  statValue?: number
+  rankNo?: number
+  skipReason?: string
+  selected?: boolean
+  divisionId?: number
+  divisionName?: string
+  eventTeamId?: number
+  sourceId?: number
+  awardDate?: string
+}
+
+export interface HonorGenerationBatch {
+  id?: number
+  batchNo?: string
+  seasonId?: number
+  seasonName?: string
+  batchStatus?: string
+  honorCount?: number
+  currentFlag?: number
+}
+
 export interface HonorGenerationPreview {
   seasonId?: number
   seasonName?: string

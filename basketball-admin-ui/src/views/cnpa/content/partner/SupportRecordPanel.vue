@@ -32,17 +32,17 @@
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="dataList" border>
-      <el-table-column label="合作伙伴" prop="partnerName" min-width="160" :show-overflow-tooltip="true" />
-      <el-table-column label="赞助金额" width="140" align="right">
+    <el-table v-loading="loading" class="even-table even-table--6" :data="dataList" border>
+      <el-table-column label="合作伙伴" prop="partnerName" align="center" :show-overflow-tooltip="true" />
+      <el-table-column label="赞助金额" align="center">
         <template #default="scope">
           <span class="amount-text">{{ formatAmount(scope.row.supportAmount) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="赞助日期" prop="supportDate" width="120" />
-      <el-table-column label="备注" prop="publicDescription" min-width="180" :show-overflow-tooltip="true" />
-      <el-table-column label="创建时间" prop="createTime" width="170" />
-      <el-table-column label="操作" align="center" width="200" class-name="small-padding fixed-width">
+      <el-table-column label="赞助日期" prop="supportDate" align="center" />
+      <el-table-column label="备注" prop="publicDescription" align="center" :show-overflow-tooltip="true" />
+      <el-table-column label="创建时间" prop="createTime" align="center" />
+      <el-table-column label="操作" align="center">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:partnerSupport:query']">详情</el-button>
           <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['basket:partnerSupport:edit']">编辑</el-button>
@@ -54,8 +54,8 @@
 
     <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="赞助记录详情" size="480px" append-to-body>
-      <el-descriptions v-if="detail" :column="1" border>
+    <el-dialog v-model="detailOpen" title="赞助记录详情" width="520px" align-center center append-to-body>
+      <el-descriptions v-if="detail" class="center-desc" :column="1" border>
         <el-descriptions-item label="合作伙伴">{{ detail.partnerName }}</el-descriptions-item>
         <el-descriptions-item label="赞助金额">{{ formatAmount(detail.supportAmount) }}</el-descriptions-item>
         <el-descriptions-item label="赞助日期">{{ detail.supportDate || '-' }}</el-descriptions-item>
@@ -63,9 +63,9 @@
         <el-descriptions-item label="公开状态">{{ detail.publishStatusName }}</el-descriptions-item>
         <el-descriptions-item label="创建时间">{{ detail.createTime || '-' }}</el-descriptions-item>
       </el-descriptions>
-    </el-drawer>
+    </el-dialog>
 
-    <el-dialog :title="dialogTitle" v-model="dialogOpen" width="520px" append-to-body>
+    <el-dialog :title="dialogTitle" v-model="dialogOpen" width="520px" align-center center append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="合作伙伴" prop="partnerName">
           <el-input v-model="form.partnerName" placeholder="合作伙伴名称" maxlength="100" show-word-limit :disabled="!!currentId" />
@@ -280,5 +280,25 @@ getList()
 .amount-text {
   font-weight: 600;
   color: #b88230;
+}
+.even-table {
+  width: 100%;
+}
+.even-table :deep(.el-table__header),
+.even-table :deep(.el-table__body) {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+.even-table :deep(col:not([name="gutter"])) {
+  width: calc(100% / 6) !important;
+}
+.even-table :deep(.cell) {
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+}
+.center-desc :deep(.el-descriptions__label),
+.center-desc :deep(.el-descriptions__content) {
+  text-align: center !important;
 }
 </style>

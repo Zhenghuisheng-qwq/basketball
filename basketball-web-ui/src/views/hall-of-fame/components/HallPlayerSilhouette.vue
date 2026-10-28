@@ -156,8 +156,8 @@ function handleError() {
 }
 
 .hall-player-visual--feature {
-  min-height: 210px;
-  height: 100%;
+  height: 180px;
+  min-height: 180px;
 }
 
 .hall-player-visual--mvp {

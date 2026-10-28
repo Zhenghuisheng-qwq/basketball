@@ -17,4 +17,9 @@ public class HonorGenerationPreviewItemResp {
     private Integer rankNo;
     private String skipReason;
     private boolean selected;
+    private Long divisionId;
+    private String divisionName;
+    private Long eventTeamId;
+    private Long sourceId;
+    private java.util.Date awardDate;
 }

@@ -11,7 +11,8 @@ import {
   getPublicHallHonorDetail,
   getPublicHallTournamentHonorPage,
 } from '@/api/publicHallOfFame'
-import { getV4PublicSeriesList } from '@/api/v4Public'
+import { getV4PublicSeasonList, getV4PublicSeriesList } from '@/api/v4Public'
+import type { V4PublicSeasonItem } from '@/api/types/v4Public'
 import type {
   PublicHonorDetailResp,
   PublicHonorItemResp,
@@ -31,22 +32,29 @@ const championCardStyle = {
 const props = defineProps<{
   tournamentId: string
   rosterExpanded: boolean
+  preferredSeasonId?: string
 }>()
 
 const emit = defineEmits<{
   'update:tournamentId': [value: string]
   'update:rosterExpanded': [value: boolean]
+  'update:seasonId': [value: string]
 }>()
 
 const router = useRouter()
 const { t } = useI18n()
 
+const EVENT_HONOR_CODES = 'CHAMPION,RUNNER_UP,THIRD_PLACE,MVP,ALL_TOURNAMENT,ALL_DEFENSIVE'
+
 const tournaments = ref<PublicTournamentItemVo[]>([])
+const seasons = ref<V4PublicSeasonItem[]>([])
+const seasonId = ref('')
 const honors = ref<PublicHonorItemResp[]>([])
 const championDetail = ref<PublicHonorDetailResp | null>(null)
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
 let tournamentReq = 0
+let seasonReq = 0
 let honorReq = 0
 
 const tournamentOptions = computed(() =>
@@ -60,11 +68,15 @@ const currentTournament = computed(
   () => tournaments.value.find((item) => item.tournamentId === props.tournamentId) ?? null,
 )
 
+const seasonOptions = computed(() =>
+  seasons.value.map((item) => ({
+    value: String(item.seasonId),
+    label: displayText(item.displayTitle || item.seasonName, t('publicPages.hall.season')),
+  })),
+)
+
 const championHonor = computed(
-  () =>
-    honors.value.find((item) => (item.honorCode || '').toUpperCase() === 'CHAMPION') ??
-    honors.value.find((item) => item.teamId) ??
-    null,
+  () => honors.value.find((item) => (item.honorCode || '').toUpperCase() === 'CHAMPION') ?? null,
 )
 
 const featuredGroups = computed(() => {
@@ -161,9 +173,45 @@ async function loadTournaments() {
   }
 }
 
-async function loadHonors(tournamentId: string) {
+async function loadSeasons(seriesId: string) {
+  const current = ++seasonReq
+  seasons.value = []
+  seasonId.value = ''
+  honors.value = []
+  championDetail.value = null
+  if (!seriesId) {
+    state.value = 'empty'
+    return
+  }
+  state.value = 'loading'
+  errorMessage.value = ''
+  try {
+    const res = await getV4PublicSeasonList()
+    if (current !== seasonReq) return
+    const rows = (res.data || []).filter((item) => String(item.seriesId) === String(seriesId))
+    seasons.value = rows
+    if (!rows.length) {
+      state.value = 'empty'
+      return
+    }
+    const latest = [...rows].sort((a, b) =>
+      Number(b.seasonYear || 0) - Number(a.seasonYear || 0)
+      || String(b.seasonId).localeCompare(String(a.seasonId)),
+    )[0]
+    const preferred = rows.find((item) => props.preferredSeasonId && String(item.seasonId) === String(props.preferredSeasonId))
+    seasonId.value = String(preferred?.seasonId || latest?.seasonId || rows[0]!.seasonId)
+    await loadHonors(seriesId, seasonId.value)
+  } catch (err) {
+    if (current !== seasonReq) return
+    seasons.value = []
+    state.value = 'error'
+    errorMessage.value = err instanceof Error ? err.message : t('publicPages.hall.loadEventsFailed')
+  }
+}
+
+async function loadHonors(tournamentId: string, selectedSeasonId = seasonId.value) {
   const current = ++honorReq
-  if (!tournamentId) {
+  if (!tournamentId || !selectedSeasonId) {
     honors.value = []
     championDetail.value = null
     state.value = 'empty'
@@ -175,8 +223,10 @@ async function loadHonors(tournamentId: string) {
   try {
     const res = await getPublicHallTournamentHonorPage({
       currentPage: 1,
-      pageSize: 50,
+      pageSize: 100,
       tournamentId,
+      seasonId: selectedSeasonId,
+      honorCodes: EVENT_HONOR_CODES,
       sortField: 'awardDate',
       sortOrder: 'desc',
     })
@@ -209,8 +259,9 @@ async function loadHonors(tournamentId: string) {
 watch(
   () => props.tournamentId,
   (id) => {
-    void loadHonors(id)
+    void loadSeasons(id)
   },
+  { immediate: true },
 )
 
 watch(
@@ -224,6 +275,21 @@ watch(
 function updateTournament(value: string | number) {
   emit('update:tournamentId', String(value))
   emit('update:rosterExpanded', false)
+}
+
+function updateSeason(value: string | number) {
+  seasonId.value = String(value)
+  emit('update:seasonId', seasonId.value)
+  emit('update:rosterExpanded', false)
+  void loadHonors(props.tournamentId, seasonId.value)
+}
+
+function retryLoad() {
+  if (props.tournamentId && seasonId.value) {
+    void loadHonors(props.tournamentId, seasonId.value)
+    return
+  }
+  void loadSeasons(props.tournamentId)
 }
 
 function toggleRoster() {
@@ -283,12 +349,21 @@ watch(mvpHonor, async (item) => {
           :disabled="!tournamentOptions.length"
           @update:model-value="updateTournament"
         />
+        <HallSelect
+          v-if="seasonOptions.length"
+          :model-value="seasonId"
+          :options="seasonOptions"
+          @update:model-value="updateSeason"
+        />
       </template>
     </HallPanelHead>
 
     <div v-if="state === 'loading'" class="hall-empty">{{ t('publicPages.hall.loading') }}</div>
-    <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
-    <div v-else-if="state === 'empty'" class="hall-empty">{{ t('publicPages.hall.noEventHonors') }}</div>
+    <div v-else-if="state === 'error'" class="hall-empty">
+      <p>{{ errorMessage }}</p>
+      <button type="button" @click="retryLoad">{{ t('publicPages.hall.retry') }}</button>
+    </div>
+    <div v-else-if="state === 'empty'" class="hall-empty">{{ t('publicPages.hall.noSeasonPublishedHonors') }}</div>
 
     <template v-else>
       <article

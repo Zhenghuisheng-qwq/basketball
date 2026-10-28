@@ -34,6 +34,21 @@
         order by source_rank asc, id asc
     </select>
 
+    <select id="selectConfirmedChampionsBySeasonId" resultMap="Result">
+        select q.id, q.division_id, q.stage_id, q.group_id, q.event_team_id, q.qualification_type,
+               q.source_rank, q.target_stage_id, q.source_series_id, q.qualification_status,
+               q.confirmed_by, q.confirmed_time, q.remark, q.active_unique_key,
+               q.create_time, q.update_time, q.is_delete
+        from basket_division_stage_qualification q
+        inner join basket_division d on d.id = q.division_id and d.is_delete = 0
+        where d.season_id = #{seasonId}
+          and d.division_status in ('FINISHED', 'ARCHIVED')
+          and q.qualification_type = 'CHAMPION'
+          and q.qualification_status = 'CONFIRMED'
+          and q.is_delete = 0
+        order by q.division_id asc, q.id asc
+    </select>
+
     <select id="selectConfirmedByStageId" resultMap="Result">
         select <include refid="BaseColumns"/> from basket_division_stage_qualification
         where stage_id = #{stageId}

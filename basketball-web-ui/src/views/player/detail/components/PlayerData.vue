@@ -315,13 +315,18 @@ onBeforeUnmount(() => {
               <tr v-for="row in careerRows" :key="`${row.seasonId}-${row.teamId}`">
                 <td class="col-event" :title="row.tournamentName">{{ row.tournamentName }}</td>
                 <td class="col-team">
-                  <router-link :to="`/tournament/team/${row.teamId}/overview`" class="player-detail-team-link player-data-team">
+                  <router-link
+                    v-if="row.teamId"
+                    :to="`/tournament/team/${row.teamId}/overview`"
+                    class="player-detail-team-link player-data-team"
+                  >
                     <TeamLogo
                       :team="{ id: row.teamId, name: row.teamName, shortName: row.teamName, logoUrl: row.teamLogoUrl }"
                       size="xs"
                     />
                     <span :title="row.teamName">{{ row.teamName }}</span>
                   </router-link>
+                  <span v-else class="player-detail-team-link player-data-team" :title="row.teamName">{{ row.teamName }}</span>
                 </td>
                 <td class="col-platform">{{ row.platform }}</td>
                 <td class="col-gp">{{ row.games }}</td>

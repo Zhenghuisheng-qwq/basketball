@@ -548,6 +548,7 @@ export interface V4PublicTeamLogoHistoryItem {
 
 export interface V4PublicTeamHonorItem {
   honorId?: string
+  honorCode?: string
   honorTitle?: string
   competitionName?: string
   awardDate?: string

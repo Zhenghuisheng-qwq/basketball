@@ -69,7 +69,7 @@ async function loadPlayer() {
     const [detailRes, statRes, honorRes] = await Promise.all([
       getPublicPlayerDetail(id),
       getPublicPlayerSeasonStat(id),
-      getPublicPlayerHonorPage(id, { currentPage: 1, pageSize: 50 }),
+      getPublicPlayerHonorPage(id, { currentPage: 1, pageSize: 200 }),
     ])
     if (current !== reqId) return
     const rawDetail = detailRes.data

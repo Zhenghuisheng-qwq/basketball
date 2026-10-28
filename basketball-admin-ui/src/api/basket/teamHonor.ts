@@ -1,6 +1,8 @@
 import request from '@/utils/request'
 import type {
   AjaxResult,
+  HonorGenerationBatch,
+  HonorGenerationPreview,
   HonorRecordAddReq,
   HonorRecordDetail,
   HonorRecordEditReq,
@@ -67,6 +69,21 @@ export function replaceTeamHonorLineup(id: number, data: Array<{
     url: `/basket/team-honor/${id}/lineup`,
     method: 'put',
     data
+  })
+}
+
+export function previewHonorGeneration(seasonId: number): Promise<AjaxResult<HonorGenerationPreview>> {
+  return request({
+    url: `/basket/honor-generation/preview/${seasonId}`,
+    method: 'get'
+  })
+}
+
+export function confirmHonorGeneration(seasonId: number): Promise<AjaxResult<HonorGenerationBatch>> {
+  return request({
+    url: '/basket/honor-generation/confirm',
+    method: 'post',
+    data: { seasonId }
   })
 }
 

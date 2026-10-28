@@ -33,6 +33,7 @@
     <el-row :gutter="10" class="mb8">
       <el-col :span="1.5">
         <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['basket:teamHonor:add']">新增</el-button>
+        <el-button v-if="canGenerateFromResult" type="warning" plain @click="openGeneration" v-hasPermi="['basket:dataSettlement:confirm']">从赛事结果生成荣誉候选</el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
@@ -162,6 +163,26 @@
       </template>
     </el-dialog>
 
+    <el-dialog title="从赛事结果生成荣誉候选" v-model="generationOpen" width="860px" append-to-body>
+      <p class="generation-note">只根据已结束赛区的已确认冠军生成草稿。不会直接发布，也不会覆盖已有荣誉。没有决赛负方时不生成亚军，没有季军认定时不生成季军。</p>
+      <el-table :data="generationItems" border max-height="420">
+        <el-table-column label="荣誉" prop="honorName" width="120" />
+        <el-table-column label="赛区" prop="divisionName" min-width="120" :show-overflow-tooltip="true" />
+        <el-table-column label="球队" prop="teamName" min-width="140" :show-overflow-tooltip="true" />
+        <el-table-column label="授予日期" width="120">
+          <template #default="scope">{{ scope.row.awardDate ? parseTime(scope.row.awardDate, '{y}-{m}-{d}') : '-' }}</template>
+        </el-table-column>
+        <el-table-column label="将保存" width="80">
+          <template #default="scope">{{ scope.row.selected ? '是' : '否' }}</template>
+        </el-table-column>
+        <el-table-column label="说明" prop="skipReason" min-width="220" :show-overflow-tooltip="true" />
+      </el-table>
+      <template #footer>
+        <el-button @click="generationOpen = false">关闭</el-button>
+        <el-button type="primary" :disabled="!generationItems.some(item => item.selected)" @click="submitGeneration">保存为草稿</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog title="撤销荣誉" v-model="revokeOpen" width="480px" append-to-body>
       <el-form ref="revokeRef" :model="revokeForm" :rules="revokeRules" label-width="100px">
         <el-form-item label="撤销原因" prop="revokeReason">
@@ -182,12 +203,15 @@ import {
   delTeamHonor,
   getTeamHonor,
   listTeamHonor,
+  confirmHonorGeneration,
+  previewHonorGeneration,
   publishTeamHonor,
   replaceTeamHonorLineup,
   revokeTeamHonor,
   updateTeamHonor
 } from '@/api/basket/teamHonor'
 import type {
+  HonorGenerationPreviewItem,
   HonorRecordAddReq,
   HonorRecordDetail,
   HonorRecordListItem,
@@ -213,6 +237,9 @@ const codeOptions = computed(() => {
   return TEAM_HONOR_CODE_OPTIONS.filter(item => props.lockedCodes.includes(item.value))
 })
 const singleLock = computed(() => props.lockedCodes.length === 1)
+const canGenerateFromResult = computed(() => props.lockedCodes.includes('CHAMPION'))
+const generationOpen = ref(false)
+const generationItems = ref<HonorGenerationPreviewItem[]>([])
 
 const dataList = ref<HonorRecordListItem[]>([])
 const loading = ref(true)
@@ -337,6 +364,27 @@ function getList() {
 function handleQuery() {
   queryParams.value.pageNum = 1
   getList()
+}
+
+function openGeneration() {
+  if (!queryParams.value.seasonId) {
+    proxy.$modal.msgWarning('请先选择赛季')
+    return
+  }
+  previewHonorGeneration(queryParams.value.seasonId).then(res => {
+    generationItems.value = res.data?.items || []
+    generationOpen.value = true
+  })
+}
+
+function submitGeneration() {
+  if (!queryParams.value.seasonId) return
+  confirmHonorGeneration(queryParams.value.seasonId).then(res => {
+    const count = res.data?.honorCount || 0
+    proxy.$modal.msgSuccess(count > 0 ? `已保存 ${count} 条草稿，请核对后再发布` : '没有新的候选，已有荣誉未改动')
+    generationOpen.value = false
+    getList()
+  })
 }
 
 function resetQuery() {
@@ -523,6 +571,14 @@ function handleDelete(row: HonorRecordListItem) {
 
 loadTournaments()
 </script>
+
+<style scoped>
+.generation-note {
+  margin: 0 0 12px;
+  color: var(--el-text-color-secondary);
+  line-height: 1.5;
+}
+</style>
 
 <style scoped>
 .mb8 {

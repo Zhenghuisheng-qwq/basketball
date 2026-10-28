@@ -31,11 +31,10 @@ let statReq = 0
 const weeklyItems = computed(() =>
   allItems.value.filter((item) => (item.honorCode || '').toUpperCase() === 'WEEKLY_BEST'),
 )
-const featuredSource = computed(() => (weeklyItems.value.length ? weeklyItems.value : allItems.value))
 
 const seasonOptions = computed(() => {
   const map = new Map<string, string>()
-  featuredSource.value.forEach((item) => {
+  weeklyItems.value.forEach((item) => {
     const id = String(item.seasonId || '')
     if (!id) return
     map.set(id, displayText(item.seasonName, t('publicPages.hall.season')))
@@ -47,7 +46,7 @@ const seasonOptions = computed(() => {
 })
 
 const weeks = computed(() => {
-  const list = featuredSource.value.filter((item) => {
+  const list = weeklyItems.value.filter((item) => {
     if (seasonFilter.value === 'ALL') return true
     return String(item.seasonId || '') === seasonFilter.value
   })
@@ -56,10 +55,18 @@ const weeks = computed(() => {
 
 const current = computed(() => weeks.value[weekCursor.value] || null)
 
+function weekLabel(item: PublicHonorItemResp): string {
+  const subtitle = String(item.honorSubtitle || '').trim()
+  if (subtitle) return subtitle
+  const date = formatDateTime(item.awardDate || '').date
+  if (date !== '--') return date
+  return displayText(item.honorTitle, t('publicPages.hall.weeklyBest'))
+}
+
 const weekOptions = computed(() =>
   weeks.value.map((item, index) => ({
     value: String(index),
-    label: t('publicPages.hall.weekMatch', { week: index + 1 }),
+    label: weekLabel(item),
   })),
 )
 
@@ -87,6 +94,7 @@ async function loadAll() {
       const res = await getPublicHallPlayerHonorPage({
         currentPage: page,
         pageSize: 100,
+        honorCodes: 'WEEKLY_BEST',
         sortField: 'awardDate',
         sortOrder: 'asc',
       })
@@ -96,8 +104,9 @@ async function loadAll() {
       pages = Math.max(1, Number(data?.pages || 1))
       page += 1
     } while (page <= pages && page <= 8)
-    allItems.value = collected
-    state.value = collected.length ? 'success' : 'empty'
+    const weekly = collected.filter((item) => (item.honorCode || '').toUpperCase() === 'WEEKLY_BEST')
+    allItems.value = weekly
+    state.value = weekly.length ? 'success' : 'empty'
     weekCursor.value = Math.max(0, weeks.value.length - 1)
   } catch (err) {
     if (currentReq !== reqId) return
@@ -211,8 +220,12 @@ function formatPct(value?: number | string | null) {
     </HallPanelHead>
 
     <div v-if="state === 'loading'" class="hall-empty">{{ t('publicPages.hall.loading') }}</div>
-    <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
-    <div v-else-if="state === 'empty' || !current" class="hall-empty">{{ t('publicPages.hall.noPlayerHonors') }}</div>
+    <div v-else-if="state === 'error'" class="hall-empty">
+      <p>{{ errorMessage }}</p>
+      <button type="button" @click="loadAll">{{ t('publicPages.hall.retry') }}</button>
+    </div>
+    <div v-else-if="state === 'empty'" class="hall-empty">{{ t('publicPages.hall.noWeeklyBest') }}</div>
+    <div v-else-if="!current" class="hall-empty">{{ t('publicPages.hall.noWeeklyBestSeason') }}</div>
 
     <template v-else>
       <article class="weekly-feature hall-card-surface">
@@ -257,6 +270,7 @@ function formatPct(value?: number | string | null) {
             />
             <span>{{ displayText(current.teamName, t('publicPages.hall.championTeam')) }}</span>
           </button>
+          <p v-if="current.honorTitle" class="weekly-feature__meta">{{ current.honorTitle }}</p>
           <p class="weekly-feature__meta">{{ displayText(current.seasonName || current.tournamentName, t('publicPages.hall.season')) }}</p>
           <p v-if="awardRange(current)" class="weekly-feature__meta">{{ awardRange(current) }}</p>
         </div>
@@ -271,11 +285,11 @@ function formatPct(value?: number | string | null) {
       <div class="weekly-nav">
         <button type="button" :disabled="weekCursor <= 0" @click="stepWeek(-1)">
           <span aria-hidden="true">‹</span>
-          {{ t('publicPages.hall.prevWeek') }}
+          {{ t('publicPages.hall.prevRecord') }}
         </button>
-        <strong>{{ t('publicPages.hall.weekNo', { week: weekCursor + 1 }) }}</strong>
+        <strong>{{ weekLabel(current) }}</strong>
         <button type="button" :disabled="weekCursor >= weeks.length - 1" @click="stepWeek(1)">
-          {{ t('publicPages.hall.nextWeek') }}
+          {{ t('publicPages.hall.nextRecord') }}
           <span aria-hidden="true">›</span>
         </button>
       </div>
@@ -290,7 +304,7 @@ function formatPct(value?: number | string | null) {
 
 .weekly-feature {
   display: grid;
-  grid-template-columns: minmax(320px, 1.15fr) minmax(180px, 240px) minmax(420px, 1.35fr);
+  grid-template-columns: minmax(280px, 1.05fr) minmax(160px, 220px) minmax(280px, 1.2fr);
   gap: 12px 20px;
   align-items: center;
   min-height: 196px;
@@ -299,9 +313,11 @@ function formatPct(value?: number | string | null) {
 
 .weekly-feature__hero {
   display: grid;
-  grid-template-columns: 132px minmax(0, 1fr);
+  grid-template-columns: minmax(156px, 0.9fr) minmax(120px, 1fr);
   align-items: end;
   min-height: 180px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .weekly-feature__mark {
@@ -323,6 +339,8 @@ function formatPct(value?: number | string | null) {
 
 .weekly-feature__photo {
   height: 180px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .weekly-feature__name,

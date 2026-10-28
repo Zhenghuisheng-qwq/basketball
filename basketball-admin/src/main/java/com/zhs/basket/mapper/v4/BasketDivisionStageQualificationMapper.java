@@ -10,6 +10,8 @@ public interface BasketDivisionStageQualificationMapper {
 
     List<BasketDivisionStageQualification> selectConfirmedByStageId(@Param("stageId") Long stageId);
 
+    List<BasketDivisionStageQualification> selectConfirmedChampionsBySeasonId(@Param("seasonId") Long seasonId);
+
     int insert(BasketDivisionStageQualification entity);
 
     int batchInsert(@Param("list") List<BasketDivisionStageQualification> list);

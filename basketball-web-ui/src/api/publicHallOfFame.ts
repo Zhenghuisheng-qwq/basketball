@@ -14,6 +14,7 @@ export type PublicHonorPageParams = {
   keyword?: string
   sortField?: string
   sortOrder?: string
+  honorCodes?: string
 }
 
 export function getPublicHallOverview() {

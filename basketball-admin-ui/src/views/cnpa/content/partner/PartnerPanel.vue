@@ -22,40 +22,40 @@
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
-    <el-table v-loading="loading" :data="dataList" border>
-      <el-table-column label="Logo" width="72" align="center">
+    <el-table v-loading="loading" class="even-table even-table--7" :data="dataList" border>
+      <el-table-column label="Logo" align="center">
         <template #default="scope">
           <el-image v-if="scope.row.logoUrl" :src="scope.row.logoUrl" style="width: 40px; height: 40px" fit="contain" />
           <div v-else class="partner-logo-fallback">{{ partnerInitial(scope.row.partnerName) }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="合作伙伴" min-width="160" :show-overflow-tooltip="true">
+      <el-table-column label="合作伙伴" align="center" :show-overflow-tooltip="true">
         <template #default="scope">
           <div class="partner-name">{{ scope.row.partnerName }}</div>
           <div v-if="scope.row.partnerCode" class="partner-code">{{ scope.row.partnerCode }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="累计赞助" width="140" align="right">
+      <el-table-column label="累计赞助" align="center">
         <template #default="scope">
           <span class="amount-text">{{ formatAmount(scope.row.totalSupportAmount) }}</span>
         </template>
       </el-table-column>
-      <el-table-column label="赞助次数" width="90" align="center">
+      <el-table-column label="赞助次数" align="center">
         <template #default="scope">
           {{ Number(scope.row.supportCount || 0) }} 次
         </template>
       </el-table-column>
-      <el-table-column label="最近赞助" prop="latestSupportTime" width="120" align="center">
+      <el-table-column label="最近赞助" prop="latestSupportTime" align="center">
         <template #default="scope">
           {{ formatDate(scope.row.latestSupportTime) }}
         </template>
       </el-table-column>
-      <el-table-column label="状态" prop="partnerStatus" width="100" align="center">
+      <el-table-column label="状态" prop="partnerStatus" align="center">
         <template #default="scope">
           <dict-tag :options="PARTNER_STATUS_OPTIONS" :value="scope.row.partnerStatus" />
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="300" class-name="small-padding fixed-width" fixed="right">
+      <el-table-column label="操作" align="center">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:partner:query']">详情</el-button>
           <el-button link type="success" icon="Plus" @click="openSupportDialog(scope.row)" v-hasPermi="['basket:partnerSupport:add']">新增赞助</el-button>
@@ -68,9 +68,9 @@
 
     <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="合作伙伴详情" size="580px" append-to-body>
+    <el-dialog v-model="detailOpen" title="合作伙伴详情" width="640px" align-center center append-to-body>
       <template v-if="detail">
-        <el-descriptions :column="1" border>
+        <el-descriptions class="center-desc" :column="1" border>
           <el-descriptions-item label="合作伙伴">{{ detail.partnerName }}</el-descriptions-item>
           <el-descriptions-item label="Logo">
             <el-image v-if="detail.logoUrl" :src="detail.logoUrl" style="width: 120px; height: 80px" fit="contain" />
@@ -86,19 +86,19 @@
         </el-descriptions>
 
         <div class="detail-history-title">历史赞助记录</div>
-        <el-table v-loading="detailSupportsLoading" :data="detailSupports" border size="small" empty-text="暂无赞助记录">
-          <el-table-column label="赞助日期" prop="supportDate" width="120" />
-          <el-table-column label="赞助金额" width="130" align="right">
+        <el-table v-loading="detailSupportsLoading" class="even-table even-table--3" :data="detailSupports" border size="small" empty-text="暂无赞助记录">
+          <el-table-column label="赞助日期" prop="supportDate" align="center" />
+          <el-table-column label="赞助金额" align="center">
             <template #default="scope">
               {{ formatAmount(scope.row.supportAmount) }}
             </template>
           </el-table-column>
-          <el-table-column label="备注" prop="publicDescription" min-width="160" :show-overflow-tooltip="true" />
+          <el-table-column label="备注" prop="publicDescription" align="center" :show-overflow-tooltip="true" />
         </el-table>
       </template>
-    </el-drawer>
+    </el-dialog>
 
-    <el-dialog :title="dialogTitle" v-model="dialogOpen" width="560px" append-to-body>
+    <el-dialog :title="dialogTitle" v-model="dialogOpen" width="560px" align-center center append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="名称" prop="partnerName">
           <el-input v-model="form.partnerName" maxlength="100" show-word-limit placeholder="合作伙伴名称" />
@@ -135,7 +135,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog title="新增赞助" v-model="supportDialogOpen" width="480px" append-to-body>
+    <el-dialog title="新增赞助" v-model="supportDialogOpen" width="480px" align-center center append-to-body>
       <el-form ref="supportFormRef" :model="supportForm" :rules="supportRules" label-width="100px">
         <el-form-item label="合作伙伴">
           <el-input :model-value="supportPartnerName" disabled />
@@ -443,11 +443,13 @@ getList()
 .partner-name {
   font-weight: 600;
   color: #303133;
+  text-align: center;
 }
 .partner-code {
   margin-top: 2px;
   font-size: 12px;
   color: #909399;
+  text-align: center;
 }
 .amount-text {
   font-weight: 600;
@@ -456,6 +458,30 @@ getList()
 .detail-history-title {
   margin: 20px 0 10px;
   font-weight: 600;
+  text-align: center;
+}
+.even-table {
+  width: 100%;
+}
+.even-table :deep(.el-table__header),
+.even-table :deep(.el-table__body) {
+  width: 100% !important;
+  table-layout: fixed !important;
+}
+.even-table :deep(col:not([name="gutter"])) {
+  width: calc(100% / 7) !important;
+}
+.even-table--3 :deep(col:not([name="gutter"])) {
+  width: calc(100% / 3) !important;
+}
+.even-table :deep(.cell) {
+  text-align: center;
+  white-space: normal;
+  word-break: break-word;
+}
+.center-desc :deep(.el-descriptions__label),
+.center-desc :deep(.el-descriptions__content) {
+  text-align: center !important;
 }
 .more-settings {
   border: none;

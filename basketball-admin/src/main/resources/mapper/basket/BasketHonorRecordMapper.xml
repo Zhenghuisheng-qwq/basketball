@@ -117,9 +117,17 @@
         select count(1) from basket_honor_record
         where is_delete = 0 and season_id = #{seasonId} and honor_category_id = #{honorCategoryId}
           and player_id = #{playerId} and display_status &lt;&gt; 3
+        <if test="seriesId != null">and series_id = #{seriesId}</if>
+        <if test="seriesId == null">and series_id is null</if>
         <if test="awardDate != null">and award_date = #{awardDate}</if>
         <if test="awardDate == null">and award_date is null</if>
         <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>
+    </select>
+
+    <select id="countAnyTeamHonor" resultType="int">
+        select count(1) from basket_honor_record
+        where is_delete = 0 and season_id = #{seasonId} and honor_category_id = #{honorCategoryId}
+          and team_id = #{teamId} and player_id is null
     </select>
 
     <select id="countActiveUnique" resultType="int">

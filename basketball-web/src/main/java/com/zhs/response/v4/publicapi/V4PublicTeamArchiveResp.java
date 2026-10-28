@@ -56,6 +56,7 @@ public class V4PublicTeamArchiveResp {
     public static class V4PublicTeamHonorItem {
         @JsonSerialize(using = ToStringSerializer.class)
         private Long honorId;
+        private String honorCode;
         private String honorTitle;
         private String competitionName;
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

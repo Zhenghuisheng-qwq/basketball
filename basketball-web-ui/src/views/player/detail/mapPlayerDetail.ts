@@ -29,7 +29,7 @@ export function mapPublicPlayerProfile(
     const teamName = displayText(item.teamName, '--')
     const eventContext = [item.seasonName, item.divisionName].filter(Boolean).join(' · ')
     return {
-      teamId: String(item.eventTeamId || item.teamId || ''),
+      teamId: item.eventTeamId ? String(item.eventTeamId) : '',
       teamName,
       shortName: displayText(item.shortName, teamName).slice(0, 8),
       logoUrl: item.logoUrl?.trim() || '',
@@ -41,7 +41,7 @@ export function mapPublicPlayerProfile(
       divisionName: item.divisionName || '',
       platformCode: item.platformCode || '',
       gameMode: item.gameMode || '',
-      eventTeamId: item.eventTeamId ? String(item.eventTeamId) : String(item.teamId || ''),
+      eventTeamId: item.eventTeamId ? String(item.eventTeamId) : '',
       disqualified: Boolean(item.disqualified),
       seasonId: item.seasonId ? String(item.seasonId) : '',
     }
@@ -61,12 +61,12 @@ export function mapPublicPlayerProfile(
     badgeUrl: '',
     verified,
     registrationText: verified ? 'CNPA REGISTERED PLAYER' : 'CNPA PLAYER',
-    currentTeamId: primary?.teamId || String(detail.currentTeamId || ''),
+    currentTeamId: primary?.eventTeamId || '',
     currentTeamName: teamName,
     currentTeamAbbr: (primary?.shortName || teamName).slice(0, 8),
     currentTeamLogoUrl: primary?.logoUrl || detail.currentTeamLogoUrl?.trim() || '',
     currentTeams,
-    teamKey: primary?.teamId || String(detail.currentTeamId || ''),
+    teamKey: primary?.eventTeamId || primary?.teamId || '',
     logoColor: '#c9a360',
     position: displayText(detail.positionCode, '--'),
     platform: v4PlatformLabel(primary?.platformCode) || '--',
@@ -76,7 +76,7 @@ export function mapPublicPlayerProfile(
     seasonName: primary?.seasonName || '',
     divisionName: primary?.divisionName || '',
     divisionId: primary?.divisionId || queryDivisionId,
-    eventTeamId: primary?.eventTeamId || primary?.teamId || '',
+    eventTeamId: primary?.eventTeamId || '',
     eventPlayerId: '',
     eventTeamDisqualified: Boolean(primary?.disqualified),
     seasonId: primary?.seasonId || '',
@@ -210,7 +210,7 @@ export function mapPublicPlayerSeasonStats(
     seasonId: String(row.divisionId || row.seasonId || ''),
     divisionId: String(row.divisionId || ''),
     tournamentName: buildSeasonLabel(row),
-    teamId: String(row.eventTeamId || row.teamId || ''),
+    teamId: row.eventTeamId ? String(row.eventTeamId) : '',
     teamName: displayText(row.teamName, '--'),
     teamLogoUrl: row.teamLogoUrl?.trim() || '',
     platform: v4PlatformLabel(row.platformCode),
@@ -251,16 +251,6 @@ function seasonPeriodLabel(row: Pick<PublicPlayerSeasonStatVo, 'seasonName' | 's
   return displayText(row.seasonName || row.seriesName, '')
 }
 
-function formatCareerPeriod(labels: string[], current: boolean): string {
-  const start = labels[0] || ''
-  const end = labels[labels.length - 1] || ''
-  if (!start && current) return translate('publicPages.player.present')
-  if (!start) return '--'
-  if (current) return `${start} — ${translate('publicPages.player.present')}`
-  if (end && end !== start) return `${start} — ${end}`
-  return start
-}
-
 export function buildPlayerTeamHistory(
   profile: PlayerProfile,
   rows: PublicPlayerSeasonStatVo[] = [],
@@ -279,9 +269,9 @@ export function buildPlayerTeamHistory(
   )
   for (const row of sorted) {
     const teamName = displayText(row.teamName, '')
-    const teamId = String(row.eventTeamId || row.teamId || '')
+    const teamId = row.eventTeamId ? String(row.eventTeamId) : ''
     if (!teamId && (!teamName || teamName === '--')) continue
-    const key = (teamName && teamName !== '--' ? teamName : teamId).toLowerCase()
+    const key = teamId || `name:${teamName.toLowerCase()}`
     const label = seasonPeriodLabel(row)
     const existing = byKey.get(key)
     if (existing) {
@@ -290,8 +280,8 @@ export function buildPlayerTeamHistory(
       continue
     }
     byKey.set(key, {
-      teamId: teamId || profile.eventTeamId || profile.currentTeamId,
-      teamName: teamName || profile.currentTeamName || '--',
+      teamId,
+      teamName: teamName || '--',
       teamLogoUrl: row.teamLogoUrl?.trim() || '',
       divisionId: row.divisionId ? String(row.divisionId) : '',
       labels: label ? [label] : [],
@@ -299,17 +289,11 @@ export function buildPlayerTeamHistory(
     })
   }
 
-  const currentTeamId = profile.eventTeamId || profile.currentTeamId
-  const currentName = profile.currentTeamName
-  const hasCurrent = [...byKey.values()].some((item) =>
-    item.teamId === currentTeamId
-    || item.teamId === profile.currentTeamId
-    || (currentName && currentName !== '--' && item.teamName === currentName),
-  )
-  if (!hasCurrent && (currentTeamId || (currentName && currentName !== '--'))) {
-    byKey.set(currentTeamId || currentName, {
-      teamId: currentTeamId,
-      teamName: currentName || '--',
+  const currentEventTeamId = profile.eventTeamId || ''
+  if (currentEventTeamId && ![...byKey.values()].some((item) => item.teamId === currentEventTeamId)) {
+    byKey.set(currentEventTeamId, {
+      teamId: currentEventTeamId,
+      teamName: profile.currentTeamName || '--',
       teamLogoUrl: profile.currentTeamLogoUrl,
       divisionId: profile.divisionId,
       labels: profile.seasonName ? [profile.seasonName] : [],
@@ -319,96 +303,51 @@ export function buildPlayerTeamHistory(
 
   const list = [...byKey.values()]
   for (const item of list) {
-    item.current = Boolean(
-      item.teamId
-      && (item.teamId === profile.eventTeamId || item.teamId === profile.currentTeamId),
-    ) || Boolean(currentName && currentName !== '--' && item.teamName === currentName)
-  }
-  if (!list.some((item) => item.current) && list.length) {
-    list[list.length - 1].current = true
+    item.current = Boolean(currentEventTeamId && item.teamId === currentEventTeamId)
   }
 
-  return list.map((item, index) => {
-    let description = translate('publicPages.player.participatingTeam')
-    if (item.current) description = translate('publicPages.player.currentRosterTeam')
-    else if (index === 0) description = translate('publicPages.player.firstTeam')
-    return {
-      id: index + 1,
-      startDate: item.labels[0] || '--',
-      endDate: item.current ? translate('publicPages.player.present') : (item.labels[item.labels.length - 1] || '--'),
-      period: formatCareerPeriod(item.labels, item.current),
-      teamId: item.teamId,
-      teamName: item.teamName,
-      teamLogoUrl: item.teamLogoUrl,
-      divisionId: item.divisionId,
-      description,
-      current: item.current,
-    }
-  })
+  return list.map((item, index) => ({
+    id: index + 1,
+    startDate: item.labels[0] || '--',
+    endDate: item.labels[item.labels.length - 1] || '--',
+    period: item.labels.filter(Boolean).join(' · ') || '--',
+    teamId: item.teamId,
+    teamName: item.teamName,
+    teamLogoUrl: item.teamLogoUrl,
+    divisionId: item.divisionId,
+    description: item.current
+      ? translate('publicPages.player.currentRosterTeam')
+      : translate('publicPages.player.participatingTeam'),
+    current: item.current,
+  }))
 }
 
 export function buildPlayerNameHistory(
   profile: PlayerProfile,
   rows: PublicPlayerSeasonStatVo[] = [],
 ): PlayerNameHistory[] {
-  type Entry = { playerName: string; labels: string[]; current: boolean }
-  const entries: Entry[] = []
+  const currentName = displayText(profile.displayName, '')
+  const byName = new Map<string, string[]>()
   const sorted = [...rows].sort((a, b) =>
     String(a.seasonName || a.seasonId || '').localeCompare(String(b.seasonName || b.seasonId || '')),
   )
   for (const row of sorted) {
     const playerName = displayText(row.playerName, '')
-    if (!playerName || playerName === '--') continue
+    if (!playerName || playerName === '--' || (currentName && playerName === currentName)) continue
     const label = seasonPeriodLabel(row)
-    const last = entries[entries.length - 1]
-    if (last && last.playerName === playerName) {
-      if (label && !last.labels.includes(label)) last.labels.push(label)
-      continue
-    }
-    entries.push({
-      playerName,
-      labels: label ? [label] : [],
-      current: false,
-    })
+    const labels = byName.get(playerName) || []
+    if (label && !labels.includes(label)) labels.push(label)
+    byName.set(playerName, labels)
   }
-
-  const currentName = displayText(profile.displayName, translate('publicPages.player.unknownPlayer'))
-  if (!entries.some((item) => item.playerName === currentName)) {
-    entries.push({
-      playerName: currentName,
-      labels: profile.seasonName ? [profile.seasonName] : [],
-      current: true,
-    })
-  }
-  if (!entries.length) {
-    entries.push({
-      playerName: currentName,
-      labels: [],
-      current: true,
-    })
-  }
-
-  entries.forEach((item) => {
-    item.current = item.playerName === currentName
-  })
-  if (!entries.some((item) => item.current)) {
-    entries[entries.length - 1].current = true
-  }
-
-  return entries.map((item, index) => {
-    let description = translate('publicPages.player.formerName')
-    if (item.current) description = translate('publicPages.player.currentName')
-    else if (index === 0) description = translate('publicPages.player.firstRegisteredName')
-    return {
-      id: index + 1,
-      startDate: item.labels[0] || '--',
-      endDate: item.current ? translate('publicPages.player.present') : (item.labels[item.labels.length - 1] || '--'),
-      period: formatCareerPeriod(item.labels, item.current),
-      playerName: item.playerName,
-      description,
-      current: item.current,
-    }
-  })
+  return [...byName.entries()].map(([playerName, labels], index) => ({
+    id: index + 1,
+    startDate: labels[0] || '--',
+    endDate: labels[labels.length - 1] || '--',
+    period: labels.filter(Boolean).join(' · ') || '--',
+    playerName,
+    description: translate('publicPages.player.seasonSnapshotName'),
+    current: false,
+  }))
 }
 
 export function mapPublicPlayerHonors(rows: PublicHonorItemResp[]): PlayerHonor[] {

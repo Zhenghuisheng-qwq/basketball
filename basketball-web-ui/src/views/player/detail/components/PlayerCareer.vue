@@ -158,7 +158,9 @@ function openHonor(tournamentId?: string) {
         </div>
       </div>
 
-      <ol class="career-timeline">
+      <div v-if="detail.nameHistory.length === 0" class="player-detail-empty-inline">{{ t('publicPages.player.noNameHistory') }}</div>
+
+      <ol v-else class="career-timeline">
         <li
           v-for="item in detail.nameHistory"
           :key="item.id"

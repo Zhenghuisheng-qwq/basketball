@@ -284,8 +284,20 @@ public class PublicCurrentRosterSupport {
             logoUrl = publicSupport.loadAccessUrlMap(Collections.singleton(source.getLogoFileId()))
                     .get(source.getLogoFileId());
         }
-        applyItem(resp, faceFrom(source, logoUrl));
-        if (StringUtils.hasText(source.getDescription())) {
+        CurrentTeamFace face = faceFrom(source, logoUrl);
+        if (face != null) {
+            if (!StringUtils.hasText(resp.getTeamName()) && face.teamName() != null) {
+                resp.setTeamName(face.teamName());
+            }
+            if (!StringUtils.hasText(resp.getTeamShortName()) && face.shortName() != null) {
+                resp.setTeamShortName(face.shortName());
+            }
+            if (resp.getTeamLogoFileId() == null && face.logoFileId() != null) {
+                resp.setTeamLogoFileId(face.logoFileId());
+                resp.setTeamLogoUrl(face.logoUrl());
+            }
+        }
+        if (!StringUtils.hasText(resp.getDescription()) && StringUtils.hasText(source.getDescription())) {
             resp.setDescription(source.getDescription());
         }
     }

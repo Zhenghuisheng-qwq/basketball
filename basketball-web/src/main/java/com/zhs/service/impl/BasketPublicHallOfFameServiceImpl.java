@@ -42,25 +42,25 @@ public class BasketPublicHallOfFameServiceImpl implements IBasketPublicHallOfFam
     @Override
     public IPage<PublicHonorItemResp> pageTournamentHonors(Integer currentPage, Integer pageSize,
                                                            Long tournamentId, Long seasonId, String keyword,
-                                                           String sortField, String sortOrder) {
+                                                           String sortField, String sortOrder, String honorCodes) {
         return honorSupport.pageByScope(BasketPublicConstants.HONOR_SCOPE_TOURNAMENT,
-                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder);
+                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder, honorCodes);
     }
 
     @Override
     public IPage<PublicHonorItemResp> pagePlayerHonors(Integer currentPage, Integer pageSize,
                                                        Long tournamentId, Long seasonId, String keyword,
-                                                       String sortField, String sortOrder) {
+                                                       String sortField, String sortOrder, String honorCodes) {
         return honorSupport.pageByScope(BasketPublicConstants.HONOR_SCOPE_PLAYER,
-                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder);
+                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder, honorCodes);
     }
 
     @Override
     public IPage<PublicHonorItemResp> pageTeamHonors(Integer currentPage, Integer pageSize,
                                                      Long tournamentId, Long seasonId, String keyword,
-                                                     String sortField, String sortOrder) {
+                                                     String sortField, String sortOrder, String honorCodes) {
         return honorSupport.pageByScope(BasketPublicConstants.HONOR_SCOPE_TEAM,
-                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder);
+                currentPage, pageSize, tournamentId, seasonId, keyword, sortField, sortOrder, honorCodes);
     }
 
     @Override

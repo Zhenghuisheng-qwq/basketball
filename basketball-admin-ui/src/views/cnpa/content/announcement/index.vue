@@ -34,23 +34,23 @@
     </el-row>
 
     <el-table v-loading="loading" :data="dataList" border>
-      <el-table-column label="编号" prop="announcementNo" width="140" />
-      <el-table-column label="标题" prop="title" min-width="180" :show-overflow-tooltip="true" />
-      <el-table-column label="分类" prop="categoryName" width="110" />
-      <el-table-column label="赛季" prop="seasonName" width="120" :show-overflow-tooltip="true" />
-      <el-table-column label="规则版本" prop="ruleVersion" width="100" />
-      <el-table-column label="状态" prop="announcementStatus" width="100">
+      <el-table-column label="编号" prop="announcementNo" min-width="140" align="center" />
+      <el-table-column label="标题" prop="title" min-width="180" align="center" :show-overflow-tooltip="true" />
+      <el-table-column label="分类" prop="categoryName" min-width="110" align="center" />
+      <el-table-column label="赛季" prop="seasonName" min-width="120" align="center" :show-overflow-tooltip="true" />
+      <el-table-column label="规则版本" prop="ruleVersion" min-width="100" align="center" />
+      <el-table-column label="状态" prop="announcementStatus" min-width="100" align="center">
         <template #default="scope">
           <dict-tag :options="ANNOUNCEMENT_STATUS_OPTIONS" :value="scope.row.announcementStatus" />
         </template>
       </el-table-column>
-      <el-table-column label="置顶" prop="isTop" width="70">
+      <el-table-column label="置顶" prop="isTop" width="80" align="center">
         <template #default="scope">{{ scope.row.isTop === 1 ? '是' : '否' }}</template>
       </el-table-column>
-      <el-table-column label="重要" prop="isImportant" width="70">
+      <el-table-column label="重要" prop="isImportant" width="80" align="center">
         <template #default="scope">{{ scope.row.isImportant === 1 ? '是' : '否' }}</template>
       </el-table-column>
-      <el-table-column label="发布时间" prop="publishTime" width="160">
+      <el-table-column label="发布时间" prop="publishTime" min-width="160" align="center">
         <template #default="scope">{{ parseTime(scope.row.publishTime) || '-' }}</template>
       </el-table-column>
       <el-table-column label="操作" align="center" width="420" class-name="small-padding fixed-width">
@@ -69,7 +69,7 @@
 
     <pagination :total="total" v-model:page="queryParams.pageNum" v-model:limit="queryParams.pageSize" @pagination="getList" />
 
-    <el-drawer v-model="detailOpen" title="公告详情" size="640px" append-to-body>
+    <el-dialog v-model="detailOpen" title="公告详情" width="720px" align-center append-to-body>
       <el-descriptions v-if="detail" :column="1" border>
         <el-descriptions-item label="编号">{{ detail.announcementNo }}</el-descriptions-item>
         <el-descriptions-item label="标题">{{ detail.title }}</el-descriptions-item>
@@ -88,9 +88,9 @@
           <span v-else>-</span>
         </el-descriptions-item>
       </el-descriptions>
-    </el-drawer>
+    </el-dialog>
 
-    <el-dialog :title="dialogTitle" v-model="dialogOpen" width="720px" append-to-body>
+    <el-dialog :title="dialogTitle" v-model="dialogOpen" width="720px" align-center append-to-body>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="分类" prop="categoryCode">
           <el-select v-model="form.categoryCode" style="width: 100%">
@@ -152,7 +152,7 @@
       </template>
     </el-dialog>
 
-    <el-dialog title="替代旧规则公告" v-model="supersedeOpen" width="560px" append-to-body>
+    <el-dialog title="替代旧规则公告" v-model="supersedeOpen" width="560px" align-center append-to-body>
       <el-form :model="supersedeForm" label-width="110px">
         <el-form-item label="新公告">{{ supersedeTarget?.title }}</el-form-item>
         <el-form-item label="旧公告ID" required>

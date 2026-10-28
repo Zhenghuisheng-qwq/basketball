@@ -19,6 +19,9 @@ const playerPage = computed(() => parsePositiveInt(route.query.page, 1))
 const eventTournamentId = computed(() =>
   typeof route.query.tournamentId === 'string' ? route.query.tournamentId : '',
 )
+const eventSeasonId = computed(() =>
+  typeof route.query.seasonId === 'string' ? route.query.seasonId : '',
+)
 const rosterExpanded = computed(() => route.query.showRoster === '1')
 const championYear = computed(() => parseQueryString(route.query.year, 'ALL'))
 const championPage = computed(() => parsePositiveInt(route.query.page, 1))
@@ -48,6 +51,7 @@ function setTab(tab: HallTab) {
     replaceQuery({
       tab,
       tournamentId: eventTournamentId.value || undefined,
+      seasonId: eventSeasonId.value || undefined,
       showRoster: rosterExpanded.value ? '1' : undefined,
     })
     return
@@ -68,6 +72,16 @@ function updateEventTournamentId(value: string) {
   replaceQuery({
     tab: 'event',
     tournamentId: value || undefined,
+    seasonId: undefined,
+    showRoster: undefined,
+  })
+}
+
+function updateEventSeasonId(value: string) {
+  replaceQuery({
+    tab: 'event',
+    tournamentId: eventTournamentId.value || undefined,
+    seasonId: value || undefined,
     showRoster: undefined,
   })
 }
@@ -76,6 +90,7 @@ function updateRosterExpanded(value: boolean) {
   replaceQuery({
     tab: 'event',
     tournamentId: eventTournamentId.value || undefined,
+    seasonId: eventSeasonId.value || undefined,
     showRoster: value ? '1' : undefined,
   })
 }
@@ -136,8 +151,10 @@ watch(
             <EventHonorsPanel
               v-else-if="activeTab === 'event'"
               :tournament-id="eventTournamentId"
+              :preferred-season-id="eventSeasonId"
               :roster-expanded="rosterExpanded"
               @update:tournament-id="updateEventTournamentId"
+              @update:season-id="updateEventSeasonId"
               @update:roster-expanded="updateRosterExpanded"
             />
             <PastChampionsPanel

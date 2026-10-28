@@ -33,10 +33,10 @@ spring:
 
   data:
     redis:
-      # 本机测试走 SSH 隧道连线上 Redis：ssh -N -L 16379:127.0.0.1:6379 root@111.229.241.29
+      # 本机 Redis（WinGet redis-server --port 16380）。线上隧道是 16379，不要和这里混用。
       host: 127.0.0.1
-      port: 16379
-      password: 'CnpaRedis@2026#Cache!'
+      port: 16380
+      password: ''
       database: 0
       timeout: 10s
       lettuce:

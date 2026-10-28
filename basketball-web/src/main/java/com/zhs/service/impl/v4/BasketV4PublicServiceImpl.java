@@ -401,22 +401,33 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 resp.getLogoHistory().add(item);
             }
         }
-        try {
-            List<PublicHonorItemResp> honors = publicHonorSupport.pageByTeam(team.getSourceTeamId(), 1, 50).getRecords();
-            if (!CollectionUtils.isEmpty(honors)) {
-                for (PublicHonorItemResp honor : honors) {
-                    V4PublicTeamArchiveResp.V4PublicTeamHonorItem item = new V4PublicTeamArchiveResp.V4PublicTeamHonorItem();
-                    item.setHonorId(honor.getHonorId());
-                    item.setHonorTitle(honor.getHonorTitle());
-                    item.setCompetitionName(honor.getSeasonName() != null ? honor.getSeasonName() : honor.getTournamentName());
-                    item.setAwardDate(honor.getAwardDate());
-                    resp.getHonors().add(item);
+        List<PublicHonorItemResp> honors = publicHonorSupport.pageByTeam(team.getSourceTeamId(), 1, 100).getRecords();
+        if (!CollectionUtils.isEmpty(honors)) {
+            for (PublicHonorItemResp honor : honors) {
+                if (!isPublishedTeamHonor(honor)) {
+                    continue;
                 }
+                V4PublicTeamArchiveResp.V4PublicTeamHonorItem item = new V4PublicTeamArchiveResp.V4PublicTeamHonorItem();
+                item.setHonorId(honor.getHonorId());
+                item.setHonorCode(honor.getHonorCode());
+                item.setHonorTitle(honor.getHonorTitle());
+                item.setCompetitionName(honor.getSeasonName() != null ? honor.getSeasonName() : honor.getTournamentName());
+                item.setAwardDate(honor.getAwardDate());
+                resp.getHonors().add(item);
             }
-        } catch (Exception ignored) {
-            // honors are optional for archive
         }
         return resp;
+    }
+
+    private boolean isPublishedTeamHonor(PublicHonorItemResp honor) {
+        if (honor == null) {
+            return false;
+        }
+        String code = honor.getHonorCode() == null ? "" : honor.getHonorCode().trim().toUpperCase();
+        if ("CHAMPION".equals(code) || "RUNNER_UP".equals(code) || "THIRD_PLACE".equals(code) || "TEAM_HONOR".equals(code)) {
+            return true;
+        }
+        return "TEAM".equalsIgnoreCase(honor.getRecipientType());
     }
 
     @Override
