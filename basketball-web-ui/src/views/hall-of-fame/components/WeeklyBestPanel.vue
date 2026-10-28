@@ -304,7 +304,7 @@ function formatPct(value?: number | string | null) {
 
 .weekly-feature {
   display: grid;
-  grid-template-columns: minmax(280px, 1.05fr) minmax(160px, 220px) minmax(280px, 1.2fr);
+  grid-template-columns: minmax(360px, 1.2fr) minmax(170px, 0.75fr) minmax(240px, 1fr);
   gap: 12px 20px;
   align-items: center;
   min-height: 196px;
@@ -313,11 +313,10 @@ function formatPct(value?: number | string | null) {
 
 .weekly-feature__hero {
   display: grid;
-  grid-template-columns: minmax(156px, 0.9fr) minmax(120px, 1fr);
+  grid-template-columns: auto minmax(88px, 1fr);
   align-items: end;
   min-height: 180px;
   min-width: 0;
-  overflow: hidden;
 }
 
 .weekly-feature__mark {
@@ -325,12 +324,13 @@ function formatPct(value?: number | string | null) {
   flex-direction: column;
   justify-content: center;
   height: 100%;
-  padding-left: 16px;
+  padding: 0 12px 0 16px;
   color: #fff;
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 900;
-  line-height: 0.9;
-  letter-spacing: 0.01em;
+  line-height: 0.92;
+  letter-spacing: 0;
+  white-space: nowrap;
 
   strong {
     color: var(--cnpa-red, #e10613);
@@ -452,6 +452,10 @@ function formatPct(value?: number | string | null) {
   .weekly-feature {
     grid-template-columns: 1fr;
     padding: 16px;
+  }
+
+  .weekly-feature__mark {
+    white-space: normal;
   }
 
   .weekly-feature__stats {
