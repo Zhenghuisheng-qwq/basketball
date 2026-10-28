@@ -48,6 +48,12 @@ public interface BasketHonorRecordMapper {
                           @Param("playerId") Long playerId,
                           @Param("excludeId") Long excludeId);
 
+    int countActiveWeekly(@Param("seasonId") Long seasonId,
+                          @Param("honorCategoryId") Long honorCategoryId,
+                          @Param("playerId") Long playerId,
+                          @Param("awardDate") java.util.Date awardDate,
+                          @Param("excludeId") Long excludeId);
+
     int revokeByGenerationBatch(@Param("generationBatchId") Long generationBatchId);
 
     int countBySourceHonorId(@Param("sourceType") String sourceType, @Param("sourceId") Long sourceId);

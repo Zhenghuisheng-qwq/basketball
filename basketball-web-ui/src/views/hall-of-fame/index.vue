@@ -170,7 +170,7 @@ watch(
   margin: 0;
 
   :deep(.paper-tear) {
-    display: none; /* 临时隐藏撕纸，勿删 */
+    display: block;
   }
 }
 

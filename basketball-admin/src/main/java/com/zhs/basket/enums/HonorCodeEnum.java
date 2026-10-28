@@ -15,7 +15,11 @@ public enum HonorCodeEnum {
     ASSIST_CHAMPION("ASSIST_CHAMPION", "助攻王", "PLAYER", "PLAYER", "赛季助攻王", 70),
     STEAL_CHAMPION("STEAL_CHAMPION", "抢断王", "PLAYER", "PLAYER", "赛季抢断王", 80),
     BLOCK_CHAMPION("BLOCK_CHAMPION", "盖帽王", "PLAYER", "PLAYER", "赛季盖帽王", 90),
-    PLAYER_HONOR("PLAYER_HONOR", "球员荣誉", "PLAYER", "PLAYER", "人工球员荣誉", 100);
+    PLAYER_HONOR("PLAYER_HONOR", "球员荣誉", "PLAYER", "PLAYER", "人工球员荣誉", 100),
+    WEEKLY_BEST("WEEKLY_BEST", "周最佳", "PLAYER", "PLAYER", "人工评选周最佳", 110),
+    MVP("MVP", "赛事MVP", "TOURNAMENT", "PLAYER", "人工评选赛事MVP", 120),
+    ALL_TOURNAMENT("ALL_TOURNAMENT", "最佳阵容", "PLAYER", "PLAYER", "人工评选最佳阵容", 130),
+    ALL_DEFENSIVE("ALL_DEFENSIVE", "最佳防守阵容", "PLAYER", "PLAYER", "人工评选最佳防守阵容", 140);
 
     private final String code;
     private final String name;

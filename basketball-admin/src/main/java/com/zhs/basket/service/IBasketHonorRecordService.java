@@ -1,5 +1,6 @@
 package com.zhs.basket.service;
 
+import com.zhs.basket.req.HonorLineupSaveReq;
 import com.zhs.basket.req.HonorRecordAddReq;
 import com.zhs.basket.req.HonorRecordEditReq;
 import com.zhs.basket.req.HonorRecordQueryReq;
@@ -27,6 +28,8 @@ public interface IBasketHonorRecordService {
     void revoke(Long id, HonorRecordRevokeReq req, String recipientType);
 
     void remove(Long id, String recipientType);
+
+    void replaceChampionLineup(Long id, List<HonorLineupSaveReq> items, String recipientType);
 
     List<PlayerHonorCandidateResp> listPlayerCandidates(PlayerHonorCandidateQueryReq query);
 

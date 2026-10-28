@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.constant.BasketContentPerms;
+import com.zhs.basket.req.HonorLineupSaveReq;
 import com.zhs.basket.req.HonorRecordAddReq;
 import com.zhs.basket.req.HonorRecordEditReq;
 import com.zhs.basket.req.HonorRecordQueryReq;
@@ -14,6 +15,8 @@ import com.zhs.common.enums.BusinessType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/basket/team-honor")
@@ -66,6 +69,14 @@ public class BasketTeamHonorController extends BaseController {
     @PostMapping("/{id}/revoke")
     public AjaxResult revoke(@PathVariable Long id, @RequestBody HonorRecordRevokeReq req) {
         honorRecordService.revoke(id, req, RECIPIENT_TEAM);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.TEAM_HONOR_EDIT + "')")
+    @Log(title = "球队荣誉", businessType = BusinessType.UPDATE)
+    @PutMapping("/{id}/lineup")
+    public AjaxResult replaceLineup(@PathVariable Long id, @RequestBody List<HonorLineupSaveReq> items) {
+        honorRecordService.replaceChampionLineup(id, items, RECIPIENT_TEAM);
         return success();
     }
 

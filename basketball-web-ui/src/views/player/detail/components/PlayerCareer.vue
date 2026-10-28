@@ -381,11 +381,12 @@ function openHonor(tournamentId?: string) {
 
 .career-timeline__card {
   position: relative;
-  min-height: 156px;
+  min-height: 168px;
   padding: 20px 18px 18px;
   border: 1px solid rgba(17, 17, 17, 0.08);
-  background: rgba(255, 255, 255, 0.72);
+  background: rgba(255, 255, 255, 0.86);
   box-sizing: border-box;
+  text-align: center;
 }
 
 .career-timeline__tag {
@@ -406,12 +407,14 @@ function openHonor(tournamentId?: string) {
   color: var(--cnpa-paper-text-secondary);
   font-size: 13px;
   font-weight: 700;
+  text-align: center;
 }
 
 .career-timeline__identity {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 12px;
   color: inherit;
   text-decoration: none;
@@ -433,6 +436,7 @@ function openHonor(tournamentId?: string) {
 .career-timeline__name {
   display: block;
   margin: 8px 0 12px;
+  text-align: center;
   color: var(--cnpa-paper-text);
   font-size: 22px;
   font-weight: 900;

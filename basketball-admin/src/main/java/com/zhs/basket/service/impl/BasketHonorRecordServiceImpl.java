@@ -3,6 +3,7 @@ package com.zhs.basket.service.impl;
 import com.zhs.basket.domain.BasketHonorCategory;
 import com.zhs.basket.domain.BasketHonorLineup;
 import com.zhs.basket.domain.BasketHonorRecord;
+import com.zhs.basket.domain.BasketPlayerProfile;
 import com.zhs.basket.domain.BasketStatChangeRecord;
 import com.zhs.basket.enums.HonorCodeEnum;
 import com.zhs.basket.enums.HonorDisplayStatusEnum;
@@ -10,11 +11,13 @@ import com.zhs.basket.enums.PlayerRankTypeEnum;
 import com.zhs.basket.mapper.BasketHonorCategoryMapper;
 import com.zhs.basket.mapper.BasketHonorLineupMapper;
 import com.zhs.basket.mapper.BasketHonorRecordMapper;
+import com.zhs.basket.mapper.BasketPlayerProfileMapper;
 import com.zhs.basket.mapper.BasketPlayerRankAdminMapper;
 import com.zhs.basket.mapper.BasketStatChangeRecordMapper;
 import com.zhs.basket.domain.v4.BasketSeason;
 import com.zhs.basket.mapper.v4.BasketSeasonMapper;
 import com.zhs.basket.query.RankingQuery;
+import com.zhs.basket.req.HonorLineupSaveReq;
 import com.zhs.basket.req.HonorRecordAddReq;
 import com.zhs.basket.req.HonorRecordEditReq;
 import com.zhs.basket.req.HonorRecordQueryReq;
@@ -38,7 +41,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -53,6 +58,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
     private static final String RECIPIENT_PLAYER = "PLAYER";
 
     @Autowired private BasketHonorRecordMapper honorRecordMapper;
+    @Autowired private BasketPlayerProfileMapper playerProfileMapper;
     @Autowired private BasketHonorCategoryMapper honorCategoryMapper;
     @Autowired private BasketHonorCategoryCatalog honorCategoryCatalog;
     @Autowired private BasketHonorLineupMapper honorLineupMapper;
@@ -105,9 +111,9 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
                 req.setTournamentId(season.getSeriesId());
             }
         }
-        ensureUnique(req.getSeasonId(), category.getId(), req.getTeamId(), req.getPlayerId(), null);
-
         Date now = new Date();
+        Date awardDate = req.getAwardDate() == null ? now : req.getAwardDate();
+        ensureUnique(category, req.getSeasonId(), req.getTeamId(), req.getPlayerId(), awardDate, null);
         BasketHonorRecord record = new BasketHonorRecord();
         record.setSeriesId(req.getTournamentId());
         record.setSeasonId(req.getSeasonId());
@@ -120,7 +126,7 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         record.setHonorSubtitle(req.getHonorSubtitle());
         record.setHonorSubtitleEn(req.getHonorSubtitleEn());
         record.setHonorValue(req.getHonorValue());
-        record.setAwardDate(req.getAwardDate() == null ? now : req.getAwardDate());
+        record.setAwardDate(awardDate);
         record.setCoverFileId(req.getCoverFileId());
         record.setSourceType(StringUtils.isEmpty(sourceType) ? SOURCE_MANUAL : sourceType);
         record.setSourceId(null);
@@ -152,7 +158,8 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         validateRecipientFields(category, teamId, playerId);
         String remark = req.getRemark() != null ? req.getRemark() : existing.getRemark();
         validateManualRemark(category, remark);
-        ensureUnique(existing.getSeasonId(), category.getId(), teamId, playerId, id);
+        Date awardDate = req.getAwardDate() != null ? req.getAwardDate() : existing.getAwardDate();
+        ensureUnique(category, existing.getSeasonId(), teamId, playerId, awardDate, id);
 
         existing.setHonorCategoryId(category.getId());
         existing.setTeamId(teamId);
@@ -201,8 +208,12 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         if (!status.canPublish()) {
             throw new ServiceException("当前状态不可发布");
         }
-        ensureUnique(existing.getSeasonId(), existing.getHonorCategoryId(), existing.getTeamId(),
-                existing.getPlayerId(), id);
+        BasketHonorCategory category = honorCategoryMapper.selectById(existing.getHonorCategoryId());
+        if (category == null) {
+            throw new ServiceException("荣誉分类不存在");
+        }
+        ensureUnique(category, existing.getSeasonId(), existing.getTeamId(), existing.getPlayerId(),
+                existing.getAwardDate(), id);
         if (honorRecordMapper.updateDisplayStatusIfMatch(id, existing.getDisplayStatus(),
                 HonorDisplayStatusEnum.PUBLISHED.getCode()) != 1) {
             throw new ServiceException("发布失败");
@@ -270,6 +281,56 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         }
         honorLineupMapper.softDeleteByHonorRecordId(id);
         writeAudit(id, "is_delete", "0", "1", "删除荣誉");
+        publicCacheCleaner.clearAfterCommit();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void replaceChampionLineup(Long id, List<HonorLineupSaveReq> items, String recipientType) {
+        BasketHonorRecord existing = requireRecord(id, recipientType);
+        BasketHonorCategory category = honorCategoryMapper.selectById(existing.getHonorCategoryId());
+        if (category == null || !HonorCodeEnum.CHAMPION.getCode().equalsIgnoreCase(category.getHonorCode())) {
+            throw new ServiceException("仅冠军记录可以维护冠军阵容");
+        }
+        List<HonorLineupSaveReq> rows = items == null ? List.of() : items;
+        Set<Long> playerIds = new HashSet<>();
+        Date now = new Date();
+        List<BasketHonorLineup> copies = new java.util.ArrayList<>();
+        int index = 0;
+        for (HonorLineupSaveReq item : rows) {
+            if (item == null || item.getPlayerId() == null) {
+                throw new ServiceException("冠军阵容必须指定球员");
+            }
+            if (!playerIds.add(item.getPlayerId())) {
+                throw new ServiceException("冠军阵容球员不能重复");
+            }
+            BasketPlayerProfile player = playerProfileMapper.selectById(item.getPlayerId());
+            if (player == null || player.getMemberId() == null) {
+                throw new ServiceException("球员不存在或未关联会员，无法写入冠军阵容");
+            }
+            BasketHonorLineup row = new BasketHonorLineup();
+            row.setHonorRecordId(id);
+            row.setTeamId(item.getTeamId() != null ? item.getTeamId() : existing.getTeamId());
+            row.setPlayerId(item.getPlayerId());
+            row.setMemberId(player.getMemberId());
+            row.setRoleType(StringUtils.isEmpty(item.getRoleType()) ? "STARTER" : item.getRoleType().trim());
+            row.setJerseyNo(item.getJerseyNo());
+            row.setPositionCode(item.getPositionCode());
+            row.setSortNo(item.getSortNo() == null ? index : item.getSortNo());
+            row.setCreateTime(now);
+            row.setUpdateTime(now);
+            row.setIsDelete(NOT_DELETED);
+            if (row.getTeamId() == null) {
+                throw new ServiceException("冠军阵容必须指定球队");
+            }
+            copies.add(row);
+            index++;
+        }
+        honorLineupMapper.deleteByHonorRecordId(id);
+        if (!copies.isEmpty()) {
+            honorLineupMapper.batchInsert(copies);
+        }
+        writeAudit(id, "lineup", null, String.valueOf(copies.size()), "维护冠军阵容");
         publicCacheCleaner.clearAfterCommit();
     }
 
@@ -432,13 +493,21 @@ public class BasketHonorRecordServiceImpl implements IBasketHonorRecordService {
         }
     }
 
-    private void ensureUnique(Long seasonId, Long categoryId, Long teamId, Long playerId, Long excludeId) {
-        if (seasonId == null || categoryId == null) {
+    private void ensureUnique(BasketHonorCategory category, Long seasonId, Long teamId, Long playerId,
+                              Date awardDate, Long excludeId) {
+        if (seasonId == null || category == null || category.getId() == null) {
             return;
         }
-        int count = honorRecordMapper.countActiveUnique(seasonId, categoryId, teamId, playerId, excludeId);
+        int count;
+        if (HonorCodeEnum.WEEKLY_BEST.getCode().equalsIgnoreCase(category.getHonorCode())) {
+            count = honorRecordMapper.countActiveWeekly(seasonId, category.getId(), playerId, awardDate, excludeId);
+        } else {
+            count = honorRecordMapper.countActiveUnique(seasonId, category.getId(), teamId, playerId, excludeId);
+        }
         if (count > 0) {
-            throw new ServiceException("同赛季同荣誉分类下已存在未撤销记录，不能重复授予");
+            throw new ServiceException(HonorCodeEnum.WEEKLY_BEST.getCode().equalsIgnoreCase(category.getHonorCode())
+                    ? "同一球员在该赛季的同一授予日期已有周最佳，请改日期或先撤销旧记录"
+                    : "同赛季同荣誉分类下已存在未撤销记录，不能重复授予");
         }
     }
 

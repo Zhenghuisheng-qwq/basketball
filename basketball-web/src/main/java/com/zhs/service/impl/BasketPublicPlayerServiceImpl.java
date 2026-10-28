@@ -694,7 +694,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         if (!publicSupport.isPlayerPubliclyVisible(player)) {
             return publicSupport.emptyPage(currentPage, pageSize);
         }
-        return honorSupport.pageByPlayer(playerId, currentPage, pageSize);
+        return honorSupport.pageByPlayerCareer(playerId, currentPage, pageSize);
     }
 
     private Date latestSnapshot(Long seasonId, String rankType) {

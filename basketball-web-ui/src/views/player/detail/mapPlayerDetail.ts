@@ -416,8 +416,8 @@ export function mapPublicPlayerHonors(rows: PublicHonorItemResp[]): PlayerHonor[
     const honorDate = formatDateTime(item.awardDate).date
     return {
       id: String(item.honorId),
-      seasonName: displayText(item.tournamentName || item.seasonName, translate('publicPages.player.publicSeason')),
-      honorName: displayText(item.honorTitle || item.honorName, translate('publicPages.player.playerHonor')),
+      seasonName: displayText(item.seasonName || item.tournamentName, translate('publicPages.player.publicSeason')),
+      honorName: displayText(item.honorName || item.honorTitle, translate('publicPages.player.playerHonor')),
       honorDate: honorDate === '--' ? '' : honorDate,
       honorValue: displayText(item.honorValue || item.honorSubtitle, ''),
       honorCode: item.honorCode || '',

@@ -19,7 +19,11 @@ INSERT INTO basket_honor_category (
 ('ASSIST_CHAMPION',   '助攻王',   'PLAYER',     'PLAYER', '赛季助攻王', 70, 1, NOW(), NOW(), 0),
 ('STEAL_CHAMPION',    '抢断王',   'PLAYER',     'PLAYER', '赛季抢断王', 80, 1, NOW(), NOW(), 0),
 ('BLOCK_CHAMPION',    '盖帽王',   'PLAYER',     'PLAYER', '赛季盖帽王', 90, 1, NOW(), NOW(), 0),
-('PLAYER_HONOR',      '球员荣誉', 'PLAYER',     'PLAYER', '人工球员荣誉', 100, 1, NOW(), NOW(), 0)
+('PLAYER_HONOR',      '球员荣誉', 'PLAYER',     'PLAYER', '人工球员荣誉', 100, 1, NOW(), NOW(), 0),
+('WEEKLY_BEST',       '周最佳',   'PLAYER',     'PLAYER', '人工评选周最佳', 110, 1, NOW(), NOW(), 0),
+('MVP',               '赛事MVP',  'TOURNAMENT', 'PLAYER', '人工评选赛事MVP', 120, 1, NOW(), NOW(), 0),
+('ALL_TOURNAMENT',    '最佳阵容', 'PLAYER',     'PLAYER', '人工评选最佳阵容', 130, 1, NOW(), NOW(), 0),
+('ALL_DEFENSIVE',     '最佳防守阵容', 'PLAYER', 'PLAYER', '人工评选最佳防守阵容', 140, 1, NOW(), NOW(), 0)
 ON DUPLICATE KEY UPDATE
   honor_name = VALUES(honor_name),
   honor_scope = VALUES(honor_scope),

@@ -1495,6 +1495,10 @@ export const TEAM_HONOR_CODE_OPTIONS = [
 /** 球员荣誉编码 / 候选奖项 */
 export const PLAYER_HONOR_CODE_OPTIONS = [
   { value: 'PLAYER_HONOR', label: '球员荣誉' },
+  { value: 'WEEKLY_BEST', label: '周最佳' },
+  { value: 'MVP', label: '赛事MVP' },
+  { value: 'ALL_TOURNAMENT', label: '最佳阵容' },
+  { value: 'ALL_DEFENSIVE', label: '最佳防守阵容' },
   { value: 'SCORING_CHAMPION', label: '得分王' },
   { value: 'REBOUND_CHAMPION', label: '篮板王' },
   { value: 'ASSIST_CHAMPION', label: '助攻王' },
@@ -1678,6 +1682,7 @@ export interface HonorRecordQuery extends PageDomain {
   seasonId?: number
   honorCategoryId?: number
   honorCode?: string
+  honorCodes?: string
   honorScope?: string
   recipientType?: string
   teamId?: number

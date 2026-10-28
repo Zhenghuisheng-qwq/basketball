@@ -2,6 +2,7 @@
 import { computed, inject, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getV4PublicTeamArchive } from '@/api/v4Public'
+import cupIcon from '@/assets/icon/home/cup.png'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
 import {
   PUBLIC_TEAM_PAGE_KEY,
@@ -85,24 +86,12 @@ function hideBrokenLogo(event: Event) {
   if (img) img.style.display = 'none'
 }
 
-function honorMeta(honor: TeamHonorItem): string {
-  return [honor.competitionName, honor.date].filter(Boolean).join(' · ')
-}
-
 function hasNamePair(item: TeamNameHistoryItem): boolean {
   return Boolean(item.oldName && item.newName)
 }
 
 function singleName(item: TeamNameHistoryItem): string {
   return item.oldName || item.newName || t('publicPages.team.nameChange')
-}
-
-function hasLogoPair(item: TeamLogoHistoryItem): boolean {
-  return Boolean(item.oldLogo && item.newLogo)
-}
-
-function singleLogo(item: TeamLogoHistoryItem): string {
-  return item.newLogo || item.oldLogo
 }
 
 async function loadArchive() {
@@ -214,65 +203,47 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
         <article
           v-for="honor in honors"
           :key="honor.id"
-          class="honor-item"
+          class="honor-card"
         >
-          <div class="honor-item__body">
-            <strong class="honor-item__title">{{ honor.honorTitle }}</strong>
-            <span v-if="honorMeta(honor)" class="honor-item__meta">{{ honorMeta(honor) }}</span>
+          <img class="honor-card__cup" :src="cupIcon" alt="" />
+          <div class="honor-card__body">
+            <span v-if="honor.competitionName" class="honor-card__event">{{ honor.competitionName }}</span>
+            <strong class="honor-card__title">{{ honor.honorTitle }}</strong>
+            <span v-if="honor.date" class="honor-card__date">{{ honor.date }}</span>
           </div>
         </article>
       </div>
 
-      <ol v-else-if="block.key === 'names'" class="archive-timeline">
-        <li
-          v-for="item in nameHistory"
-          :key="item.id"
-          class="timeline-item"
-        >
-          <div class="timeline-item__rail" aria-hidden="true">
-            <span class="timeline-item__dot" />
-          </div>
-          <div class="timeline-item__body">
-            <time v-if="item.date" class="timeline-item__date">{{ item.date }}</time>
-            <div v-if="hasNamePair(item)" class="timeline-item__change">
-              <span>{{ item.oldName }}</span>
-              <span class="timeline-item__arrow" aria-hidden="true">→</span>
-              <strong>{{ item.newName }}</strong>
-            </div>
-            <strong v-else class="timeline-item__title">{{ singleName(item) }}</strong>
-          </div>
-        </li>
-      </ol>
+      <div v-else-if="block.key === 'names'" class="archive-cards">
+        <article v-for="item in nameHistory" :key="item.id" class="archive-card">
+          <time v-if="item.date">{{ item.date }}</time>
+          <strong>{{ hasNamePair(item) ? item.newName : singleName(item) }}</strong>
+          <span v-if="hasNamePair(item)">{{ item.oldName }} → {{ item.newName }}</span>
+          <span v-else>{{ t('publicPages.team.nameChange') }}</span>
+        </article>
+      </div>
 
-      <ol v-else class="archive-timeline">
-        <li
-          v-for="item in logoHistory"
-          :key="item.id"
-          class="timeline-item timeline-item--logo"
-        >
-          <div class="timeline-item__rail" aria-hidden="true">
-            <span class="timeline-item__dot" />
+      <div v-else class="archive-cards">
+        <article v-for="item in logoHistory" :key="item.id" class="archive-card archive-card--logo">
+          <div class="archive-card__logos">
+            <img
+              v-if="item.oldLogo"
+              :src="item.oldLogo"
+              :alt="t('publicPages.team.logoBefore')"
+              @error="hideBrokenLogo"
+            />
+            <img
+              v-if="item.newLogo"
+              :src="item.newLogo"
+              :alt="t('publicPages.team.logoAfter')"
+              @error="hideBrokenLogo"
+            />
+            <span v-if="!item.oldLogo && !item.newLogo" class="archive-card__swatch">CN</span>
           </div>
-          <div class="timeline-item__body">
-            <time v-if="item.date" class="timeline-item__date">{{ item.date }}</time>
-            <div v-if="hasLogoPair(item)" class="logo-compare">
-              <div class="logo-compare__mark">
-                <img :src="item.oldLogo" :alt="t('publicPages.team.logoBefore')" @error="hideBrokenLogo" />
-              </div>
-              <span class="timeline-item__arrow" aria-hidden="true">→</span>
-              <div class="logo-compare__mark">
-                <img :src="item.newLogo" :alt="t('publicPages.team.logoAfter')" @error="hideBrokenLogo" />
-              </div>
-            </div>
-            <div v-else-if="singleLogo(item)" class="logo-compare">
-              <div class="logo-compare__mark">
-                <img :src="singleLogo(item)" :alt="t('publicPages.team.teamLogo')" @error="hideBrokenLogo" />
-              </div>
-            </div>
-            <span class="timeline-item__caption">{{ t('publicPages.team.logoUpdated') }}</span>
-          </div>
-        </li>
-      </ol>
+          <time v-if="item.date">{{ item.date }}</time>
+          <span>{{ t('publicPages.team.logoUpdated') }}</span>
+        </article>
+      </div>
     </section>
 
     <p class="archive-note">{{ t('publicPages.team.archiveNote') }}</p>
@@ -394,54 +365,112 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
 }
 
 .honor-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.honor-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 118px;
+  padding: 16px 18px;
+  border: 1px solid rgba(201, 163, 90, 0.48);
+  background: linear-gradient(180deg, #1c1a16 0%, #0f0e0c 100%);
+  box-sizing: border-box;
+}
+
+.honor-card__cup {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.honor-card__body {
+  min-width: 0;
+}
+
+.honor-card__event,
+.honor-card__date {
+  display: block;
+  color: rgba(243, 227, 194, 0.62);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.honor-card__title {
+  display: block;
+  margin: 6px 0;
+  color: #e8c56a;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.15;
+}
+
+.archive-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.archive-card {
   display: flex;
   flex-direction: column;
+  justify-content: center;
   gap: 8px;
-}
-
-.honor-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
+  min-height: 148px;
+  padding: 18px;
   border: 1px solid rgba(17, 17, 17, 0.08);
-  background: rgba(255, 255, 255, 0.72);
-  transition: background 0.18s ease;
+  background: rgba(255, 255, 255, 0.78);
+  box-sizing: border-box;
 
-  &::before {
-    content: '';
-    width: 3px;
-    align-self: stretch;
-    min-height: 28px;
-    background: var(--cnpa-red);
-    flex-shrink: 0;
-    opacity: 0.72;
+  time,
+  span {
+    color: rgba(17, 17, 17, 0.5);
+    font-size: 12px;
+    font-weight: 700;
   }
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.96);
+  strong {
+    color: #111;
+    font-size: 22px;
+    font-weight: 900;
+    line-height: 1.2;
+    word-break: break-word;
   }
 }
 
-.honor-item__body {
-  min-width: 0;
-  flex: 1;
+.archive-card__logos {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 64px;
+
+  img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+  }
 }
 
-.honor-item__title {
-  display: block;
-  color: #111;
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.35;
+.archive-card__swatch {
+  display: grid;
+  place-items: center;
+  width: 64px;
+  height: 64px;
+  background: #151515;
+  color: #fff !important;
+  font-size: 16px;
+  font-weight: 900;
 }
 
-.honor-item__meta {
-  display: block;
-  margin-top: 4px;
-  color: rgba(17, 17, 17, 0.52);
-  font-size: 12px;
-  font-weight: 600;
+@media (max-width: 991px) {
+  .honor-list,
+  .archive-cards {
+    grid-template-columns: 1fr;
+  }
 }
 
 .archive-timeline {

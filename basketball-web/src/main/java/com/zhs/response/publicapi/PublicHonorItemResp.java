@@ -59,6 +59,13 @@ public class PublicHonorItemResp implements Serializable {
     private String teamLogoUrl;
 
     @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty("赛事球队主键，用于公开球队页")
+    private Long eventTeamId;
+
+    @ApiModelProperty("比赛平台")
+    private String platformCode;
+
+    @JsonSerialize(using = ToStringSerializer.class)
     @ApiModelProperty("球员主键")
     private Long playerId;
 

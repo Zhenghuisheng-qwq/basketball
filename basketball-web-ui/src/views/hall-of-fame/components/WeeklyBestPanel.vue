@@ -1,68 +1,157 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import HallPanelHead from './HallPanelHead.vue'
-import HallPagination from './HallPagination.vue'
+import HallSelect from './HallSelect.vue'
 import HallPlayerSilhouette from './HallPlayerSilhouette.vue'
 import { getPublicHallPlayerHonorPage } from '@/api/publicHallOfFame'
-import type { PublicHonorItemResp } from '@/api/types/public'
+import { getPublicPlayerSeasonStat } from '@/api/publicPlayer'
+import type { PublicHonorItemResp, PublicPlayerSeasonStatVo } from '@/api/types/public'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
 
-const props = defineProps<{
+defineProps<{
   page: number
-}>()
-
-const emit = defineEmits<{
-  'update:page': [value: number]
 }>()
 
 const router = useRouter()
 const { t } = useI18n()
-const pageSize = 8
 
-const items = ref<PublicHonorItemResp[]>([])
-const totalPages = ref(1)
+const allItems = ref<PublicHonorItemResp[]>([])
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
+const seasonFilter = ref('ALL')
+const weekCursor = ref(0)
+const stat = ref<PublicPlayerSeasonStatVo | null>(null)
 let reqId = 0
+let statReq = 0
 
-async function load(page: number) {
-  const current = ++reqId
+const weeklyItems = computed(() =>
+  allItems.value.filter((item) => (item.honorCode || '').toUpperCase() === 'WEEKLY_BEST'),
+)
+const featuredSource = computed(() => (weeklyItems.value.length ? weeklyItems.value : allItems.value))
+
+const seasonOptions = computed(() => {
+  const map = new Map<string, string>()
+  featuredSource.value.forEach((item) => {
+    const id = String(item.seasonId || '')
+    if (!id) return
+    map.set(id, displayText(item.seasonName, t('publicPages.hall.season')))
+  })
+  return [
+    { value: 'ALL', label: t('publicPages.hall.allSeasons') },
+    ...Array.from(map, ([value, label]) => ({ value, label })),
+  ]
+})
+
+const weeks = computed(() => {
+  const list = featuredSource.value.filter((item) => {
+    if (seasonFilter.value === 'ALL') return true
+    return String(item.seasonId || '') === seasonFilter.value
+  })
+  return [...list].sort((a, b) => String(a.awardDate || '').localeCompare(String(b.awardDate || '')))
+})
+
+const current = computed(() => weeks.value[weekCursor.value] || null)
+
+const weekOptions = computed(() =>
+  weeks.value.map((item, index) => ({
+    value: String(index),
+    label: t('publicPages.hall.weekMatch', { week: index + 1 }),
+  })),
+)
+
+const statBoxes = computed(() => {
+  const row = stat.value
+  return [
+    { key: 'games', label: t('publicPages.player.games'), value: formatCount(row?.games), accent: false },
+    { key: 'pts', label: t('publicPages.player.avgPoints'), value: formatAvg(row?.avgPoints), accent: true },
+    { key: 'reb', label: t('publicPages.player.avgRebounds'), value: formatAvg(row?.avgRebounds), accent: true },
+    { key: 'ast', label: t('publicPages.player.avgAssists'), value: formatAvg(row?.avgAssists), accent: true },
+    { key: 'stl', label: t('publicPages.team.avgSteals'), value: formatAvg(row?.avgSteals), accent: true },
+    { key: 'fg', label: t('publicPages.player.fgPct'), value: formatPct(row?.fieldGoalPct), accent: true },
+  ]
+})
+
+async function loadAll() {
+  const currentReq = ++reqId
   state.value = 'loading'
   errorMessage.value = ''
   try {
-    const res = await getPublicHallPlayerHonorPage({
-      currentPage: page,
-      pageSize,
-      sortField: 'awardDate',
-      sortOrder: 'desc',
-    })
-    if (current !== reqId) return
-    const data = res.data
-    items.value = data?.records ?? []
-    totalPages.value = Math.max(1, Number(data?.pages || 1))
-    state.value = items.value.length ? 'success' : 'empty'
-    if (page > totalPages.value) {
-      emit('update:page', totalPages.value)
-    }
+    const collected: PublicHonorItemResp[] = []
+    let page = 1
+    let pages = 1
+    do {
+      const res = await getPublicHallPlayerHonorPage({
+        currentPage: page,
+        pageSize: 100,
+        sortField: 'awardDate',
+        sortOrder: 'asc',
+      })
+      if (currentReq !== reqId) return
+      const data = res.data
+      collected.push(...(data?.records ?? []))
+      pages = Math.max(1, Number(data?.pages || 1))
+      page += 1
+    } while (page <= pages && page <= 8)
+    allItems.value = collected
+    state.value = collected.length ? 'success' : 'empty'
+    weekCursor.value = Math.max(0, weeks.value.length - 1)
   } catch (err) {
-    if (current !== reqId) return
-    items.value = []
+    if (currentReq !== reqId) return
+    allItems.value = []
     state.value = 'error'
     errorMessage.value = err instanceof Error ? err.message : t('publicPages.hall.loadPlayerHonorsFailed')
   }
 }
 
-watch(
-  () => props.page,
-  (page) => {
-    void load(page)
-  },
-  { immediate: true },
-)
+async function loadStat(item: PublicHonorItemResp | null) {
+  const currentReq = ++statReq
+  stat.value = null
+  if (!item?.playerId) return
+  try {
+    const res = await getPublicPlayerSeasonStat(item.playerId, {
+      seasonId: item.seasonId || undefined,
+    })
+    if (currentReq !== statReq) return
+    const rows = res.data ?? []
+    stat.value = rows.find((row) => String(row.seasonId || '') === String(item.seasonId || '')) || rows[0] || null
+  } catch {
+    if (currentReq !== statReq) return
+    stat.value = null
+  }
+}
+
+watch(() => true, () => {
+  void loadAll()
+}, { immediate: true })
+
+watch(weeks, (list) => {
+  if (weekCursor.value > list.length - 1) {
+    weekCursor.value = Math.max(0, list.length - 1)
+  }
+})
+
+watch(current, (item) => {
+  void loadStat(item)
+})
+
+function updateSeason(value: string | number) {
+  seasonFilter.value = String(value)
+  weekCursor.value = Math.max(0, weeks.value.length - 1)
+}
+
+function updateWeek(value: string | number) {
+  const index = Number(value)
+  if (Number.isNaN(index)) return
+  weekCursor.value = Math.min(Math.max(index, 0), Math.max(0, weeks.value.length - 1))
+}
+
+function stepWeek(delta: number) {
+  updateWeek(weekCursor.value + delta)
+}
 
 function openPlayer(playerId?: string | null) {
   if (!playerId) return
@@ -74,82 +163,122 @@ function openTeam(teamId?: string | null) {
   router.push(`/tournament/team/${teamId}/overview`)
 }
 
-function awardDateText(value?: string | null) {
-  const dt = formatDateTime(value)
-  return dt.date === '--' ? '--' : dt.date
+function awardRange(item: PublicHonorItemResp) {
+  const date = formatDateTime(item.awardDate || '').date
+  return date === '--' ? '' : date
+}
+
+function formatCount(value?: number | null) {
+  if (value == null || Number.isNaN(Number(value))) return '--'
+  return String(value)
+}
+
+function formatAvg(value?: number | string | null) {
+  if (value == null || value === '') return '--'
+  const num = Number(value)
+  if (Number.isNaN(num)) return String(value)
+  return Number.isInteger(num) ? String(num) : num.toFixed(1)
+}
+
+function formatPct(value?: number | string | null) {
+  if (value == null || value === '') return '--'
+  const num = Number(value)
+  if (Number.isNaN(num)) return String(value)
+  const pct = num <= 1 ? num * 100 : num
+  return `${pct.toFixed(1)}%`
 }
 </script>
 
 <template>
   <section class="weekly-best-panel">
-    <HallPanelHead :title="t('publicPages.hall.playerHonors')" subtitle="Player Honors" />
+    <HallPanelHead :title="t('publicPages.hall.weeklyTab')" subtitle="WEEKLY BEST" layout="inline">
+      <template #filters>
+        <HallSelect
+          width="filter"
+          :model-value="seasonFilter"
+          :options="seasonOptions"
+          @update:model-value="updateSeason"
+        />
+        <HallSelect
+          v-if="weekOptions.length"
+          width="filter"
+          trigger-variant="week"
+          :model-value="String(weekCursor)"
+          :options="weekOptions"
+          @update:model-value="updateWeek"
+        />
+      </template>
+    </HallPanelHead>
 
     <div v-if="state === 'loading'" class="hall-empty">{{ t('publicPages.hall.loading') }}</div>
     <div v-else-if="state === 'error'" class="hall-empty">{{ errorMessage }}</div>
-    <div v-else-if="state === 'empty'" class="hall-empty">{{ t('publicPages.hall.noPlayerHonors') }}</div>
+    <div v-else-if="state === 'empty' || !current" class="hall-empty">{{ t('publicPages.hall.noPlayerHonors') }}</div>
 
     <template v-else>
-      <div class="player-honor-grid">
-        <article
-          v-for="item in items"
-          :key="item.honorId"
-          class="weekly-best-card hall-card-surface"
-        >
-          <div class="weekly-best-card__left">
-            <div class="weekly-best-card__visual">
-              <HallPlayerSilhouette
-                :name="displayText(item.playerName, t('publicPages.hall.player'))"
-                :avatar-url="item.playerAvatarUrl || ''"
-                size="feature"
-              />
-            </div>
+      <article class="weekly-feature hall-card-surface">
+        <div class="weekly-feature__hero">
+          <div class="weekly-feature__mark">
+            <span>PLAYER</span>
+            <span>OF THE</span>
+            <strong>WEEK</strong>
           </div>
+          <div class="weekly-feature__photo">
+            <HallPlayerSilhouette
+              :name="displayText(current.playerName, t('publicPages.hall.player'))"
+              :avatar-url="current.playerAvatarUrl || ''"
+              size="feature"
+            />
+          </div>
+        </div>
+        <div class="weekly-feature__identity">
+          <button
+            type="button"
+            class="weekly-feature__name"
+            :disabled="!current.playerId"
+            @click="openPlayer(current.playerId)"
+          >
+            {{ displayText(current.playerName, t('publicPages.hall.unknownPlayer')) }}
+          </button>
+          <button
+            v-if="current.teamName || current.eventTeamId"
+            type="button"
+            class="weekly-feature__team"
+            :disabled="!current.eventTeamId"
+            @click="openTeam(current.eventTeamId)"
+          >
+            <TeamLogo
+              :team="{
+                id: String(current.eventTeamId || current.teamId || current.honorId),
+                name: displayText(current.teamName, 'CN'),
+                shortName: displayText(current.teamName, 'CN'),
+                logoUrl: current.teamLogoUrl || '',
+              }"
+              size="sm"
+            />
+            <span>{{ displayText(current.teamName, t('publicPages.hall.championTeam')) }}</span>
+          </button>
+          <p class="weekly-feature__meta">{{ displayText(current.seasonName || current.tournamentName, t('publicPages.hall.season')) }}</p>
+          <p v-if="awardRange(current)" class="weekly-feature__meta">{{ awardRange(current) }}</p>
+        </div>
+        <dl class="weekly-feature__stats">
+          <div v-for="box in statBoxes" :key="box.key">
+            <dt>{{ box.label }}</dt>
+            <dd :class="{ 'is-accent': box.accent }">{{ box.value }}</dd>
+          </div>
+        </dl>
+      </article>
 
-          <div class="weekly-best-card__body">
-            <p class="weekly-best-card__label">{{ displayText(item.honorName, t('publicPages.hall.playerHonors')) }}</p>
-            <button
-              type="button"
-              class="weekly-best-card__name"
-              :disabled="!item.playerId"
-              @click="openPlayer(item.playerId)"
-            >
-              {{ displayText(item.playerName, t('publicPages.hall.unknownPlayer')) }}
-            </button>
-            <button
-              v-if="item.teamId || item.teamName"
-              type="button"
-              class="weekly-best-card__team"
-              @click="openTeam(item.teamId)"
-            >
-              <span class="weekly-best-card__logo">
-                <TeamLogo
-                  :team="{
-                    id: String(item.teamId || ''),
-                    name: displayText(item.teamName),
-                    shortName: displayText(item.teamName),
-                    logoUrl: item.teamLogoUrl || '',
-                  }"
-                  size="sm"
-                />
-              </span>
-              <span>{{ displayText(item.teamName) }}</span>
-            </button>
-            <p class="weekly-best-card__meta">
-              {{ displayText(item.tournamentName, t('publicPages.hall.publicEvent')) }}
-              ·
-              {{ displayText(item.seasonName, t('publicPages.hall.season')) }}
-            </p>
-            <p class="weekly-best-card__date">{{ t('publicPages.hall.awardDateValue', { date: awardDateText(item.awardDate) }) }}</p>
-            <p v-if="item.honorValue" class="weekly-best-card__value">{{ item.honorValue }}</p>
-          </div>
-        </article>
+      <div class="weekly-nav">
+        <button type="button" :disabled="weekCursor <= 0" @click="stepWeek(-1)">
+          <span aria-hidden="true">‹</span>
+          {{ t('publicPages.hall.prevWeek') }}
+        </button>
+        <strong>{{ t('publicPages.hall.weekNo', { week: weekCursor + 1 }) }}</strong>
+        <button type="button" :disabled="weekCursor >= weeks.length - 1" @click="stepWeek(1)">
+          {{ t('publicPages.hall.nextWeek') }}
+          <span aria-hidden="true">›</span>
+        </button>
       </div>
-
-      <HallPagination
-        :page="page"
-        :total-pages="totalPages"
-        @update:page="emit('update:page', $event)"
-      />
     </template>
   </section>
 </template>
@@ -159,93 +288,162 @@ function awardDateText(value?: string | null) {
   width: 100%;
 }
 
-.player-honor-grid {
+.weekly-feature {
   display: grid;
-  gap: 18px;
-}
-
-.weekly-best-card {
-  display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: minmax(320px, 1.15fr) minmax(180px, 240px) minmax(420px, 1.35fr);
+  gap: 12px 20px;
   align-items: center;
-  padding: 22px 24px;
+  min-height: 196px;
+  padding: 8px 22px 8px 8px;
 }
 
-.weekly-best-card__label {
-  margin: 0 0 8px;
-  color: var(--cnpa-red, #e10613);
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+.weekly-feature__hero {
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  align-items: end;
+  min-height: 180px;
 }
 
-.weekly-best-card__name {
-  display: block;
-  margin: 0;
+.weekly-feature__mark {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  height: 100%;
+  padding-left: 16px;
+  color: #fff;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 0.9;
+  letter-spacing: 0.01em;
+
+  strong {
+    color: var(--cnpa-red, #e10613);
+  }
+}
+
+.weekly-feature__photo {
+  height: 180px;
+}
+
+.weekly-feature__name,
+.weekly-feature__team {
   padding: 0;
   border: 0;
   background: transparent;
-  color: #111;
+  color: #fff;
   font: inherit;
-  font-size: clamp(26px, 3vw, 34px);
-  font-weight: 900;
   text-align: left;
   cursor: pointer;
 
   &:disabled {
     cursor: default;
   }
-
-  &:not(:disabled):hover {
-    color: var(--cnpa-red, #e10613);
-  }
 }
 
-.weekly-best-card__team {
+.weekly-feature__name {
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+}
+
+.weekly-feature__team {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 10px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #333;
-  font: inherit;
+  margin-top: 8px;
   font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
+  font-weight: 800;
+}
 
-  &:hover {
+.weekly-feature__meta,
+.weekly-feature__code {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.weekly-feature__code {
+  color: var(--cnpa-red, #e10613);
+}
+
+.weekly-feature__stats {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+
+  dt {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  dd {
+    margin: 8px 0 0;
+    color: #fff;
+    font-size: 32px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .is-accent {
     color: var(--cnpa-red, #e10613);
   }
 }
 
-.weekly-best-card__logo {
-  width: 28px;
-  height: 28px;
+.weekly-nav {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 22px;
+
+  button,
+  strong {
+    min-width: 108px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border: 1px solid rgba(17, 17, 17, 0.16);
+    background: #fff;
+    color: #111;
+    font-size: 14px;
+    font-weight: 800;
+  }
+
+  strong {
+    background: #111;
+    color: #fff;
+    border-color: #111;
+  }
+
+  button {
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+  }
 }
 
-.weekly-best-card__meta,
-.weekly-best-card__date,
-.weekly-best-card__value {
-  margin: 8px 0 0;
-  color: #666;
-  font-size: 13px;
-  font-weight: 600;
-}
+@media (max-width: 1100px) {
+  .weekly-feature {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
 
-.weekly-best-card__value {
-  color: #111;
-  font-size: 15px;
-  font-weight: 800;
+  .weekly-feature__stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 767px) {
-  .weekly-best-card {
+  .weekly-feature__hero {
     grid-template-columns: 1fr;
-    padding: 18px 16px;
   }
 }
 </style>

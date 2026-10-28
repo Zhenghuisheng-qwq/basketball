@@ -11,9 +11,9 @@
           <el-option v-for="item in seasonOptions" :key="item.id" :label="item.seasonName" :value="item.id" />
         </el-select>
       </el-form-item>
-      <el-form-item label="荣誉编码" prop="honorCode">
+      <el-form-item v-if="!singleLock" label="荣誉编码" prop="honorCode">
         <el-select v-model="queryParams.honorCode" placeholder="荣誉编码" clearable style="width: 160px">
-          <el-option v-for="item in TEAM_HONOR_CODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+          <el-option v-for="item in codeOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="displayStatus">
@@ -71,7 +71,17 @@
         <el-descriptions-item label="球队">{{ detail.teamName || detail.teamId }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ detail.displayStatusName }}</el-descriptions-item>
         <el-descriptions-item label="副标题">{{ detail.honorSubtitle || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="授予日期">{{ parseTime(detail.awardDate, '{y}-{m}-{d}') }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ detail.remark || '-' }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.honorCode === 'CHAMPION'" label="冠军阵容">
+          <div v-if="detail.lineup?.length">
+            <div v-for="item in detail.lineup" :key="item.playerId">
+              {{ item.sortNo }} · {{ item.playerName || item.playerId }} · {{ item.roleType }}
+            </div>
+          </div>
+          <span v-else>未配置</span>
+          <el-button link type="primary" @click="openLineup" v-hasPermi="['basket:teamHonor:edit']">维护阵容</el-button>
+        </el-descriptions-item>
         <el-descriptions-item label="封面">
           <el-image v-if="detail.coverUrl" :src="detail.coverUrl" style="width: 120px; height: 80px" fit="cover" />
           <span v-else>-</span>
@@ -93,7 +103,7 @@
         </el-form-item>
         <el-form-item label="荣誉编码" prop="honorCode">
           <el-select v-model="form.honorCode" style="width: 100%">
-            <el-option v-for="item in TEAM_HONOR_CODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+            <el-option v-for="item in codeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
         <el-form-item label="球队" prop="teamId">
@@ -106,6 +116,9 @@
         </el-form-item>
         <el-form-item label="副标题">
           <el-input v-model="form.honorSubtitle" />
+        </el-form-item>
+        <el-form-item label="授予日期" prop="awardDate">
+          <el-date-picker v-model="form.awardDate" type="date" value-format="YYYY-MM-DD" placeholder="选择授予日期" style="width: 100%" />
         </el-form-item>
         <el-divider content-position="left">英文内容</el-divider>
         <div class="el-form-item__tip bilingual-tip">英文选填，不改变荣誉归属。留空时官网显示中文标题。</div>
@@ -135,6 +148,20 @@
       </template>
     </el-dialog>
 
+    <el-dialog title="冠军阵容" v-model="lineupOpen" width="640px" append-to-body>
+      <el-form label-width="88px">
+        <el-form-item label="赛季球员">
+          <el-select v-model="lineupPlayerIds" multiple filterable style="width: 100%" placeholder="按出场顺序选择">
+            <el-option v-for="item in lineupPlayers" :key="item.sourcePlayerId" :label="lineupPlayerLabel(item)" :value="item.sourcePlayerId!" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="lineupOpen = false">取消</el-button>
+        <el-button type="primary" @click="saveLineup">保存阵容</el-button>
+      </template>
+    </el-dialog>
+
     <el-dialog title="撤销荣誉" v-model="revokeOpen" width="480px" append-to-body>
       <el-form ref="revokeRef" :model="revokeForm" :rules="revokeRules" label-width="100px">
         <el-form-item label="撤销原因" prop="revokeReason">
@@ -156,6 +183,7 @@ import {
   getTeamHonor,
   listTeamHonor,
   publishTeamHonor,
+  replaceTeamHonorLineup,
   revokeTeamHonor,
   updateTeamHonor
 } from '@/api/basket/teamHonor'
@@ -170,11 +198,21 @@ import type {
   TournamentListItem
 } from '@/types'
 import { HONOR_DISPLAY_STATUS_OPTIONS, TEAM_HONOR_CODE_OPTIONS } from '@/types'
-import { listV4EventTeam } from '@/api/cnpa/event-v4/event-team'
+import { listV4EventPlayer, listV4EventTeam, type BasketEventPlayerListVo } from '@/api/cnpa/event-v4/event-team'
 import { listV4Series } from '@/api/cnpa/event-v4/series'
 import { listV4Season } from '@/api/cnpa/event-v4/season'
 
+const props = withDefaults(defineProps<{ lockedCodes?: string[] }>(), {
+  lockedCodes: () => []
+})
+
 const { proxy } = getCurrentInstance()
+
+const codeOptions = computed(() => {
+  if (!props.lockedCodes.length) return TEAM_HONOR_CODE_OPTIONS
+  return TEAM_HONOR_CODE_OPTIONS.filter(item => props.lockedCodes.includes(item.value))
+})
+const singleLock = computed(() => props.lockedCodes.length === 1)
 
 const dataList = ref<HonorRecordListItem[]>([])
 const loading = ref(true)
@@ -193,6 +231,9 @@ const seasonOptions = ref<SeasonListItem[]>([])
 const formSeasonOptions = ref<SeasonListItem[]>([])
 const candidateTeams = ref<SeasonCandidateTeam[]>([])
 const selectedTournamentId = ref<number>()
+const lineupOpen = ref(false)
+const lineupPlayerIds = ref<number[]>([])
+const lineupPlayers = ref<BasketEventPlayerListVo[]>([])
 
 const queryParams = ref<HonorRecordQuery>({
   pageNum: 1,
@@ -213,7 +254,25 @@ const rules = {
   tournamentId: [{ required: true, message: '请选择赛事', trigger: 'change' }],
   seasonId: [{ required: true, message: '请选择赛季', trigger: 'change' }],
   honorCode: [{ required: true, message: '请选择荣誉编码', trigger: 'change' }],
-  teamId: [{ required: true, message: '请选择球队', trigger: 'change' }]
+  teamId: [{ required: true, message: '请选择球队', trigger: 'change' }],
+  awardDate: [{ required: true, message: '请选择授予日期', trigger: 'change' }]
+}
+
+function applyHonorLock() {
+  if (!props.lockedCodes.length) return
+  if (props.lockedCodes.length === 1) {
+    queryParams.value.honorCode = props.lockedCodes[0]
+    queryParams.value.honorCodes = undefined
+    return
+  }
+  queryParams.value.honorCodes = props.lockedCodes.join(',')
+  if (queryParams.value.honorCode && !props.lockedCodes.includes(queryParams.value.honorCode)) {
+    queryParams.value.honorCode = undefined
+  }
+}
+
+function dateOnly(value?: string) {
+  return value ? String(value).slice(0, 10) : undefined
 }
 const revokeRules = {
   revokeReason: [{ required: true, message: '请填写撤销原因', trigger: 'blur' }]
@@ -265,6 +324,7 @@ function handleTournamentChange() {
 
 function getList() {
   loading.value = true
+  applyHonorLock()
   queryParams.value.tournamentId = selectedTournamentId.value
   listTeamHonor(queryParams.value).then(res => {
     dataList.value = res.rows || []
@@ -303,12 +363,13 @@ function resetFormData() {
   form.value = {
     tournamentId: selectedTournamentId.value,
     seasonId: queryParams.value.seasonId,
-    honorCode: 'TEAM_HONOR',
+    honorCode: codeOptions.value[0]?.value || 'TEAM_HONOR',
     teamId: undefined,
     honorTitle: undefined,
     honorTitleEn: '',
     honorSubtitle: undefined,
     honorSubtitleEn: '',
+    awardDate: undefined,
     coverFileId: undefined,
     displayOrder: 0,
     remark: undefined
@@ -344,6 +405,7 @@ function handleUpdate(row: HonorRecordListItem) {
       honorTitleEn: data.honorTitleEn || '',
       honorSubtitle: data.honorSubtitle,
       honorSubtitleEn: data.honorSubtitleEn || '',
+      awardDate: dateOnly(data.awardDate),
       coverFileId: data.coverFileId,
       displayOrder: data.displayOrder ?? 0,
       remark: data.remark
@@ -408,6 +470,45 @@ function submitRevoke() {
       revokeOpen.value = false
       getList()
     }).catch(() => {})
+  })
+}
+
+function lineupPlayerLabel(item: BasketEventPlayerListVo) {
+  const name = item.playerNameSnapshot || item.gameIdSnapshot || item.sourcePlayerId
+  return item.teamNameSnapshot ? `${name} · ${item.teamNameSnapshot}` : String(name)
+}
+
+function openLineup() {
+  if (!detail.value?.seasonId) {
+    proxy.$modal.msgWarning('这条冠军记录没有赛季，无法加载阵容候选')
+    return
+  }
+  lineupPlayerIds.value = (detail.value.lineup || []).map(item => item.playerId!).filter(Boolean)
+  listV4EventPlayer({ seasonId: detail.value.seasonId, pageNum: 1, pageSize: 500 }).then(res => {
+    const seen = new Set<number>()
+    lineupPlayers.value = (res.rows || []).filter(item => {
+      if (!item.sourcePlayerId || seen.has(item.sourcePlayerId)) return false
+      seen.add(item.sourcePlayerId)
+      return true
+    })
+    lineupOpen.value = true
+  })
+}
+
+function saveLineup() {
+  if (!detail.value?.id) return
+  const rows = lineupPlayerIds.value.map((playerId, index) => ({
+    playerId,
+    teamId: detail.value?.teamId,
+    roleType: index < 5 ? 'STARTER' : 'SUBSTITUTE',
+    sortNo: index + 1
+  }))
+  replaceTeamHonorLineup(detail.value.id, rows).then(() => {
+    proxy.$modal.msgSuccess('冠军阵容已保存')
+    lineupOpen.value = false
+    return getTeamHonor(detail.value!.id)
+  }).then(res => {
+    detail.value = res.data
   })
 }
 

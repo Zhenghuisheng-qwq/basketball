@@ -26,6 +26,7 @@ function goPage(next: number) {
       :disabled="page <= 1"
       @click="goPage(page - 1)"
     >
+      <span aria-hidden="true">‹</span>
       {{ t('publicPages.hall.prevPage') }}
     </button>
 
@@ -47,6 +48,7 @@ function goPage(next: number) {
       @click="goPage(page + 1)"
     >
       {{ t('publicPages.hall.nextPage') }}
+      <span aria-hidden="true">›</span>
     </button>
   </div>
 </template>
@@ -64,8 +66,12 @@ function goPage(next: number) {
 
 .hall-pagination__btn,
 .hall-pagination__page {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   min-width: 44px;
-  height: 40px;
+  height: 36px;
   padding: 0 14px;
   border: 1px solid rgba(0, 0, 0, 0.16);
   background: var(--hall-paper, #e9e7e7);

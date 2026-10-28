@@ -6,12 +6,16 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.dao.BasketHonorCategoryDao;
 import com.zhs.dao.BasketHonorLineupDao;
 import com.zhs.dao.BasketHonorRecordDao;
+import com.zhs.dao.v4.BasketEventPlayerDao;
+import com.zhs.dao.v4.BasketEventTeamDao;
 import com.zhs.enums.PublicHonorSortEnum;
 import com.zhs.model.BasketHonorCategory;
 import com.zhs.model.BasketHonorLineup;
 import com.zhs.model.BasketHonorRecord;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
+import com.zhs.model.v4.BasketEventPlayer;
+import com.zhs.model.v4.BasketEventTeam;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketSeries;
 import com.zhs.response.publicapi.PublicHonorDetailResp;
@@ -47,6 +51,10 @@ public class BasketPublicHonorSupport {
     private BasketHonorLineupDao honorLineupDao;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private BasketEventTeamDao eventTeamDao;
+    @Resource
+    private BasketEventPlayerDao eventPlayerDao;
 
     public LambdaQueryWrapper<BasketHonorRecord> publishedWrapper() {
         return new LambdaQueryWrapper<BasketHonorRecord>()
@@ -169,6 +177,34 @@ public class BasketPublicHonorSupport {
                 .orderByDesc(BasketHonorRecord::getAwardDate)
                 .orderByDesc(BasketHonorRecord::getId);
         return toItemPage(honorRecordDao.selectPage(page, wrapper), currentPage, pageSize);
+    }
+
+    /**
+     * 球员生涯荣誉：本人荣誉，加上其所在赛事球队已发布的球队荣誉（如冠军）。
+     */
+    public IPage<PublicHonorItemResp> pageByPlayerCareer(Long playerId, Integer currentPage, Integer pageSize) {
+        Set<Long> teamKeys = teamKeysForPlayer(playerId);
+        LambdaQueryWrapper<BasketHonorRecord> wrapper = publishedWrapper()
+                .and(w -> {
+                    w.eq(BasketHonorRecord::getPlayerId, playerId);
+                    if (!teamKeys.isEmpty()) {
+                        w.or(o -> o.in(BasketHonorRecord::getTeamId, teamKeys)
+                                .and(inner -> inner.isNull(BasketHonorRecord::getPlayerId)
+                                        .or()
+                                        .eq(BasketHonorRecord::getPlayerId, playerId)));
+                    }
+                })
+                .orderByDesc(BasketHonorRecord::getAwardDate)
+                .orderByAsc(BasketHonorRecord::getDisplayOrder)
+                .orderByDesc(BasketHonorRecord::getId);
+        List<BasketHonorRecord> all = honorRecordDao.selectList(wrapper);
+        int pageNo = currentPage == null || currentPage < 1 ? 1 : currentPage;
+        int size = pageSize == null || pageSize < 1 ? 10 : pageSize;
+        int from = Math.min((pageNo - 1) * size, all.size());
+        int to = Math.min(from + size, all.size());
+        Page<BasketHonorRecord> entityPage = new Page<>(pageNo, size, all.size());
+        entityPage.setRecords(all.subList(from, to));
+        return toItemPage(entityPage, pageNo, size);
     }
 
     public IPage<PublicHonorItemResp> pageByPlayer(Long playerId, Integer currentPage, Integer pageSize) {
@@ -303,7 +339,25 @@ public class BasketPublicHonorSupport {
         Map<Long, BasketHonorCategory> categoryMap = loadCategoryMap(categoryIds);
         Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seriesIds);
         Map<Long, BasketSeason> seasonMap = publicSupport.loadSeasonMap(seasonIds);
-        Map<Long, BasketTeam> teamMap = publicSupport.loadPublicTeamMap(teamIds);
+        Map<Long, BasketTeam> teamMap = publicSupport.loadTeamMap(teamIds);
+        List<BasketEventTeam> eventTeams = loadEventTeams(teamIds);
+        Map<Long, BasketEventTeam> eventById = new HashMap<>();
+        Map<String, BasketEventTeam> eventBySourceSeason = new HashMap<>();
+        Map<Long, BasketEventTeam> latestBySource = new HashMap<>();
+        for (BasketEventTeam eventTeam : eventTeams) {
+            eventById.put(eventTeam.getId(), eventTeam);
+            if (eventTeam.getTeamLogoFileId() != null) {
+                fileIds.add(eventTeam.getTeamLogoFileId());
+            }
+            if (eventTeam.getSourceTeamId() == null) {
+                continue;
+            }
+            if (eventTeam.getSeasonId() != null) {
+                String key = eventTeam.getSourceTeamId() + ":" + eventTeam.getSeasonId();
+                eventBySourceSeason.merge(key, eventTeam, this::preferNewerEventTeam);
+            }
+            latestBySource.merge(eventTeam.getSourceTeamId(), eventTeam, this::preferNewerEventTeam);
+        }
         for (BasketTeam team : teamMap.values()) {
             if (team.getLogoFileId() != null) {
                 fileIds.add(team.getLogoFileId());
@@ -350,9 +404,20 @@ public class BasketPublicHonorSupport {
                 vo.setSeasonNameEn(season.getDisplayTitleEn());
             }
             BasketTeam team = teamMap.get(record.getTeamId());
+            BasketEventTeam eventTeam = pickEventTeam(record, eventById, eventBySourceSeason, latestBySource);
             if (team != null) {
                 vo.setTeamName(team.getTeamName());
                 vo.setTeamLogoUrl(urlMap.get(team.getLogoFileId()));
+            }
+            if (eventTeam != null) {
+                vo.setEventTeamId(eventTeam.getId());
+                vo.setPlatformCode(eventTeam.getPlatformCode());
+                if (!StringUtils.hasText(vo.getTeamName())) {
+                    vo.setTeamName(eventTeam.getTeamNameSnapshot());
+                }
+                if (!StringUtils.hasText(vo.getTeamLogoUrl()) && eventTeam.getTeamLogoFileId() != null) {
+                    vo.setTeamLogoUrl(urlMap.get(eventTeam.getTeamLogoFileId()));
+                }
             }
             BasketPlayerProfile player = playerMap.get(record.getPlayerId());
             if (player != null && publicSupport.isPlayerPubliclyVisible(player)) {
@@ -362,6 +427,74 @@ public class BasketPublicHonorSupport {
             result.add(vo);
         }
         return result;
+    }
+
+    private Set<Long> teamKeysForPlayer(Long playerId) {
+        if (playerId == null) {
+            return Collections.emptySet();
+        }
+        List<BasketEventPlayer> players = eventPlayerDao.selectList(new LambdaQueryWrapper<BasketEventPlayer>()
+                .eq(BasketEventPlayer::getSourcePlayerId, playerId)
+                .eq(BasketEventPlayer::getIsDelete, BasketPublicConstants.NOT_DELETED));
+        if (CollectionUtils.isEmpty(players)) {
+            return Collections.emptySet();
+        }
+        Set<Long> eventTeamIds = players.stream()
+                .map(BasketEventPlayer::getEventTeamId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (eventTeamIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        List<BasketEventTeam> teams = eventTeamDao.selectList(new LambdaQueryWrapper<BasketEventTeam>()
+                .in(BasketEventTeam::getId, eventTeamIds)
+                .eq(BasketEventTeam::getIsDelete, BasketPublicConstants.NOT_DELETED));
+        Set<Long> keys = new HashSet<>(eventTeamIds);
+        if (!CollectionUtils.isEmpty(teams)) {
+            for (BasketEventTeam team : teams) {
+                if (team.getSourceTeamId() != null) {
+                    keys.add(team.getSourceTeamId());
+                }
+            }
+        }
+        return keys;
+    }
+
+    private List<BasketEventTeam> loadEventTeams(Set<Long> teamIds) {
+        if (CollectionUtils.isEmpty(teamIds)) {
+            return Collections.emptyList();
+        }
+        return eventTeamDao.selectList(new LambdaQueryWrapper<BasketEventTeam>()
+                .eq(BasketEventTeam::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .and(w -> w.in(BasketEventTeam::getId, teamIds)
+                        .or()
+                        .in(BasketEventTeam::getSourceTeamId, teamIds)));
+    }
+
+    private BasketEventTeam pickEventTeam(BasketHonorRecord record,
+                                          Map<Long, BasketEventTeam> eventById,
+                                          Map<String, BasketEventTeam> eventBySourceSeason,
+                                          Map<Long, BasketEventTeam> latestBySource) {
+        if (record.getTeamId() == null) {
+            return null;
+        }
+        if (record.getSeasonId() != null) {
+            BasketEventTeam bySeason = eventBySourceSeason.get(record.getTeamId() + ":" + record.getSeasonId());
+            if (bySeason != null) {
+                return bySeason;
+            }
+        }
+        BasketEventTeam byId = eventById.get(record.getTeamId());
+        if (byId != null) {
+            return byId;
+        }
+        return latestBySource.get(record.getTeamId());
+    }
+
+    private BasketEventTeam preferNewerEventTeam(BasketEventTeam left, BasketEventTeam right) {
+        long leftId = left.getId() == null ? 0L : left.getId();
+        long rightId = right.getId() == null ? 0L : right.getId();
+        return rightId >= leftId ? right : left;
     }
 
     private void copyItem(PublicHonorItemResp src, PublicHonorDetailResp dest) {
@@ -378,6 +511,8 @@ public class BasketPublicHonorSupport {
         dest.setTeamId(src.getTeamId());
         dest.setTeamName(src.getTeamName());
         dest.setTeamLogoUrl(src.getTeamLogoUrl());
+        dest.setEventTeamId(src.getEventTeamId());
+        dest.setPlatformCode(src.getPlatformCode());
         dest.setPlayerId(src.getPlayerId());
         dest.setPlayerName(src.getPlayerName());
         dest.setPlayerAvatarUrl(src.getPlayerAvatarUrl());

@@ -67,6 +67,7 @@
         <if test="seasonId != null">and h.season_id = #{seasonId}</if>
         <if test="honorCategoryId != null">and h.honor_category_id = #{honorCategoryId}</if>
         <if test="honorCode != null and honorCode != ''">and c.honor_code = #{honorCode}</if>
+        <if test="honorCodes != null and honorCodes != ''">and find_in_set(c.honor_code, #{honorCodes})</if>
         <if test="honorScope != null and honorScope != ''">and c.honor_scope = #{honorScope}</if>
         <if test="recipientType != null and recipientType != ''">and c.recipient_type = #{recipientType}</if>
         <if test="teamId != null">and h.team_id = #{teamId}</if>
@@ -110,6 +111,15 @@
         where is_delete = 0 and season_id = #{seasonId} and honor_category_id = #{honorCategoryId}
           and source_type = #{sourceType} and display_status &lt;&gt; 3
         order by id desc limit 1
+    </select>
+
+    <select id="countActiveWeekly" resultType="int">
+        select count(1) from basket_honor_record
+        where is_delete = 0 and season_id = #{seasonId} and honor_category_id = #{honorCategoryId}
+          and player_id = #{playerId} and display_status &lt;&gt; 3
+        <if test="awardDate != null">and award_date = #{awardDate}</if>
+        <if test="awardDate == null">and award_date is null</if>
+        <if test="excludeId != null">and id &lt;&gt; #{excludeId}</if>
     </select>
 
     <select id="countActiveUnique" resultType="int">

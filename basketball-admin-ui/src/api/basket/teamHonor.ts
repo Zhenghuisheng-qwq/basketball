@@ -56,6 +56,20 @@ export function revokeTeamHonor(id: number, data: HonorRecordRevokeReq): Promise
   })
 }
 
+export function replaceTeamHonorLineup(id: number, data: Array<{
+  playerId: number
+  teamId?: number
+  roleType?: string
+  positionCode?: string
+  sortNo?: number
+}>): Promise<AjaxResult> {
+  return request({
+    url: `/basket/team-honor/${id}/lineup`,
+    method: 'put',
+    data
+  })
+}
+
 export function delTeamHonor(id: number): Promise<AjaxResult> {
   return request({
     url: `/basket/team-honor/${id}`,

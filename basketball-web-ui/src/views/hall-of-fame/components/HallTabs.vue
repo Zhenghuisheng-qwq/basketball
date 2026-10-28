@@ -14,7 +14,7 @@ const emit = defineEmits<{
 const { t } = useI18n()
 
 const tabs = computed<Array<{ value: HallTab; label: string }>>(() => [
-  { value: 'weekly', label: t('publicPages.hall.playerHonors') },
+  { value: 'weekly', label: t('publicPages.hall.weeklyTab') },
   { value: 'event', label: t('publicPages.hall.eventHonors') },
   { value: 'champions', label: t('publicPages.hall.pastChampions') },
 ])

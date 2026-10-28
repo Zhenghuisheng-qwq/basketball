@@ -26,6 +26,8 @@ const panelRef = ref<HTMLElement | null>(null)
 const pageSize = 8
 
 const allChampions = ref<PublicHonorItemResp[]>([])
+const platform = ref('ALL')
+const series = ref('ALL')
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
 let reqId = 0
@@ -43,10 +45,37 @@ const yearOptions = computed(() => {
   ]
 })
 
-const filtered = computed(() => {
-  if (props.year === 'ALL') return allChampions.value
-  return allChampions.value.filter((item) => String(item.awardDate || '').startsWith(props.year))
+const platformOptions = computed(() => {
+  const values = new Set<string>()
+  allChampions.value.forEach((item) => {
+    const tag = platformTag(item.platformCode)
+    if (tag) values.add(tag)
+  })
+  return [
+    { value: 'ALL', label: t('publicPages.hall.allPlatforms') },
+    ...Array.from(values).map((value) => ({ value, label: value })),
+  ]
 })
+
+const seriesOptions = computed(() => {
+  const map = new Map<string, string>()
+  allChampions.value.forEach((item) => {
+    const id = String(item.tournamentId || '')
+    if (!id) return
+    map.set(id, displayText(item.tournamentName, t('publicPages.hall.publicEvent')))
+  })
+  return [
+    { value: 'ALL', label: t('publicPages.hall.allEvents') },
+    ...Array.from(map, ([value, label]) => ({ value, label })),
+  ]
+})
+
+const filtered = computed(() => allChampions.value.filter((item) => {
+  if (props.year !== 'ALL' && !String(item.awardDate || '').startsWith(props.year)) return false
+  if (platform.value !== 'ALL' && platformTag(item.platformCode) !== platform.value) return false
+  if (series.value !== 'ALL' && String(item.tournamentId || '') !== series.value) return false
+  return true
+}))
 
 const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / pageSize)))
 
@@ -125,12 +154,39 @@ function updateYear(value: string | number) {
   emit('update:page', 1)
 }
 
+function updatePlatform(value: string | number) {
+  platform.value = String(value)
+  emit('update:page', 1)
+}
+
+function updateSeries(value: string | number) {
+  series.value = String(value)
+  emit('update:page', 1)
+}
+
+function platformTag(code?: string | null): string {
+  const value = String(code || '').trim().toUpperCase()
+  if (!value) return ''
+  if (value === 'PC') return 'PC'
+  if (value === 'PS_XBOX' || value === 'PS' || value === 'XBOX') return '主机'
+  return value
+}
+
+function teamLabel(record: PublicHonorItemResp): string {
+  return String(record.teamName || '').trim()
+}
+
+function cardTitle(record: PublicHonorItemResp): string {
+  return displayText(record.seasonName || record.tournamentName, t('publicPages.hall.publicEvent'))
+}
+
 function updatePage(page: number) {
   emit('update:page', page)
   panelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
-function openTeam(teamId?: string | null) {
+function openTeam(record: PublicHonorItemResp) {
+  const teamId = record.eventTeamId
   if (!teamId) return
   router.push(`/tournament/team/${teamId}/overview`)
 }
@@ -148,20 +204,44 @@ function openEventHonor(tournamentId?: string | null, showRoster = false) {
 }
 
 function awardDateText(value?: string | null) {
+  const matched = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (matched) return `${matched[1]}.${matched[2]}.${matched[3]}`
   const dt = formatDateTime(value)
-  return dt.date === '--' ? '--' : dt.date
+  return dt.date === '--' ? '--' : dt.date.replace(/-/g, '.')
+}
+
+function teamNameText(record: PublicHonorItemResp) {
+  const name = teamLabel(record)
+  return name ? name.toLocaleUpperCase() : t('publicPages.hall.championTeam')
 }
 </script>
 
 <template>
   <section ref="panelRef" class="past-champions-panel">
-    <HallPanelHead :title="t('publicPages.hall.pastChampions')" subtitle="Past Champions">
+    <HallPanelHead
+      layout="inline"
+      :title="t('publicPages.hall.pastChampions')"
+      subtitle="PAST CHAMPIONS"
+    >
       <template #filters>
         <HallSelect
           width="filter"
           :model-value="year"
           :options="yearOptions"
           @update:model-value="updateYear"
+        />
+        <HallSelect
+          width="filter"
+          :model-value="platform"
+          :options="platformOptions"
+          @update:model-value="updatePlatform"
+        />
+        <HallSelect
+          width="filter"
+          trigger-variant="week"
+          :model-value="series"
+          :options="seriesOptions"
+          @update:model-value="updateSeries"
         />
       </template>
     </HallPanelHead>
@@ -179,51 +259,51 @@ function awardDateText(value?: string | null) {
           <article
             v-for="record in group.items"
             :key="record.honorId"
-            class="past-champion-card hall-card-surface"
+            class="past-champion-card"
           >
-            <div class="past-champion-card__main">
-              <div class="past-champion-card__left">
-                <div class="past-champion-card__meta">
-                  <span class="past-champion-card__series">
-                    {{ displayText(record.honorName, t('publicPages.hall.championFallback')) }}
-                  </span>
-                </div>
-                <p class="past-champion-card__name">
-                  {{ displayText(record.tournamentName, t('publicPages.hall.publicEvent')) }}
-                </p>
-                <p class="past-champion-card__date">{{ awardDateText(record.awardDate) }}</p>
+            <div class="past-champion-card__copy">
+              <div class="past-champion-card__series">
+                <span class="past-champion-card__mark" aria-hidden="true" />
+                <span>{{ displayText(record.tournamentName, t('publicPages.hall.championFallback')) }}</span>
               </div>
-
-              <button
-                type="button"
-                class="past-champion-card__team"
-                :disabled="!record.teamId"
-                @click="openTeam(record.teamId)"
-              >
-                <TeamLogo
-                  :team="{
-                    id: String(record.teamId || ''),
-                    name: displayText(record.teamName),
-                    shortName: displayText(record.teamName),
-                    logoUrl: record.teamLogoUrl || '',
-                  }"
-                  size="xl"
-                />
-                <strong>{{ displayText(record.teamName, t('publicPages.hall.championTeam')) }}</strong>
-              </button>
+              <h4 class="past-champion-card__name">{{ cardTitle(record) }}</h4>
+              <span v-if="platformTag(record.platformCode)" class="past-champion-card__platform">
+                {{ platformTag(record.platformCode) }}
+              </span>
+              <p class="past-champion-card__date">
+                <span>{{ t('publicPages.hall.crownedDate') }}</span>
+                <strong>{{ awardDateText(record.awardDate) }}</strong>
+              </p>
+              <div class="past-champion-card__actions">
+                <button type="button" @click="openEventHonor(record.tournamentId, true)">
+                  {{ t('publicPages.hall.viewChampionRoster') }}
+                  <span aria-hidden="true">→</span>
+                </button>
+                <span class="past-champion-card__divider" aria-hidden="true" />
+                <button type="button" @click="openEventHonor(record.tournamentId, false)">
+                  {{ t('publicPages.hall.enterEventHonors') }}
+                  <span aria-hidden="true">→</span>
+                </button>
+              </div>
             </div>
 
-            <div class="past-champion-card__actions">
-              <button type="button" @click="openEventHonor(record.tournamentId, true)">
-                {{ t('publicPages.hall.viewChampionRoster') }}
-                <span aria-hidden="true">→</span>
-              </button>
-              <span class="past-champion-card__divider" aria-hidden="true" />
-              <button type="button" @click="openEventHonor(record.tournamentId, false)">
-                {{ t('publicPages.hall.enterEventHonors') }}
-                <span aria-hidden="true">→</span>
-              </button>
-            </div>
+            <button
+              type="button"
+              class="past-champion-card__team"
+              :disabled="!record.eventTeamId"
+              @click="openTeam(record)"
+            >
+              <TeamLogo
+                :team="{
+                  id: String(record.eventTeamId || record.teamId || record.honorId),
+                  name: teamLabel(record) || 'CN',
+                  shortName: teamLabel(record) || 'CN',
+                  logoUrl: record.teamLogoUrl || '',
+                }"
+                size="xl"
+              />
+              <strong>{{ teamNameText(record) }}</strong>
+            </button>
           </article>
         </div>
       </div>
@@ -247,113 +327,227 @@ function awardDateText(value?: string | null) {
 }
 
 .past-champions-group__year {
-  margin: 0 0 14px;
-  color: #111;
-  font-size: 22px;
+  margin: 2px 0 16px;
+  color: #e10613;
+  font-size: 36px;
   font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 
 .past-champions-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 18px;
 }
 
 .past-champion-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  align-items: center;
+  gap: 12px 0;
+  min-height: 214px;
+  padding: 22px 10px 18px 24px;
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.past-champion-card__copy {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  padding: 20px 22px;
-}
-
-.past-champion-card__main {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.past-champion-card__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  align-items: flex-start;
+  min-width: 0;
 }
 
 .past-champion-card__series {
-  color: var(--cnpa-red, #e10613);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  color: rgba(255, 255, 255, 0.62);
   font-size: 12px;
   font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.past-champion-card__mark {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  background: #e10613;
+  transform: rotate(45deg);
 }
 
 .past-champion-card__name {
   margin: 10px 0 0;
-  color: #111;
-  font-size: 18px;
+  max-width: 100%;
+  color: #fff;
+  font-size: 22px;
   font-weight: 900;
+  line-height: 1.15;
+}
+
+.past-champion-card__platform {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  margin-top: 10px;
+  padding: 0 8px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .past-champion-card__date {
-  margin: 8px 0 0;
-  color: #666;
-  font-size: 13px;
-}
+  margin: 12px 0 0;
 
-.past-champion-card__team {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  min-width: 110px;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #111;
-  font: inherit;
-  cursor: pointer;
-
-  &:disabled {
-    cursor: default;
+  span {
+    display: block;
+    color: rgba(255, 255, 255, 0.46);
+    font-size: 12px;
+    font-weight: 700;
   }
 
   strong {
-    font-size: 14px;
+    display: block;
+    margin-top: 4px;
+    color: #fff;
+    font-size: 16px;
     font-weight: 800;
-    text-align: center;
+    letter-spacing: 0.04em;
   }
 }
 
 .past-champion-card__actions {
   display: flex;
   align-items: center;
-  gap: 12px;
-  border-top: 1px solid rgba(0, 0, 0, 0.08);
-  padding-top: 12px;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 16px;
 
   button {
     padding: 0;
     border: 0;
     background: transparent;
-    color: #111;
+    color: rgba(255, 255, 255, 0.88);
     font: inherit;
     font-size: 13px;
     font-weight: 800;
     cursor: pointer;
 
+    span {
+      margin-left: 4px;
+    }
+
     &:hover {
-      color: var(--cnpa-red, #e10613);
+      color: #e10613;
     }
   }
 }
 
 .past-champion-card__divider {
   width: 1px;
-  height: 14px;
-  background: rgba(0, 0, 0, 0.12);
+  height: 12px;
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.past-champion-card__team {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 200px;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+
+  &:disabled {
+    cursor: default;
+  }
+
+  strong {
+    max-width: 180px;
+    color: #fff;
+    font-size: 20px;
+    font-weight: 900;
+    letter-spacing: 0.12em;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  :deep(.team-logo.team-logo--xl) {
+    width: 132px;
+    height: 120px;
+    background: transparent;
+  }
+
+  :deep(.team-logo__img) {
+    mix-blend-mode: lighten;
+    object-fit: contain;
+  }
 }
 
 @media (max-width: 1023px) {
   .past-champions-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .past-champions-group__year {
+    font-size: 28px;
+  }
+
+  .past-champion-card {
+    grid-template-columns: minmax(0, 1fr) 104px;
+    min-height: 0;
+    padding: 16px 8px 14px 16px;
+  }
+
+  .past-champion-card__name {
+    font-size: 18px;
+  }
+
+  .past-champion-card__actions {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .past-champion-card__divider {
+    display: none;
+  }
+
+  .past-champion-card__team {
+    width: 104px;
+
+    strong {
+      max-width: 96px;
+      font-size: 13px;
+      letter-spacing: 0.04em;
+    }
+
+    :deep(.team-logo.team-logo--xl) {
+      width: 72px;
+      height: 64px;
+    }
   }
 }
 </style>

@@ -434,6 +434,28 @@ public class BasketPublicSupport {
         return map;
     }
 
+    /** 已发布荣誉上的球队：不要求公开标记，删除的球队仍不返回。 */
+    public Map<Long, BasketTeam> loadTeamMap(Collection<Long> teamIds) {
+        if (CollectionUtils.isEmpty(teamIds)) {
+            return Collections.emptyMap();
+        }
+        Set<Long> ids = teamIds.stream().filter(Objects::nonNull).collect(Collectors.toSet());
+        if (ids.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        List<BasketTeam> teams = teamDao.selectByIds(ids);
+        Map<Long, BasketTeam> map = new HashMap<>();
+        if (CollectionUtils.isEmpty(teams)) {
+            return map;
+        }
+        for (BasketTeam team : teams) {
+            if (team != null && Objects.equals(team.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                map.put(team.getId(), team);
+            }
+        }
+        return map;
+    }
+
     public Map<Long, BasketPlayerProfile> loadPlayerMap(Collection<Long> playerIds) {
         if (CollectionUtils.isEmpty(playerIds)) {
             return Collections.emptyMap();

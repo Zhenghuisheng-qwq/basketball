@@ -148,8 +148,14 @@ async function handleTriggerClick() {
 }
 
 .hall-select--week .hall-select__trigger {
-  border-color: rgba(231, 25, 34, 0.55);
-  background: linear-gradient(180deg, #2a0a0d 0%, #120608 100%);
+  border-color: #e10613;
+  background: #e10613;
+  color: #fff;
+  font-weight: 800;
+}
+
+.hall-select--week .hall-select__arrow {
+  color: #fff;
 }
 
 .hall-select__label {

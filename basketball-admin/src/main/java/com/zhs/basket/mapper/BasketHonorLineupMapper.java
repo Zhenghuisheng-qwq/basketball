@@ -11,5 +11,7 @@ public interface BasketHonorLineupMapper {
 
     int softDeleteByHonorRecordId(@Param("honorRecordId") Long honorRecordId);
 
+    int deleteByHonorRecordId(@Param("honorRecordId") Long honorRecordId);
+
     int batchInsert(@Param("list") List<BasketHonorLineup> list);
 }

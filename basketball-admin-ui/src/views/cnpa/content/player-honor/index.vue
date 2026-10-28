@@ -11,9 +11,9 @@
           <el-option v-for="item in seasonOptions" :key="item.id" :label="item.seasonName" :value="item.id" />
         </el-select>
       </el-form-item>
-      <el-form-item label="荣誉编码" prop="honorCode">
+      <el-form-item v-if="!singleLock" label="荣誉编码" prop="honorCode">
         <el-select v-model="queryParams.honorCode" placeholder="荣誉编码" clearable style="width: 160px">
-          <el-option v-for="item in PLAYER_HONOR_CODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+          <el-option v-for="item in codeOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
       </el-form-item>
       <el-form-item label="状态" prop="displayStatus">
@@ -35,7 +35,7 @@
         <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['basket:playerHonor:add']">新增</el-button>
       </el-col>
       <el-col :span="1.5">
-        <el-button type="warning" plain icon="Search" @click="openCandidate" v-hasPermi="['basket:playerHonor:query']">候选查询</el-button>
+        <el-button v-if="showCandidate" type="warning" plain icon="Search" @click="openCandidate" v-hasPermi="['basket:playerHonor:query']">候选查询</el-button>
       </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
@@ -52,6 +52,9 @@
         </template>
       </el-table-column>
       <el-table-column label="统计值" prop="honorValue" width="90" />
+      <el-table-column label="授予日期" prop="awardDate" width="120">
+        <template #default="scope">{{ parseTime(scope.row.awardDate, '{y}-{m}-{d}') }}</template>
+      </el-table-column>
       <el-table-column label="操作" align="center" width="300" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:playerHonor:query']">详情</el-button>
@@ -72,6 +75,8 @@
         <el-descriptions-item label="球员">{{ detail.playerName || detail.playerId }}</el-descriptions-item>
         <el-descriptions-item label="球队">{{ detail.teamName || detail.teamId || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ detail.displayStatusName }}</el-descriptions-item>
+        <el-descriptions-item label="授予日期">{{ parseTime(detail.awardDate, '{y}-{m}-{d}') }}</el-descriptions-item>
+        <el-descriptions-item label="副标题">{{ detail.honorSubtitle || '-' }}</el-descriptions-item>
         <el-descriptions-item label="备注">{{ detail.remark || '-' }}</el-descriptions-item>
       </el-descriptions>
     </el-drawer>
@@ -84,26 +89,43 @@
           </el-select>
         </el-form-item>
         <el-form-item label="赛季" prop="seasonId">
-          <el-select v-model="form.seasonId" filterable style="width: 100%">
+          <el-select v-model="form.seasonId" filterable style="width: 100%" @change="onFormSeasonChange">
             <el-option v-for="item in formSeasonOptions" :key="item.id" :label="item.seasonName" :value="item.id" />
           </el-select>
         </el-form-item>
         <el-form-item label="荣誉编码" prop="honorCode">
           <el-select v-model="form.honorCode" style="width: 100%">
-            <el-option v-for="item in PLAYER_HONOR_CODE_OPTIONS" :key="item.value" :label="item.label" :value="item.value" />
+            <el-option v-for="item in codeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="球员ID" prop="playerId">
-          <el-input-number v-model="form.playerId" :min="1" controls-position="right" style="width: 100%" />
+        <el-form-item label="球员" prop="playerId">
+          <el-select v-model="form.playerId" filterable style="width: 100%" @change="syncPlayerTeam">
+            <el-option
+              v-for="item in seasonPlayers"
+              :key="item.sourcePlayerId"
+              :label="playerOptionLabel(item)"
+              :value="item.sourcePlayerId"
+            />
+          </el-select>
         </el-form-item>
-        <el-form-item label="球队ID">
-          <el-input-number v-model="form.teamId" :min="1" controls-position="right" style="width: 100%" />
+        <el-form-item label="球队">
+          <el-select v-model="form.teamId" filterable clearable style="width: 100%">
+            <el-option
+              v-for="item in seasonTeams"
+              :key="item.teamId"
+              :label="item.teamName"
+              :value="item.teamId"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="荣誉标题">
           <el-input v-model="form.honorTitle" />
         </el-form-item>
         <el-form-item label="副标题">
-          <el-input v-model="form.honorSubtitle" />
+          <el-input v-model="form.honorSubtitle" :placeholder="form.honorCode === 'WEEKLY_BEST' ? '如：第 5 比赛周' : ''" />
+        </el-form-item>
+        <el-form-item label="授予日期" prop="awardDate">
+          <el-date-picker v-model="form.awardDate" type="date" value-format="YYYY-MM-DD" placeholder="选择授予日期" style="width: 100%" />
         </el-form-item>
         <el-divider content-position="left">英文内容</el-divider>
         <div class="el-form-item__tip bilingual-tip">英文选填，不改变球员、球队和赛季归属。留空时官网显示中文。</div>
@@ -208,8 +230,23 @@ import {
 } from '@/types'
 import { listV4Series } from '@/api/cnpa/event-v4/series'
 import { listV4Season } from '@/api/cnpa/event-v4/season'
+import { listV4EventPlayer, listV4EventTeam, type BasketEventPlayerListVo } from '@/api/cnpa/event-v4/event-team'
+import type { SeasonCandidateTeam } from '@/types'
+
+const props = withDefaults(defineProps<{ lockedCodes?: string[] }>(), {
+  lockedCodes: () => []
+})
 
 const { proxy } = getCurrentInstance()
+
+const codeOptions = computed(() => {
+  if (!props.lockedCodes.length) return PLAYER_HONOR_CODE_OPTIONS
+  return PLAYER_HONOR_CODE_OPTIONS.filter(item => props.lockedCodes.includes(item.value))
+})
+const singleLock = computed(() => props.lockedCodes.length === 1)
+const showCandidate = computed(() =>
+  codeOptions.value.some(item => ['SCORING_CHAMPION', 'REBOUND_CHAMPION', 'ASSIST_CHAMPION', 'STEAL_CHAMPION', 'BLOCK_CHAMPION'].includes(item.value))
+)
 
 const dataList = ref<HonorRecordListItem[]>([])
 const loading = ref(true)
@@ -229,6 +266,8 @@ const candidates = ref<PlayerHonorCandidate[]>([])
 const tournamentOptions = ref<TournamentListItem[]>([])
 const seasonOptions = ref<SeasonListItem[]>([])
 const formSeasonOptions = ref<SeasonListItem[]>([])
+const seasonPlayers = ref<BasketEventPlayerListVo[]>([])
+const seasonTeams = ref<SeasonCandidateTeam[]>([])
 const selectedTournamentId = ref<number>()
 
 const queryParams = ref<HonorRecordQuery>({
@@ -238,7 +277,8 @@ const queryParams = ref<HonorRecordQuery>({
 
 const form = ref<HonorRecordAddReq>({
   honorCode: 'PLAYER_HONOR',
-  displayOrder: 0
+  displayOrder: 0,
+  awardDate: undefined
 })
 
 const candidateQuery = ref<PlayerHonorCandidateQuery>({
@@ -251,7 +291,25 @@ const rules = {
   tournamentId: [{ required: true, message: '请选择赛事', trigger: 'change' }],
   seasonId: [{ required: true, message: '请选择赛季', trigger: 'change' }],
   honorCode: [{ required: true, message: '请选择荣誉编码', trigger: 'change' }],
-  playerId: [{ required: true, message: '请填写球员ID', trigger: 'blur' }]
+  playerId: [{ required: true, message: '请选择球员', trigger: 'change' }],
+  awardDate: [{ required: true, message: '请选择授予日期', trigger: 'change' }]
+}
+
+function applyHonorLock() {
+  if (!props.lockedCodes.length) return
+  if (props.lockedCodes.length === 1) {
+    queryParams.value.honorCode = props.lockedCodes[0]
+    queryParams.value.honorCodes = undefined
+    return
+  }
+  queryParams.value.honorCodes = props.lockedCodes.join(',')
+  if (queryParams.value.honorCode && !props.lockedCodes.includes(queryParams.value.honorCode)) {
+    queryParams.value.honorCode = undefined
+  }
+}
+
+function dateOnly(value?: string) {
+  return value ? String(value).slice(0, 10) : undefined
 }
 const revokeRules = {
   revokeReason: [{ required: true, message: '请填写撤销原因', trigger: 'blur' }]
@@ -289,6 +347,7 @@ function handleTournamentChange() {
 
 function getList() {
   loading.value = true
+  applyHonorLock()
   queryParams.value.tournamentId = selectedTournamentId.value
   listPlayerHonor(queryParams.value).then(res => {
     dataList.value = res.rows || []
@@ -308,9 +367,55 @@ function resetQuery() {
   handleQuery()
 }
 
+function playerOptionLabel(item: BasketEventPlayerListVo) {
+  const name = item.playerNameSnapshot || item.gameIdSnapshot || item.sourcePlayerId
+  return item.teamNameSnapshot ? `${name} · ${item.teamNameSnapshot}` : String(name)
+}
+
+function loadSeasonRoster(seasonId?: number) {
+  seasonPlayers.value = []
+  seasonTeams.value = []
+  if (!seasonId) return Promise.resolve()
+  const players = listV4EventPlayer({ seasonId, pageNum: 1, pageSize: 500 }).then(res => {
+    const seen = new Set<number>()
+    seasonPlayers.value = (res.rows || []).filter(item => {
+      if (!item.sourcePlayerId || seen.has(item.sourcePlayerId)) return false
+      seen.add(item.sourcePlayerId)
+      return true
+    })
+  })
+  const teams = listV4EventTeam({ seasonId, pageNum: 1, pageSize: 500 }).then(res => {
+    const seen = new Set<number>()
+    seasonTeams.value = (res.rows || []).reduce<SeasonCandidateTeam[]>((acc, item) => {
+      if (!item.sourceTeamId || seen.has(item.sourceTeamId)) return acc
+      seen.add(item.sourceTeamId)
+      acc.push({ teamId: item.sourceTeamId, teamName: item.teamNameSnapshot || String(item.sourceTeamId) })
+      return acc
+    }, [])
+  })
+  return Promise.all([players, teams])
+}
+
+function syncPlayerTeam() {
+  const player = seasonPlayers.value.find(item => item.sourcePlayerId === form.value.playerId)
+  if (!player?.eventTeamId) return
+  const team = seasonTeams.value.find(item => item.teamName === player.teamNameSnapshot)
+  if (team) form.value.teamId = team.teamId
+}
+
+function onFormSeasonChange() {
+  form.value.playerId = undefined
+  form.value.teamId = undefined
+  loadSeasonRoster(form.value.seasonId)
+}
+
 function loadFormSeasons() {
   form.value.seasonId = undefined
+  form.value.playerId = undefined
+  form.value.teamId = undefined
   formSeasonOptions.value = []
+  seasonPlayers.value = []
+  seasonTeams.value = []
   if (!form.value.tournamentId) return
   listV4Season({ seriesId: form.value.tournamentId, pageNum: 1, pageSize: 500 }).then(res => {
     formSeasonOptions.value = (res.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
@@ -321,7 +426,7 @@ function resetFormData() {
   form.value = {
     tournamentId: selectedTournamentId.value,
     seasonId: queryParams.value.seasonId,
-    honorCode: 'PLAYER_HONOR',
+    honorCode: codeOptions.value[0]?.value || 'PLAYER_HONOR',
     playerId: undefined,
     teamId: undefined,
     honorTitle: undefined,
@@ -329,12 +434,18 @@ function resetFormData() {
     honorSubtitle: undefined,
     honorSubtitleEn: '',
     honorValue: undefined,
+    awardDate: undefined,
     coverFileId: undefined,
     displayOrder: 0,
     remark: undefined
   }
   coverPreview.value = ''
   formSeasonOptions.value = seasonOptions.value
+  if (form.value.seasonId) loadSeasonRoster(form.value.seasonId)
+  else {
+    seasonPlayers.value = []
+    seasonTeams.value = []
+  }
   proxy.resetForm('formRef')
 }
 
@@ -361,6 +472,7 @@ function handleUpdate(row: HonorRecordListItem) {
       honorSubtitle: data.honorSubtitle,
       honorSubtitleEn: data.honorSubtitleEn || '',
       honorValue: data.honorValue,
+      awardDate: dateOnly(data.awardDate),
       coverFileId: data.coverFileId,
       displayOrder: data.displayOrder ?? 0,
       remark: data.remark
@@ -369,6 +481,20 @@ function handleUpdate(row: HonorRecordListItem) {
     if (data.tournamentId) {
       listV4Season({ seriesId: data.tournamentId, pageNum: 1, pageSize: 500 }).then(sRes => {
         formSeasonOptions.value = (sRes.rows || []).map((s: any) => ({ id: s.id, seasonName: s.seasonName || s.displayTitle }))
+      })
+    }
+    if (data.seasonId) {
+      loadSeasonRoster(data.seasonId).then(() => {
+        if (data.playerId && !seasonPlayers.value.some(item => item.sourcePlayerId === data.playerId)) {
+          seasonPlayers.value.unshift({
+            sourcePlayerId: data.playerId,
+            playerNameSnapshot: data.playerName || String(data.playerId),
+            teamNameSnapshot: data.teamName
+          })
+        }
+        if (data.teamId && !seasonTeams.value.some(item => item.teamId === data.teamId)) {
+          seasonTeams.value.unshift({ teamId: data.teamId!, teamName: data.teamName || String(data.teamId) })
+        }
       })
     }
     dialogTitle.value = '修改球员荣誉'

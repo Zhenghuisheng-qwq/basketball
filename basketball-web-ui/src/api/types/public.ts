@@ -248,6 +248,8 @@ export interface PublicHonorItemResp {
   teamId?: string | null
   teamName?: string | null
   teamLogoUrl?: string | null
+  eventTeamId?: string | null
+  platformCode?: string | null
   playerId?: string | null
   playerName?: string | null
   playerAvatarUrl?: string | null
