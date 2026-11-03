@@ -13,6 +13,7 @@ import type {
   V4PublicScheduleItem,
   V4PublicSeasonItem,
   V4PublicSeriesItem,
+  V4PublicLeaderboard,
   V4PublicStageItem,
   V4PublicStageStandingScope,
   V4PublicStandingItem,
@@ -91,6 +92,22 @@ export function getV4PublicStanding(divisionId: string) {
   return request.get<any, ApiResult<V4PublicStandingItem[]>>('/basket/v4/public/stats/standing', {
     params: { divisionId },
   })
+}
+
+export function getV4PublicLeaderboard(params: {
+  divisionId: string
+  scope?: string
+  tab?: string
+  mode?: string
+  sortBy?: string
+  page?: number
+  keyword?: string
+}) {
+  return request.get<any, ApiResult<V4PublicLeaderboard>>('/basket/v4/public/leaderboard', { params })
+}
+
+export function getV4PublicFeaturedDivision() {
+  return request.get<any, ApiResult<{ divisionId?: string | number | null }>>('/basket/v4/public/leaderboard/featured')
 }
 
 export function getV4PublicStageList(divisionId: string) {

@@ -17,7 +17,7 @@ import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { checkPermi } from '@/utils/permission'
 
-export type WorkspaceNavKey = 'overview' | 'rule' | 'structure' | 'schedule' | 'publish'
+export type WorkspaceNavKey = 'overview' | 'rule' | 'structure' | 'schedule' | 'publish' | 'leaderboard'
 
 interface WorkspaceNavItem {
   key: WorkspaceNavKey
@@ -31,7 +31,8 @@ const ITEMS: WorkspaceNavItem[] = [
   { key: 'rule', label: '赛事规则', path: '/event/event-v4-publish', perms: ['basket:v4Season:list', 'basket:v4FormatRule:view'] },
   { key: 'structure', label: '赛程结构', path: '/event/event-v4-structure', perms: ['basket:v4Stage:generate'] },
   { key: 'schedule', label: '日期与时间', path: '/event/event-v4-schedule', perms: ['basket:v4ScheduleBatch:list'] },
-  { key: 'publish', label: '赛程发布', path: '/event/event-v4-publish-preview', perms: ['basket:v4Stage:publish'] }
+  { key: 'publish', label: '赛程发布', path: '/event/event-v4-publish-preview', perms: ['basket:v4Stage:publish'] },
+  { key: 'leaderboard', label: '技术统计榜', path: '/event/event-v4-leaderboard', perms: ['basket:v4Leaderboard:view'] }
 ]
 
 const route = useRoute()

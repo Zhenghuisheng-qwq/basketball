@@ -92,6 +92,8 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
     private V4MatchSeriesDisplaySupport matchSeriesDisplaySupport;
     @Resource
     private com.zhs.support.v4.PublicCurrentRosterSupport currentRosterSupport;
+    @Resource
+    private com.zhs.service.impl.v4.BasketV4PublicLeaderboardService leaderboardService;
 
     @Override
     public PublicHomeVo getHome() {
@@ -264,21 +266,14 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
         if (division == null || division.getDivisionId() == null) {
             return vo;
         }
-        vo.setDivisionId(division.getDivisionId());
-
-        List<V4PublicPlayerStatItemResp> playerStats = safeList(() ->
-                v4PublicService.listPlayerStat(division.getDivisionId()));
-        vo.setPointsLeader(HomeRealtimeFocusSupport.pickLeader(
-                playerStats, V4PublicPlayerStatItemResp::getAvgPoints));
-        vo.setAssistsLeader(HomeRealtimeFocusSupport.pickLeader(
-                playerStats, V4PublicPlayerStatItemResp::getAvgAssist));
-        vo.setReboundsLeader(HomeRealtimeFocusSupport.pickLeader(
-                playerStats, V4PublicPlayerStatItemResp::getAvgRebound));
-        enrichLeaders(vo.getPointsLeader(), vo.getAssistsLeader(), vo.getReboundsLeader());
+        Long featuredDivisionId = leaderboardService.featuredDivisionId();
+        Long leaderboardDivisionId = featuredDivisionId != null ? featuredDivisionId : division.getDivisionId();
+        vo.setDivisionId(leaderboardDivisionId);
+        applyPublishedLeaders(vo, leaderboardDivisionId);
 
         List<V4PublicMatchItemResp> officialMatches = safeList(() ->
-                v4PublicService.listMatches(division.getDivisionId(), null, null, null, Boolean.TRUE, null));
-        Map<Long, Integer> rankMap = loadStandingRankMap(division.getDivisionId());
+                v4PublicService.listMatches(leaderboardDivisionId, null, null, null, Boolean.TRUE, null));
+        Map<Long, Integer> rankMap = loadStandingRankMap(leaderboardDivisionId);
         Date now = new Date();
         PublicHomeFocusTeamVo focusTeam = HomeRealtimeFocusSupport.pickWeeklyFocusTeam(
                 officialMatches,
@@ -290,6 +285,13 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
         }
         vo.setFocusTeam(focusTeam);
         return vo;
+    }
+
+    private void applyPublishedLeaders(PublicHomeDataFocusVo vo, Long divisionId) {
+        vo.setPointsLeader(leaderboardService.leader(divisionId, "OVERALL", "PTS"));
+        vo.setAssistsLeader(leaderboardService.leader(divisionId, "OVERALL", "AST"));
+        vo.setReboundsLeader(leaderboardService.leader(divisionId, "OVERALL", "REB"));
+        enrichLeaders(vo.getPointsLeader(), vo.getAssistsLeader(), vo.getReboundsLeader());
     }
 
     private Map<Long, Integer> loadStandingRankMap(Long divisionId) {

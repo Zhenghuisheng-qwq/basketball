@@ -62,6 +62,13 @@ public final class BasketEventV4Perms {
 
     public static final String V4_STATS_QUERY = "basket:v4Stats:query";
 
+    public static final String LEADERBOARD_VIEW = "basket:v4Leaderboard:view";
+    public static final String LEADERBOARD_EDIT = "basket:v4Leaderboard:edit";
+    public static final String LEADERBOARD_VALIDATE = "basket:v4Leaderboard:validate";
+    public static final String LEADERBOARD_PUBLISH = "basket:v4Leaderboard:publish";
+    public static final String LEADERBOARD_RECALC = "basket:v4Leaderboard:recalc";
+    public static final String LEADERBOARD_ARCHIVE = "basket:v4Leaderboard:archive";
+
     public static final String FORMAT_RULE_VIEW = "basket:v4FormatRule:view";
     public static final String FORMAT_RULE_EDIT = "basket:v4FormatRule:edit";
     public static final String FORMAT_RULE_LOCK = "basket:v4FormatRule:lock";

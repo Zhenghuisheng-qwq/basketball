@@ -88,7 +88,8 @@ const WORKSPACE_TITLES: Record<string, string> = {
   'event-v4-publish': '赛事规则',
   'event-v4-structure': '赛程结构',
   'event-v4-schedule': '日期与时间',
-  'event-v4-publish-preview': '赛程发布'
+  'event-v4-publish-preview': '赛程发布',
+  'event-v4-leaderboard': '技术统计榜'
 }
 
 function applyEventWorkspaceMeta(route: any) {

@@ -20,6 +20,7 @@
       </el-form-item>
       <el-form-item>
         <el-button type="primary" @click="loadAll">查询</el-button>
+        <el-button v-if="divisionId" @click="goLeaderboard">技术统计榜</el-button>
       </el-form-item>
     </el-form>
 
@@ -248,6 +249,7 @@
 
 <script setup lang="ts" name="CnpaEventV4Stats">
 import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { listV4PlayerStat, listV4Rank, listV4Standing, listV4TeamStat } from '@/api/cnpa/event-v4/match-submission-audit'
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
@@ -260,6 +262,8 @@ import {
   type BasketDivisionStageExecutionVo,
 } from '@/api/cnpa/event-v4/stage-execution'
 import { checkPermi } from '@/utils/permission'
+
+const router = useRouter()
 import { v4RankTypeLabel } from '@/utils/v4AdminDisplay'
 
 interface StageStandingRow {
@@ -415,6 +419,11 @@ function loadStageStandings() {
   listV4StageStandings(stageId.value).then(res => {
     stageStandingScopes.value = res.data || []
   })
+}
+
+function goLeaderboard() {
+  if (!divisionId.value) return
+  router.push({ path: '/event/event-v4-leaderboard', query: { divisionId: String(divisionId.value) } })
 }
 
 function loadAll() {

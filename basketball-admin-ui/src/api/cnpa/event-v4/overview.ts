@@ -2,7 +2,7 @@ import request from '@/utils/request'
 import type { AjaxResult, TableDataInfo } from '@/types'
 import type { BasketDivisionQuery } from './division'
 
-export type DivisionWorkspaceEntry = 'publish' | 'roster' | 'overview' | 'structure' | 'schedule' | 'publish-preview'
+export type DivisionWorkspaceEntry = 'publish' | 'roster' | 'overview' | 'structure' | 'schedule' | 'publish-preview' | 'leaderboard'
 
 export interface DivisionSelectorItemVo {
   divisionId: number

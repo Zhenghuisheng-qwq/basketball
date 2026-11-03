@@ -8,7 +8,8 @@ const WORKSPACE_PATHS: Record<DivisionWorkspaceEntry, string> = {
   structure: '/event/event-v4-structure',
   schedule: '/event/event-v4-schedule',
   'publish-preview': '/event/event-v4-publish-preview',
-  roster: '/event/event-v4-registration-audit'
+  roster: '/event/event-v4-registration-audit',
+  leaderboard: '/event/event-v4-leaderboard'
 }
 
 export function useDivisionWorkspace(entry: DivisionWorkspaceEntry) {

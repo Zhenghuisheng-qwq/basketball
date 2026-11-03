@@ -554,6 +554,57 @@ export interface V4PublicTeamHonorItem {
   awardDate?: string
 }
 
+export interface V4PublicLeaderboardRow {
+  rank?: number
+  eventTeamId?: string
+  teamName?: string
+  teamLogoUrl?: string
+  eventPlayerId?: string
+  sourcePlayerId?: string
+  playerName?: string
+  avatarUrl?: string
+  position?: string
+  games?: number
+  wins?: number
+  losses?: number
+  points?: number
+  rebounds?: number
+  assists?: number
+  steals?: number
+  blocks?: number
+  turnovers?: number
+  averagePoints?: number
+  averageRebounds?: number
+  averageAssists?: number
+  averageSteals?: number
+  averageBlocks?: number
+  averageTurnovers?: number
+  fieldGoalMade?: number
+  fieldGoalAttempt?: number
+  threePointMade?: number
+  threePointAttempt?: number
+  freeThrowMade?: number
+  freeThrowAttempt?: number
+}
+
+export interface V4PublicLeaderboard {
+  divisionId?: string
+  scope?: string
+  tab?: string
+  mode?: string
+  sortBy?: string
+  status?: string
+  policyVersion?: number
+  snapshotId?: string
+  lastCalculatedAt?: string
+  stale?: boolean
+  page?: number
+  pageSize?: number
+  totalEligible?: number
+  emptyReason?: string
+  rows?: V4PublicLeaderboardRow[]
+}
+
 export interface V4PublicTeamArchive {
   eventTeamId?: string
   sourceTeamId?: string

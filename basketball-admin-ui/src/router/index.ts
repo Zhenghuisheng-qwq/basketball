@@ -152,6 +152,20 @@ export const dynamicRoutes = [
     ]
   },
   {
+    path: '/event/event-v4-leaderboard',
+    component: Layout,
+    hidden: true,
+    permissions: ['basket:v4Leaderboard:view'],
+    children: [
+      {
+        path: '',
+        component: () => import('@/views/cnpa/event-v4/leaderboard/index.vue'),
+        name: 'EventV4Leaderboard',
+        meta: { title: '技术统计榜', activeMenu: '/event/event-v4-overview' }
+      }
+    ]
+  },
+  {
     path: '/tool/gen-edit',
     component: Layout,
     hidden: true,

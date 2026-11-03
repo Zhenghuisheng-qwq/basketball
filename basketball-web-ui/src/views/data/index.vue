@@ -4,11 +4,12 @@ import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import PaperTear from '@/components/common/PaperTear.vue'
 import {
-  getV4PublicPlayerStat,
+  getV4PublicFeaturedDivision,
+  getV4PublicLeaderboard,
   getV4PublicSeasonList,
-  getV4PublicTeamStat,
+  getV4PublicStageList,
 } from '@/api/v4Public'
-import type { V4PublicPlayerStatItem, V4PublicTeamStatItem } from '@/api/types/v4Public'
+import type { V4PublicLeaderboardRow, V4PublicStageItem } from '@/api/types/v4Public'
 import { displayText, localizedText, toNumber } from '@/utils/publicDisplay'
 import { v4PlatformLabel, v4SeriesLabel } from '@/utils/v4Display'
 import DataHero from './components/DataHero.vue'
@@ -43,11 +44,12 @@ const seasonError = ref('')
 const allRows = ref<Array<TeamStatistics | PlayerStatistics>>([])
 const tableLoading = ref(false)
 const tableError = ref('')
+const scopes = ref<Array<{ key: string; label: string }>>([])
+const selectedScope = ref('OVERALL')
+const serverTotal = ref(0)
+const emptyReason = ref('')
+const stale = ref(false)
 let reqId = 0
-
-function avgOrZero(totalValue: number, games: number) {
-  return games > 0 ? totalValue / games : 0
-}
 
 function teamShootingPct(made?: number | null, attempt?: number | null): number | null {
   const attempts = toNumber(attempt, 0)
@@ -55,19 +57,14 @@ function teamShootingPct(made?: number | null, attempt?: number | null): number 
   return (toNumber(made, 0) / attempts) * 100
 }
 
-function mapTeamRow(item: V4PublicTeamStatItem, index: number): TeamStatistics {
+function mapTeamRow(item: V4PublicLeaderboardRow): TeamStatistics {
   const name = displayText(item.teamName, t('publicPages.data.unknownTeam'))
-  const games = toNumber(item.matchCount, 0)
-  const wins = toNumber(item.winCount, 0)
-  const losses = toNumber(item.loseCount, 0)
-  const rebound = toNumber(item.rebound, 0)
-  const assist = toNumber(item.assist, 0)
-  const steal = toNumber(item.steal, 0)
-  const block = toNumber(item.block, 0)
-  const turnover = toNumber(item.turnover, 0)
+  const games = toNumber(item.games, 0)
+  const wins = toNumber(item.wins, 0)
+  const losses = toNumber(item.losses, 0)
   return {
     id: String(item.eventTeamId),
-    rank: index + 1,
+    rank: toNumber(item.rank, 0),
     teamId: String(item.eventTeamId),
     teamName: name,
     teamAbbr: name.slice(0, 6),
@@ -77,32 +74,32 @@ function mapTeamRow(item: V4PublicTeamStatItem, index: number): TeamStatistics {
     wins,
     losses,
     winRate: games > 0 ? (wins / games) * 100 : 0,
-    averagePoints: toNumber(item.avgPointsFor, avgOrZero(toNumber(item.pointsFor, 0), games)),
-    averageRebounds: avgOrZero(rebound, games),
-    averageAssists: avgOrZero(assist, games),
-    averageSteals: avgOrZero(steal, games),
-    averageBlocks: avgOrZero(block, games),
-    averageTurnovers: avgOrZero(turnover, games),
-    totalPoints: toNumber(item.pointsFor, 0),
-    totalRebounds: rebound,
-    totalAssists: assist,
-    totalSteals: steal,
-    totalBlocks: block,
-    totalTurnovers: turnover,
+    averagePoints: toNumber(item.averagePoints, 0),
+    averageRebounds: toNumber(item.averageRebounds, 0),
+    averageAssists: toNumber(item.averageAssists, 0),
+    averageSteals: toNumber(item.averageSteals, 0),
+    averageBlocks: toNumber(item.averageBlocks, 0),
+    averageTurnovers: toNumber(item.averageTurnovers, 0),
+    totalPoints: toNumber(item.points, 0),
+    totalRebounds: toNumber(item.rebounds, 0),
+    totalAssists: toNumber(item.assists, 0),
+    totalSteals: toNumber(item.steals, 0),
+    totalBlocks: toNumber(item.blocks, 0),
+    totalTurnovers: toNumber(item.turnovers, 0),
     fieldGoalPct: teamShootingPct(item.fieldGoalMade, item.fieldGoalAttempt),
     threePointPct: teamShootingPct(item.threePointMade, item.threePointAttempt),
     freeThrowPct: teamShootingPct(item.freeThrowMade, item.freeThrowAttempt),
   }
 }
 
-function mapPlayerRow(item: V4PublicPlayerStatItem, index: number): PlayerStatistics {
+function mapPlayerRow(item: V4PublicLeaderboardRow): PlayerStatistics {
   const teamName = displayText(item.teamName, '--')
-  const games = toNumber(item.matchCount, 0)
+  const games = toNumber(item.games, 0)
   const sourcePlayerId = String(item.sourcePlayerId || '').trim()
   return {
     id: sourcePlayerId || String(item.eventPlayerId),
     playerId: sourcePlayerId,
-    rank: index + 1,
+    rank: toNumber(item.rank, 0),
     playerName: displayText(item.playerName, t('publicPages.data.unknownPlayer')),
     avatarUrl: item.avatarUrl?.trim() || '',
     teamId: String(item.eventTeamId || ''),
@@ -112,20 +109,20 @@ function mapPlayerRow(item: V4PublicPlayerStatItem, index: number): PlayerStatis
     logoColor: '#333',
     position: item.position?.trim() || '--',
     games,
-    averagePoints: toNumber(item.avgPoints, 0),
-    averageRebounds: toNumber(item.avgRebound, 0),
-    averageAssists: toNumber(item.avgAssist, 0),
-    averageSteals: avgOrZero(toNumber(item.steal, 0), games),
-    averageBlocks: avgOrZero(toNumber(item.block, 0), games),
-    averageTurnovers: avgOrZero(toNumber(item.turnover, 0), games),
+    averagePoints: toNumber(item.averagePoints, 0),
+    averageRebounds: toNumber(item.averageRebounds, 0),
+    averageAssists: toNumber(item.averageAssists, 0),
+    averageSteals: toNumber(item.averageSteals, 0),
+    averageBlocks: toNumber(item.averageBlocks, 0),
+    averageTurnovers: toNumber(item.averageTurnovers, 0),
     totalPoints: toNumber(item.points, 0),
-    totalRebounds: toNumber(item.rebound, 0),
-    totalAssists: toNumber(item.assist, 0),
-    totalSteals: toNumber(item.steal, 0),
-    totalBlocks: toNumber(item.block, 0),
-    totalTurnovers: toNumber(item.turnover, 0),
-    averageFouls: item.foul != null ? avgOrZero(toNumber(item.foul, 0), games) : null,
-    totalFouls: item.foul != null ? toNumber(item.foul, 0) : null,
+    totalRebounds: toNumber(item.rebounds, 0),
+    totalAssists: toNumber(item.assists, 0),
+    totalSteals: toNumber(item.steals, 0),
+    totalBlocks: toNumber(item.blocks, 0),
+    totalTurnovers: toNumber(item.turnovers, 0),
+    averageFouls: null,
+    totalFouls: null,
     fieldGoalPct: teamShootingPct(item.fieldGoalMade, item.fieldGoalAttempt),
     threePointPct: teamShootingPct(item.threePointMade, item.threePointAttempt),
     freeThrowPct: teamShootingPct(item.freeThrowMade, item.freeThrowAttempt),
@@ -138,6 +135,18 @@ function applyRouteQuery() {
     activeDataType.value = tab
   } else if (tab === 'standing' || tab === 'rank') {
     activeDataType.value = tab === 'rank' ? 'player' : 'team'
+  }
+  const mode = route.query.mode
+  if (mode === 'average' || mode === 'total') {
+    activeStatisticType.value = mode
+  }
+  const page = Number(route.query.page)
+  if (Number.isFinite(page) && page > 0) {
+    currentPage.value = page
+  }
+  const scope = route.query.scope
+  if (typeof scope === 'string' && scope) {
+    selectedScope.value = scope
   }
 }
 
@@ -175,8 +184,22 @@ async function loadSeasons() {
       }
     }
     seasonGroups.value = [...groupMap.values()].filter((group) => group.tournaments.length > 0)
-    if (!selectedSeasonId.value) {
-      selectedSeasonId.value = seasonGroups.value[0]?.tournaments[0]?.id || ''
+    const queryDivision = typeof route.query.divisionId === 'string' ? route.query.divisionId : ''
+    if (queryDivision) {
+      selectedSeasonId.value = queryDivision
+    } else if (!selectedSeasonId.value) {
+      try {
+        const featured = await getV4PublicFeaturedDivision()
+        const featuredId = String(featured.data?.divisionId || '')
+        if (featuredId && featuredId !== '0') {
+          selectedSeasonId.value = featuredId
+        }
+      } catch {
+        selectedSeasonId.value = ''
+      }
+      if (!selectedSeasonId.value) {
+        selectedSeasonId.value = seasonGroups.value[0]?.tournaments[0]?.id || ''
+      }
     }
   } catch (err) {
     seasonGroups.value = []
@@ -186,94 +209,112 @@ async function loadSeasons() {
   }
 }
 
+async function loadScopes(divisionId: string) {
+  const res = await getV4PublicStageList(divisionId)
+  const stages = (res.data ?? []) as V4PublicStageItem[]
+  const next = stages
+    .filter((stage) => stage.stageId)
+    .sort((a, b) => toNumber(a.stageOrder, 0) - toNumber(b.stageOrder, 0))
+    .map((stage) => ({
+      key: `STAGE:${stage.stageId}`,
+      label: stage.stageName || stage.stageTypeName || stage.stageCode || String(stage.stageId),
+    }))
+  next.push({ key: 'OVERALL', label: t('publicPages.data.overall') })
+  scopes.value = next
+  const queryScope = typeof route.query.scope === 'string' ? route.query.scope : ''
+  if (queryScope && next.some((item) => item.key === queryScope)) {
+    selectedScope.value = queryScope
+  } else if (!next.some((item) => item.key === selectedScope.value)) {
+    selectedScope.value = next[0]?.key || 'OVERALL'
+  }
+}
+
+function emptyTextFor(reason: string) {
+  if (reason === 'NOT_PUBLISHED') return t('publicPages.data.notPublished')
+  if (reason === 'NO_ELIGIBLE_SUBJECTS') return t('publicPages.data.noEligible')
+  return ''
+}
+
 async function loadTable() {
   const divisionId = selectedSeasonId.value
   const current = ++reqId
   if (!divisionId) {
     allRows.value = []
+    serverTotal.value = 0
+    emptyReason.value = ''
     return
   }
   tableLoading.value = true
   tableError.value = ''
   try {
-    if (activeDataType.value === 'team') {
-      const res = await getV4PublicTeamStat(divisionId)
-      if (current !== reqId) return
-      allRows.value = (res.data ?? []).map((item, index) => mapTeamRow(item, index))
-    } else {
-      const res = await getV4PublicPlayerStat(divisionId)
-      if (current !== reqId) return
-      allRows.value = (res.data ?? []).map((item, index) => mapPlayerRow(item, index))
-    }
+    await loadScopes(divisionId)
+    if (current !== reqId) return
+    const res = await getV4PublicLeaderboard({
+      divisionId,
+      scope: selectedScope.value,
+      tab: activeDataType.value,
+      mode: activeStatisticType.value,
+      sortBy: 'PTS',
+      page: currentPage.value,
+      keyword: appliedKeyword.value.trim() || undefined,
+    })
+    if (current !== reqId) return
+    const board = res.data
+    emptyReason.value = board?.emptyReason || ''
+    stale.value = Boolean(board?.stale)
+    serverTotal.value = toNumber(board?.totalEligible, 0)
+    const rows = board?.rows ?? []
+    allRows.value = rows.map((item) => activeDataType.value === 'team' ? mapTeamRow(item) : mapPlayerRow(item))
   } catch (err) {
     if (current !== reqId) return
     allRows.value = []
+    serverTotal.value = 0
+    emptyReason.value = ''
     tableError.value = err instanceof Error ? err.message : t('publicPages.data.loadDataFailed')
   } finally {
     if (current === reqId) tableLoading.value = false
   }
 }
 
-const filteredRows = computed(() => {
-  const keyword = appliedKeyword.value.trim().toLowerCase()
-  let list = [...allRows.value]
-  if (keyword) {
-    list = list.filter((row) => {
-      if ('playerName' in row) {
-        return (
-          row.playerName.toLowerCase().includes(keyword)
-          || row.teamName.toLowerCase().includes(keyword)
-          || row.playerId.toLowerCase().includes(keyword)
-        )
-      }
-      return (
-        row.teamName.toLowerCase().includes(keyword)
-        || row.teamId.toLowerCase().includes(keyword)
-      )
-    })
+const filteredRows = computed(() => allRows.value)
+
+const total = computed(() => serverTotal.value)
+
+const pagedRows = computed(() => filteredRows.value)
+
+const boardEmptyText = computed(() => emptyTextFor(emptyReason.value) || (stale.value ? t('publicPages.data.stale') : ''))
+
+function syncBoardQuery() {
+  const query = {
+    ...route.query,
+    divisionId: selectedSeasonId.value || undefined,
+    scope: selectedScope.value || undefined,
+    tab: activeDataType.value,
+    mode: activeStatisticType.value,
+    page: String(currentPage.value),
   }
-  list.sort((a, b) => {
-    if (activeDataType.value === 'team') {
-      const left = a as TeamStatistics
-      const right = b as TeamStatistics
-      if (activeStatisticType.value === 'total') return right.wins - left.wins
-      return right.averagePoints - left.averagePoints
-    }
-    const left = a as PlayerStatistics
-    const right = b as PlayerStatistics
-    if (activeStatisticType.value === 'total') return right.totalPoints - left.totalPoints
-    return right.averagePoints - left.averagePoints
-  })
-  return list.map((row, index) => ({ ...row, rank: index + 1 }))
-})
+  router.replace({ path: '/data', query })
+}
 
-const total = computed(() => filteredRows.value.length)
-
-const pagedRows = computed(() => {
-  const start = (currentPage.value - 1) * pageSize.value
-  return filteredRows.value.slice(start, start + pageSize.value)
-})
-
-watch(activeDataType, (tab) => {
-  currentPage.value = 1
-  searchKeyword.value = ''
-  appliedKeyword.value = ''
-  router.replace({ path: '/data', query: { ...route.query, tab } })
-})
-
-watch([activeDataType, selectedSeasonId], () => {
+watch(activeDataType, () => {
   currentPage.value = 1
   searchKeyword.value = ''
   appliedKeyword.value = ''
 })
 
-watch(activeStatisticType, () => {
-  currentPage.value = 1
+watch([activeDataType, selectedSeasonId, activeStatisticType], () => {
+  if (currentPage.value !== 1) currentPage.value = 1
 })
 
-watch([selectedSeasonId, activeDataType], () => {
+function applySearch() {
+  appliedKeyword.value = searchKeyword.value.trim()
+  if (currentPage.value !== 1) currentPage.value = 1
+}
+
+watch([selectedSeasonId, activeDataType, activeStatisticType, selectedScope, currentPage, appliedKeyword], () => {
+  syncBoardQuery()
   void loadTable()
-}, { immediate: true })
+})
 
 watch(
   () => [route.query.tab, route.query.series],
@@ -315,6 +356,17 @@ onMounted(async () => {
           <div class="data-center-panel__shell">
             <div class="site-shell-inner data-center-panel__body">
               <div class="data-center-panel__toolbar">
+                <label class="data-scope-select">
+                  <span>{{ t('publicPages.data.scope') }}</span>
+                  <select v-model="selectedScope">
+                    <option v-for="scope in scopes" :key="scope.key" :value="scope.key">{{ scope.label }}</option>
+                  </select>
+                </label>
+                <p v-if="stale" class="data-scope-stale">{{ t('publicPages.data.stale') }}</p>
+                <form class="data-scope-search" @submit.prevent="applySearch">
+                  <input v-model="searchKeyword" :placeholder="t('publicPages.data.search')" />
+                  <button type="submit">{{ t('publicPages.data.search') }}</button>
+                </form>
                 <div class="data-stat-switch" role="group" :aria-label="t('publicPages.data.statType')">
                   <button
                     type="button"
@@ -341,6 +393,7 @@ onMounted(async () => {
                 :rows="pagedRows"
                 :loading="tableLoading"
                 :error="tableError"
+                :empty-text="boardEmptyText"
               />
 
               <DataPagination
@@ -477,7 +530,58 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   align-items: center;
+  gap: 16px;
   margin-bottom: 18px;
+}
+
+.data-scope-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+  color: var(--cnpa-paper-text);
+  font-size: 14px;
+  font-weight: 700;
+
+  select {
+    min-width: 180px;
+    height: 40px;
+    padding: 0 10px;
+    border: 1px solid var(--cnpa-paper-line, #ddd);
+    border-radius: 4px;
+    background: #fff;
+    color: inherit;
+  }
+}
+
+.data-scope-stale {
+  margin: 0;
+  color: #9a3412;
+  font-size: 13px;
+}
+
+.data-scope-search {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  input, button {
+    height: 40px;
+    border: 1px solid var(--cnpa-paper-line, #ddd);
+    border-radius: 4px;
+    background: #fff;
+  }
+
+  input {
+    width: 180px;
+    padding: 0 10px;
+  }
+
+  button {
+    padding: 0 14px;
+    font-weight: 700;
+    cursor: pointer;
+  }
 }
 
 .data-stat-switch {

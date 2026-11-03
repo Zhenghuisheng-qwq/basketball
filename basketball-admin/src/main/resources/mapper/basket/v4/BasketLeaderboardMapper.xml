@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.v4.BasketLeaderboardMapper">
+
+    <resultMap id="PolicyMap" type="com.zhs.basket.domain.v4.BasketLeaderboardPolicy">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="scopeKey" column="scope_key"/>
+        <result property="stageId" column="stage_id"/>
+        <result property="versionNo" column="version_no"/>
+        <result property="lifecycle" column="lifecycle"/>
+        <result property="templateCode" column="template_code"/>
+        <result property="rankingAudience" column="ranking_audience"/>
+        <result property="configJson" column="config_json"/>
+        <result property="basedOnPolicyId" column="based_on_policy_id"/>
+        <result property="expectedLock" column="expected_lock"/>
+        <result property="draftScopeKey" column="draft_scope_key"/>
+        <result property="activeScopeKey" column="active_scope_key"/>
+        <result property="publishNote" column="publish_note"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <resultMap id="RunMap" type="com.zhs.basket.domain.v4.BasketLeaderboardRun">
+        <id property="id" column="id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="scopeKey" column="scope_key"/>
+        <result property="policyId" column="policy_id"/>
+        <result property="purpose" column="purpose"/>
+        <result property="sourceRevision" column="source_revision"/>
+        <result property="state" column="state"/>
+        <result property="errorMessage" column="error_message"/>
+        <result property="startedTime" column="started_time"/>
+        <result property="finishedTime" column="finished_time"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <resultMap id="SnapshotMap" type="com.zhs.basket.domain.v4.BasketLeaderboardSnapshot">
+        <id property="id" column="id"/>
+        <result property="runId" column="run_id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="scopeKey" column="scope_key"/>
+        <result property="policyId" column="policy_id"/>
+        <result property="sourceRevision" column="source_revision"/>
+        <result property="publishedAt" column="published_at"/>
+        <result property="isPublic" column="is_public"/>
+        <result property="publicScopeKey" column="public_scope_key"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <resultMap id="EntryMap" type="com.zhs.basket.domain.v4.BasketLeaderboardEntry">
+        <id property="id" column="id"/>
+        <result property="runId" column="run_id"/>
+        <result property="snapshotId" column="snapshot_id"/>
+        <result property="divisionId" column="division_id"/>
+        <result property="scopeKey" column="scope_key"/>
+        <result property="subjectType" column="subject_type"/>
+        <result property="eventTeamId" column="event_team_id"/>
+        <result property="eventPlayerId" column="event_player_id"/>
+        <result property="eligible" column="eligible"/>
+        <result property="failedConditions" column="failed_conditions"/>
+        <result property="validGames" column="valid_games"/>
+        <result property="playedRounds" column="played_rounds"/>
+        <result property="playedSeries" column="played_series"/>
+        <result property="dueFixtureRate" column="due_fixture_rate"/>
+        <result property="requiredGames" column="required_games"/>
+        <result property="rankNo" column="rank_no"/>
+        <result property="points" column="points"/>
+        <result property="rebound" column="rebound"/>
+        <result property="assist" column="assist"/>
+        <result property="steal" column="steal"/>
+        <result property="block" column="block"/>
+        <result property="turnover" column="turnover"/>
+        <result property="wins" column="wins"/>
+        <result property="losses" column="losses"/>
+        <result property="fieldGoalMade" column="field_goal_made"/>
+        <result property="fieldGoalAttempt" column="field_goal_attempt"/>
+        <result property="threePointMade" column="three_point_made"/>
+        <result property="threePointAttempt" column="three_point_attempt"/>
+        <result property="freeThrowMade" column="free_throw_made"/>
+        <result property="freeThrowAttempt" column="free_throw_attempt"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="PolicyCols">id, division_id, scope_key, stage_id, version_no, lifecycle, template_code, ranking_audience, config_json, based_on_policy_id, expected_lock, draft_scope_key, active_scope_key, publish_note, create_by, create_time, update_by, update_time, is_delete</sql>
+
+    <select id="selectPolicyById" resultMap="PolicyMap">
+        select <include refid="PolicyCols"/> from basket_leaderboard_policy where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectOpenDraft" resultMap="PolicyMap">
+        select <include refid="PolicyCols"/> from basket_leaderboard_policy
+        where division_id = #{divisionId} and scope_key = #{scopeKey} and lifecycle in ('DRAFT','READY') and is_delete = 0
+        limit 1
+    </select>
+
+    <select id="selectActive" resultMap="PolicyMap">
+        select <include refid="PolicyCols"/> from basket_leaderboard_policy
+        where division_id = #{divisionId} and active_scope_key = #{scopeKey} and lifecycle = 'ACTIVE' and is_delete = 0
+        limit 1
+    </select>
+
+    <select id="selectPolicies" resultMap="PolicyMap">
+        select <include refid="PolicyCols"/> from basket_leaderboard_policy
+        where division_id = #{divisionId} and is_delete = 0
+        order by scope_key, version_no desc
+    </select>
+
+    <select id="selectMaxVersion" resultType="int">
+        select ifnull(max(version_no), 0) from basket_leaderboard_policy
+        where division_id = #{divisionId} and scope_key = #{scopeKey} and is_delete = 0
+    </select>
+
+    <insert id="insertPolicy" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_leaderboard_policy
+        (division_id, scope_key, stage_id, version_no, lifecycle, template_code, ranking_audience, config_json,
+         based_on_policy_id, expected_lock, draft_scope_key, active_scope_key, publish_note, create_by, create_time, update_by, update_time, is_delete)
+        values
+        (#{divisionId}, #{scopeKey}, #{stageId}, #{versionNo}, #{lifecycle}, #{templateCode}, #{rankingAudience}, #{configJson},
+         #{basedOnPolicyId}, #{expectedLock}, #{draftScopeKey}, #{activeScopeKey}, #{publishNote}, #{createBy}, #{createTime}, #{updateBy}, #{updateTime}, 0)
+    </insert>
+
+    <update id="updateDraft">
+        update basket_leaderboard_policy
+        set config_json = #{configJson},
+            template_code = #{templateCode},
+            ranking_audience = #{rankingAudience},
+            lifecycle = 'DRAFT',
+            draft_scope_key = #{scopeKey},
+            expected_lock = expected_lock + 1,
+            update_by = #{updateBy},
+            update_time = #{updateTime}
+        where id = #{id} and expected_lock = #{expectedLock} and lifecycle in ('DRAFT','READY') and is_delete = 0
+    </update>
+
+    <update id="updateLifecycle">
+        update basket_leaderboard_policy
+        set lifecycle = #{lifecycle},
+            draft_scope_key = #{draftScopeKey},
+            active_scope_key = #{activeScopeKey},
+            publish_note = #{publishNote},
+            expected_lock = expected_lock + 1,
+            update_by = #{updateBy},
+            update_time = #{updateTime}
+        where id = #{id} and expected_lock = #{expectedLock} and is_delete = 0
+    </update>
+
+    <update id="clearActive">
+        update basket_leaderboard_policy
+        set lifecycle = 'SUPERSEDED', active_scope_key = null, update_time = now()
+        where division_id = #{divisionId} and active_scope_key = #{scopeKey} and lifecycle = 'ACTIVE' and is_delete = 0
+          and id != #{keepId}
+    </update>
+
+    <insert id="insertAudit" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_leaderboard_policy_audit
+        (policy_id, division_id, scope_key, action, operator_id, operator_name, before_json, after_json, reason, create_time)
+        values
+        (#{policyId}, #{divisionId}, #{scopeKey}, #{action}, #{operatorId}, #{operatorName}, #{beforeJson}, #{afterJson}, #{reason}, #{createTime})
+    </insert>
+
+    <select id="selectAudits" resultType="com.zhs.basket.domain.v4.BasketLeaderboardPolicyAudit">
+        select id, policy_id as policyId, division_id as divisionId, scope_key as scopeKey, action,
+               operator_id as operatorId, operator_name as operatorName, before_json as beforeJson,
+               after_json as afterJson, reason, create_time as createTime
+        from basket_leaderboard_policy_audit
+        where division_id = #{divisionId}
+        order by id desc
+        limit 50
+    </select>
+
+    <insert id="insertRun" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_leaderboard_run
+        (division_id, scope_key, policy_id, purpose, source_revision, state, error_message, started_time, finished_time)
+        values
+        (#{divisionId}, #{scopeKey}, #{policyId}, #{purpose}, #{sourceRevision}, #{state}, #{errorMessage}, #{startedTime}, #{finishedTime})
+    </insert>
+
+    <update id="finishRun">
+        update basket_leaderboard_run
+        set state = #{state}, error_message = #{errorMessage}, finished_time = #{finishedTime}, source_revision = #{sourceRevision}
+        where id = #{id}
+    </update>
+
+    <select id="selectRuns" resultMap="RunMap">
+        select id, division_id, scope_key, policy_id, purpose, source_revision, state, error_message, started_time, finished_time, create_time
+        from basket_leaderboard_run
+        where division_id = #{divisionId}
+        <if test="scopeKey != null and scopeKey != ''">and scope_key = #{scopeKey}</if>
+        order by id desc
+        limit 50
+    </select>
+
+    <select id="selectLatestSuccess" resultMap="RunMap">
+        select id, division_id, scope_key, policy_id, purpose, source_revision, state, error_message, started_time, finished_time, create_time
+        from basket_leaderboard_run
+        where policy_id = #{policyId} and source_revision = #{sourceRevision} and state = 'SUCCESS' and purpose in ('PUBLISH','RECALC')
+        order by id desc
+        limit 1
+    </select>
+
+    <insert id="insertSnapshot" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_leaderboard_snapshot
+        (run_id, division_id, scope_key, policy_id, source_revision, published_at, is_public, public_scope_key)
+        values
+        (#{runId}, #{divisionId}, #{scopeKey}, #{policyId}, #{sourceRevision}, #{publishedAt}, #{isPublic}, #{publicScopeKey})
+    </insert>
+
+    <update id="clearPublic">
+        update basket_leaderboard_snapshot
+        set is_public = 0, public_scope_key = null
+        where division_id = #{divisionId} and public_scope_key = #{scopeKey}
+    </update>
+
+    <update id="markPublic">
+        update basket_leaderboard_snapshot
+        set is_public = 1, public_scope_key = #{publicScopeKey}, published_at = #{publishedAt}
+        where id = #{id}
+    </update>
+
+    <select id="selectPublicSnapshot" resultMap="SnapshotMap">
+        select id, run_id, division_id, scope_key, policy_id, source_revision, published_at, is_public, public_scope_key, create_time
+        from basket_leaderboard_snapshot
+        where division_id = #{divisionId} and public_scope_key = #{scopeKey} and is_public = 1
+        limit 1
+    </select>
+
+    <insert id="insertEntries">
+        insert into basket_leaderboard_entry
+        (run_id, snapshot_id, division_id, scope_key, subject_type, event_team_id, event_player_id, eligible, failed_conditions,
+         valid_games, played_rounds, played_series, due_fixture_rate, required_games, rank_no,
+         points, rebound, assist, steal, block, turnover, wins, losses,
+         field_goal_made, field_goal_attempt, three_point_made, three_point_attempt, free_throw_made, free_throw_attempt)
+        values
+        <foreach collection="rows" item="row" separator=",">
+            (#{row.runId}, #{row.snapshotId}, #{row.divisionId}, #{row.scopeKey}, #{row.subjectType}, #{row.eventTeamId}, #{row.eventPlayerId},
+             #{row.eligible}, #{row.failedConditions}, #{row.validGames}, #{row.playedRounds}, #{row.playedSeries}, #{row.dueFixtureRate},
+             #{row.requiredGames}, #{row.rankNo}, #{row.points}, #{row.rebound}, #{row.assist}, #{row.steal}, #{row.block}, #{row.turnover},
+             #{row.wins}, #{row.losses}, #{row.fieldGoalMade}, #{row.fieldGoalAttempt}, #{row.threePointMade}, #{row.threePointAttempt},
+             #{row.freeThrowMade}, #{row.freeThrowAttempt})
+        </foreach>
+    </insert>
+
+    <update id="bindSnapshot">
+        update basket_leaderboard_entry set snapshot_id = #{snapshotId} where run_id = #{runId}
+    </update>
+
+    <select id="selectEntriesByRun" resultMap="EntryMap">
+        select * from basket_leaderboard_entry
+        where run_id = #{runId}
+        <if test="subjectType != null and subjectType != ''">and subject_type = #{subjectType}</if>
+        order by subject_type, eligible desc, rank_no, event_team_id, event_player_id
+    </select>
+
+    <select id="selectEntriesBySnapshot" resultMap="EntryMap">
+        select * from basket_leaderboard_entry
+        where snapshot_id = #{snapshotId} and eligible = 1
+        <if test="subjectType != null and subjectType != ''">and subject_type = #{subjectType}</if>
+    </select>
+
+    <select id="selectPublishedMatches" resultType="com.zhs.basket.support.v4.leaderboard.LeaderboardFacts$MatchFact">
+        select id, stage_id as stageId, round_no as roundNo, series_id as seriesId,
+               home_event_team_id as homeEventTeamId, away_event_team_id as awayEventTeamId,
+               match_status as matchStatus, publish_status as publishStatus, match_time as matchTime
+        from basket_match
+        where division_id = #{divisionId} and is_delete = 0 and publish_status = 'PUBLISHED'
+    </select>
+
+    <select id="selectTeamBoxes" resultType="com.zhs.basket.support.v4.leaderboard.LeaderboardFacts$TeamBox">
+        select match_id as matchId, event_team_id as eventTeamId, points_for as pointsFor, rebound, assist, steal, block, turnover,
+               is_winner as isWinner, field_goal_made as fieldGoalMade, field_goal_attempt as fieldGoalAttempt,
+               three_point_made as threePointMade, three_point_attempt as threePointAttempt,
+               free_throw_made as freeThrowMade, free_throw_attempt as freeThrowAttempt
+        from basket_match_team_stat
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="selectPlayerBoxes" resultType="com.zhs.basket.support.v4.leaderboard.LeaderboardFacts$PlayerBox">
+        select match_id as matchId, event_team_id as eventTeamId, event_player_id as eventPlayerId,
+               points, rebound, assist, steal, block, turnover,
+               field_goal_made as fieldGoalMade, field_goal_attempt as fieldGoalAttempt,
+               three_point_made as threePointMade, three_point_attempt as threePointAttempt,
+               free_throw_made as freeThrowMade, free_throw_attempt as freeThrowAttempt
+        from basket_match_player_stat
+        where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="countTeamStats" resultType="int">
+        select count(1) from basket_match_team_stat where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="maxTeamStatUpdateTime" resultType="java.util.Date">
+        select max(update_time) from basket_match_team_stat where division_id = #{divisionId} and is_delete = 0
+    </select>
+
+    <select id="selectSetting" resultType="com.zhs.basket.domain.v4.BasketLeaderboardSetting">
+        select id, featured_division_id as featuredDivisionId, update_by as updateBy, update_time as updateTime
+        from basket_leaderboard_setting where id = 1
+    </select>
+
+    <update id="updateFeatured">
+        update basket_leaderboard_setting
+        set featured_division_id = #{divisionId}, update_by = #{updateBy}, update_time = #{updateTime}
+        where id = 1
+    </update>
+</mapper>
