@@ -13,6 +13,7 @@ import com.zhs.basket.service.IBasketMailNoticeService;
 import com.zhs.basket.support.BasketDataMaskUtil;
 import com.zhs.basket.support.mail.AdminHtmlMailSender;
 import com.zhs.common.exception.ServiceException;
+import jakarta.mail.MessagingException;
 import com.zhs.common.utils.SecurityUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -224,6 +225,37 @@ public class BasketMailNoticeServiceImpl implements IBasketMailNoticeService {
         }
     }
 
+    private String mailFailureReason(Throwable error) {
+        StringBuilder text = new StringBuilder();
+        appendFailure(text, error, 0);
+        if (text.length() == 0) {
+            text.append(error.getClass().getName());
+        }
+        return text.toString();
+    }
+
+    private void appendFailure(StringBuilder text, Throwable current, int depth) {
+        if (current == null || depth >= 8) {
+            return;
+        }
+        String message = current.getMessage();
+        if (message != null && !message.isBlank()) {
+            String one = message.replaceAll("[\\r\\n]+", " ").trim();
+            if (!one.isEmpty() && text.indexOf(one) < 0) {
+                if (text.length() > 0) {
+                    text.append(" | ");
+                }
+                text.append(current.getClass().getName()).append(": ").append(one);
+            }
+        }
+        appendFailure(text, current.getCause(), depth + 1);
+        if (current instanceof MessagingException messaging
+                && messaging.getNextException() != null
+                && messaging.getNextException() != current.getCause()) {
+            appendFailure(text, messaging.getNextException(), depth + 1);
+        }
+    }
+
     private boolean pause(long waitMs) {
         try {
             Thread.sleep(waitMs);
@@ -244,9 +276,10 @@ public class BasketMailNoticeServiceImpl implements IBasketMailNoticeService {
                 recipientMapper.markResult(item.getId(), RECIPIENT_SUCCESS, null);
             }
         } catch (Exception ex) {
-            log.error("[mail-notice] send failed noticeId={} to={} ex={}",
-                    noticeId, BasketDataMaskUtil.maskEmail(email), ex.getClass().getName());
-            recipientMapper.markResult(item.getId(), RECIPIENT_FAIL, "发送失败");
+            String reason = mailFailureReason(ex);
+            log.error("[mail-notice] send failed noticeId={} to={} reason={}",
+                    noticeId, BasketDataMaskUtil.maskEmail(email), reason, ex);
+            recipientMapper.markResult(item.getId(), RECIPIENT_FAIL, cut(reason, 240));
         }
         noticeMapper.refreshCounts(noticeId);
     }

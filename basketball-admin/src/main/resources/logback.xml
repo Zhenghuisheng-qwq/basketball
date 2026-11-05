@@ -5,8 +5,18 @@
     <!-- 日志输出格式 -->
 	<property name="log.pattern" value="%d{HH:mm:ss.SSS} [%thread] %-5level %logger{20} - [%method,%line] - %msg%n" />
 
-	<!-- 控制台输出 -->
+	<!-- 控制台输出。stdout 进 console.log，WARN 及以上同时进 stderr，方便 backend.log 看到失败 -->
 	<appender name="console" class="ch.qos.logback.core.ConsoleAppender">
+		<target>System.out</target>
+		<encoder>
+			<pattern>${log.pattern}</pattern>
+		</encoder>
+	</appender>
+	<appender name="console_err" class="ch.qos.logback.core.ConsoleAppender">
+		<target>System.err</target>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>WARN</level>
+		</filter>
 		<encoder>
 			<pattern>${log.pattern}</pattern>
 		</encoder>
@@ -76,15 +86,30 @@
 	<!-- Spring日志级别控制  -->
 	<logger name="org.springframework" level="warn" />
 
+	<!-- 启动目录下的 log/error.log，方便直接在部署目录排查 -->
+	<appender name="local_error" class="ch.qos.logback.core.rolling.RollingFileAppender">
+		<file>log/error.log</file>
+		<rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+			<fileNamePattern>log/error.log.%d{yyyy-MM-dd}.%i.gz</fileNamePattern>
+			<maxFileSize>50MB</maxFileSize>
+			<maxHistory>30</maxHistory>
+			<totalSizeCap>1GB</totalSizeCap>
+		</rollingPolicy>
+		<encoder>
+			<pattern>${log.pattern}</pattern>
+		</encoder>
+		<filter class="ch.qos.logback.classic.filter.ThresholdFilter">
+			<level>WARN</level>
+		</filter>
+	</appender>
+
 	<root level="info">
 		<appender-ref ref="console" />
+		<appender-ref ref="console_err" />
+		<appender-ref ref="file_info" />
+		<appender-ref ref="file_error" />
+		<appender-ref ref="local_error" />
 	</root>
-	
-	<!--系统操作日志-->
-    <root level="info">
-        <appender-ref ref="file_info" />
-        <appender-ref ref="file_error" />
-    </root>
 	
 	<!--系统用户操作日志-->
     <logger name="sys-user" level="info">
