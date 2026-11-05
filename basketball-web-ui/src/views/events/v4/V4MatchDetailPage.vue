@@ -121,6 +121,7 @@ const advanceLabel = computed(() => {
   if (!seriesMode.value) return ''
   const status = String(series.value?.seriesStatus || '').toUpperCase()
   if (status !== 'COMPLETED' || !series.value?.winnerEventTeamId) return ''
+  if (series.value?.finalStage) return t('eventsPage.match.champion')
   return t('eventsPage.match.advance')
 })
 

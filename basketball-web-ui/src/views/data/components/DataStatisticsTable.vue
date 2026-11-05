@@ -21,6 +21,12 @@ const props = defineProps<{
   loading?: boolean
   error?: string
   emptyText?: string
+  sortKey?: string
+  sortDir?: 'asc' | 'desc'
+}>()
+
+const emit = defineEmits<{
+  sort: [key: string, dir: 'asc' | 'desc']
 }>()
 
 const { t } = useI18n()
@@ -31,6 +37,14 @@ const columns = computed(() =>
     ? getTeamColumns(props.statisticType)
     : getPlayerColumns(props.statisticType),
 )
+
+function columnSorted(key: string) {
+  if (props.sortKey === 'totalPoints') {
+    if (props.statisticType === 'total') return key === 'points'
+    return key === 'rank'
+  }
+  return props.sortKey === key
+}
 
 const isAverage = computed(() => props.statisticType === 'average')
 
@@ -150,9 +164,7 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
 
 <template>
   <div class="data-table-scroll">
-    <div v-if="loading" class="data-table-state">{{ t('publicPages.data.loading') }}</div>
-    <div v-else-if="error" class="data-table-state is-error">{{ error }}</div>
-    <div v-else-if="rows.length === 0" class="data-table-state">{{ emptyText || t('publicPages.data.empty') }}</div>
+    <div v-if="error" class="data-table-state is-error">{{ error }}</div>
     <table v-else class="data-table">
       <thead>
         <tr>
@@ -161,12 +173,38 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
             :key="column.key"
             :class="[`is-${column.align || 'center'}`, column.cellClass]"
             :style="column.width ? { width: column.width, minWidth: column.width } : undefined"
+            :aria-sort="columnSorted(column.key) ? (props.sortDir === 'asc' ? 'ascending' : 'descending') : 'none'"
           >
-            {{ column.label }}
+            <span class="data-table__sort">
+              <span class="data-table__sort-label">{{ column.label }}</span>
+              <span class="data-table__dirs">
+                <button
+                  type="button"
+                  class="data-table__dir"
+                  :class="{ 'is-active': columnSorted(column.key) && props.sortDir === 'asc' }"
+                  :aria-label="t('publicPages.data.sortAsc', { column: column.label })"
+                  @click="emit('sort', column.key, 'asc')"
+                >↑</button>
+                <button
+                  type="button"
+                  class="data-table__dir"
+                  :class="{ 'is-active': columnSorted(column.key) && props.sortDir === 'desc' }"
+                  :aria-label="t('publicPages.data.sortDesc', { column: column.label })"
+                  @click="emit('sort', column.key, 'desc')"
+                >↓</button>
+              </span>
+            </span>
           </th>
         </tr>
       </thead>
       <tbody>
+        <tr v-if="loading">
+          <td class="data-table-state" :colspan="columns.length">{{ t('publicPages.data.loading') }}</td>
+        </tr>
+        <tr v-else-if="rows.length === 0">
+          <td class="data-table-state" :colspan="columns.length">{{ emptyText || t('publicPages.data.empty') }}</td>
+        </tr>
+        <template v-else>
         <tr v-for="row in rows" :key="`${dataType}-${row.id}`">
           <td
             v-for="column in columns"
@@ -221,6 +259,7 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
             </template>
           </td>
         </tr>
+        </template>
       </tbody>
     </table>
   </div>
@@ -255,7 +294,7 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
 
 .data-table thead th {
   height: 50px;
-  padding: 0 8px;
+  padding: 0 4px;
   background: #111;
   color: #fff;
   font-size: 13px;
@@ -266,6 +305,51 @@ function cellValue(row: TeamStatistics | PlayerStatistics, key: string): string 
   border: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.data-table__sort {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.data-table thead th.is-left .data-table__sort,
+.data-table thead th.is-team .data-table__sort,
+.data-table thead th.is-player .data-table__sort {
+  justify-content: flex-start;
+}
+
+.data-table__sort-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table__dirs {
+  display: inline-flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.data-table__dir {
+  width: 14px;
+  height: 11px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 11px;
+  cursor: pointer;
+
+  &.is-active {
+    color: #ff1717;
+  }
 }
 
 .data-table tbody td {

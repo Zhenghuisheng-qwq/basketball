@@ -10,8 +10,29 @@
     />
 
     <el-form :inline="true" class="mb8">
-      <el-form-item label="球队ID">
-        <el-input-number v-model="teamId" :min="1" controls-position="right" style="width: 160px" />
+      <el-form-item label="球队">
+        <el-select
+          v-model="teamSelectId"
+          filterable
+          remote
+          allow-create
+          default-first-option
+          reserve-keyword
+          clearable
+          :remote-method="searchTeams"
+          :loading="teamLoading"
+          placeholder="搜索或输入球队名称 / 简称 / 编号"
+          style="width: 360px"
+          @change="onTeamChange"
+          @visible-change="onTeamVisible"
+        >
+          <el-option v-for="item in teamOptions" :key="item.id" :label="item.label" :value="item.id">
+            <div class="selector-option">
+              <div>{{ item.label }}</div>
+              <div v-if="item.secondaryLabel" class="selector-option__sub">{{ item.secondaryLabel }}</div>
+            </div>
+          </el-option>
+        </el-select>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="loadArchive" v-hasPermi="['basket:permanentTeam:list']">查看档案</el-button>
@@ -65,23 +86,79 @@
       </el-card>
     </template>
 
-    <el-empty v-else-if="!searched" description="请输入球队 ID 后查看历史球队档案" />
+    <el-empty v-else-if="!searched" description="搜索或输入球队后查看历史球队档案" />
   </div>
 </template>
 
 <script setup lang="ts" name="BasketPermanentTeam">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getPermanentTeamArchive } from '@/api/basket/permanentArchive'
+import type { DisciplineSelectorOption } from '@/api/basket/discipline'
+import { getPermanentTeamArchive, searchPermanentTeams } from '@/api/basket/permanentArchive'
 import { parseTime } from '@/utils/ruoyi'
 
+const teamSelectId = ref<number | string>()
 const teamId = ref<number>()
+const teamOptions = ref<DisciplineSelectorOption[]>([])
+const teamLoading = ref(false)
 const archive = ref<any>(null)
 const searched = ref(false)
+let teamTimer: ReturnType<typeof setTimeout> | undefined
+
+function sameText(item: DisciplineSelectorOption, keyword: string) {
+  return [item.id, item.playerNo, item.gameId, item.label, item.teamName]
+    .some(value => value != null && String(value).trim() === keyword)
+}
+
+async function fetchTeams(keyword = '') {
+  teamLoading.value = true
+  try {
+    const res = await searchPermanentTeams({ keyword: keyword || undefined, pageNum: 1, pageSize: 20 })
+    teamOptions.value = res.rows || []
+  } finally {
+    teamLoading.value = false
+  }
+}
+
+function searchTeams(keyword: string) {
+  clearTimeout(teamTimer)
+  teamTimer = setTimeout(() => fetchTeams(keyword), 300)
+}
+
+function onTeamVisible(visible: boolean) {
+  if (visible && !teamOptions.value.length) fetchTeams('')
+}
+
+async function onTeamChange(selectKey?: number | string) {
+  if (selectKey == null || selectKey === '') {
+    teamId.value = undefined
+    return
+  }
+  let selected = teamOptions.value.find(item => String(item.id) === String(selectKey))
+  if (!selected) {
+    await fetchTeams(String(selectKey))
+    const text = String(selectKey).trim()
+    const exact = teamOptions.value.filter(item => sameText(item, text))
+    selected = teamOptions.value.find(item => String(item.id) === text)
+      || (exact.length === 1 ? exact[0] : undefined)
+      || (teamOptions.value.length === 1 ? teamOptions.value[0] : undefined)
+    if (!selected) {
+      teamSelectId.value = undefined
+      teamId.value = undefined
+      ElMessage.warning(teamOptions.value.length ? '找到多个球队，请从下拉列表选择' : '没有匹配的球队')
+      return
+    }
+    if (String(teamSelectId.value) !== String(selected.id)) {
+      teamSelectId.value = selected.id
+    }
+  }
+  teamId.value = Number(selected.id)
+  await loadArchive()
+}
 
 async function loadArchive() {
   if (!teamId.value) {
-    ElMessage.warning('请输入球队 ID')
+    ElMessage.warning('请搜索或输入球队')
     return
   }
   searched.value = true
@@ -90,3 +167,15 @@ async function loadArchive() {
   archive.value = res.data
 }
 </script>
+
+<style scoped>
+.selector-option {
+  line-height: 1.3;
+  padding: 4px 0;
+}
+.selector-option__sub {
+  margin-top: 2px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+</style>

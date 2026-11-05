@@ -8,9 +8,12 @@ import HallSelect from './HallSelect.vue'
 import HallPlayerSilhouette from './HallPlayerSilhouette.vue'
 import { getPublicHallPlayerHonorPage } from '@/api/publicHallOfFame'
 import { getPublicPlayerSeasonStat } from '@/api/publicPlayer'
+import { getV4PublicSeasonList, getV4PublicSeriesList } from '@/api/v4Public'
 import type { PublicHonorItemResp, PublicPlayerSeasonStatVo } from '@/api/types/public'
+import type { V4PublicSeasonItem, V4PublicSeriesItem } from '@/api/types/v4Public'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
+import { pickLatestPublishedSeason, platformTag, seasonBelongsToSeries, seasonsNewestFirst } from '../hallFilters'
 
 defineProps<{
   page: number
@@ -20,23 +23,78 @@ const router = useRouter()
 const { t } = useI18n()
 
 const allItems = ref<PublicHonorItemResp[]>([])
+const seriesList = ref<V4PublicSeriesItem[]>([])
+const v4Seasons = ref<V4PublicSeasonItem[]>([])
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
+const year = ref('ALL')
+const platform = ref('ALL')
+const seriesId = ref('ALL')
 const seasonFilter = ref('ALL')
 const weekCursor = ref(0)
 const stat = ref<PublicPlayerSeasonStatVo | null>(null)
 let reqId = 0
 let statReq = 0
+let defaultApplied = false
 
 const weeklyItems = computed(() =>
   allItems.value.filter((item) => (item.honorCode || '').toUpperCase() === 'WEEKLY_BEST'),
 )
 
+const yearOptions = computed(() => {
+  const years = new Set<string>()
+  weeklyItems.value.forEach((item) => {
+    const value = String(item.awardDate || '').slice(0, 4)
+    if (/^\d{4}$/.test(value)) years.add(value)
+  })
+  v4Seasons.value.forEach((item) => {
+    if (item.seasonYear) years.add(String(item.seasonYear))
+  })
+  return [
+    { value: 'ALL', label: t('publicPages.hall.allYears') },
+    ...Array.from(years).sort((a, b) => Number(b) - Number(a)).map((value) => ({
+      value,
+      label: t('publicPages.hall.yearLabel', { year: value }),
+    })),
+  ]
+})
+
+const platformOptions = computed(() => {
+  const values = new Set<string>()
+  weeklyItems.value.forEach((item) => {
+    const tag = platformTag(item.platformCode)
+    if (tag) values.add(tag)
+  })
+  v4Seasons.value.forEach((item) => {
+    item.platformCodes?.forEach((code) => {
+      const tag = platformTag(code)
+      if (tag) values.add(tag)
+    })
+  })
+  return [
+    { value: 'ALL', label: t('publicPages.hall.allPlatforms') },
+    ...Array.from(values).map((value) => ({ value, label: value })),
+  ]
+})
+
+const seriesOptions = computed(() => [
+  { value: 'ALL', label: t('publicPages.hall.allEvents') },
+  ...seriesList.value.map((item) => ({
+    value: String(item.seriesId),
+    label: displayText(item.seriesName, t('publicPages.hall.publicEvent')),
+  })),
+])
+
 const seasonOptions = computed(() => {
   const map = new Map<string, string>()
-  weeklyItems.value.forEach((item) => {
+  seasonsNewestFirst(v4Seasons.value).forEach((item) => {
     const id = String(item.seasonId || '')
     if (!id) return
+    map.set(id, displayText(item.displayTitle || item.seasonName, t('publicPages.hall.season')))
+  })
+  weeklyItems.value.forEach((item) => {
+    const id = String(item.seasonId || '')
+    if (!id || map.has(id)) return
     map.set(id, displayText(item.seasonName, t('publicPages.hall.season')))
   })
   return [
@@ -47,8 +105,11 @@ const seasonOptions = computed(() => {
 
 const weeks = computed(() => {
   const list = weeklyItems.value.filter((item) => {
-    if (seasonFilter.value === 'ALL') return true
-    return String(item.seasonId || '') === seasonFilter.value
+    if (year.value !== 'ALL' && !String(item.awardDate || '').startsWith(year.value)) return false
+    if (platform.value !== 'ALL' && platformTag(item.platformCode) !== platform.value) return false
+    if (seriesId.value !== 'ALL' && String(item.tournamentId || '') !== seriesId.value) return false
+    if (seasonFilter.value !== 'ALL' && String(item.seasonId || '') !== seasonFilter.value) return false
+    return true
   })
   return [...list].sort((a, b) => String(a.awardDate || '').localeCompare(String(b.awardDate || '')))
 })
@@ -87,6 +148,14 @@ async function loadAll() {
   state.value = 'loading'
   errorMessage.value = ''
   try {
+    const [seriesRes, seasonRes] = await Promise.all([
+      getV4PublicSeriesList(),
+      getV4PublicSeasonList(),
+    ])
+    if (currentReq !== reqId) return
+    seriesList.value = seriesRes.data || []
+    v4Seasons.value = seasonRes.data || []
+
     const collected: PublicHonorItemResp[] = []
     let page = 1
     let pages = 1
@@ -106,6 +175,7 @@ async function loadAll() {
     } while (page <= pages && page <= 8)
     const weekly = collected.filter((item) => (item.honorCode || '').toUpperCase() === 'WEEKLY_BEST')
     allItems.value = weekly
+    applyRunningDefault()
     state.value = weekly.length ? 'success' : 'empty'
     weekCursor.value = Math.max(0, weeks.value.length - 1)
   } catch (err) {
@@ -147,9 +217,45 @@ watch(current, (item) => {
   void loadStat(item)
 })
 
+function focusLatestWeek() {
+  weekCursor.value = Math.max(0, weeks.value.length - 1)
+}
+
+function applyRunningDefault() {
+  if (defaultApplied) return
+  defaultApplied = true
+  const active = pickLatestPublishedSeason(v4Seasons.value, allItems.value)
+  if (!active) return
+  seriesId.value = String(active.seriesId || 'ALL')
+  seasonFilter.value = String(active.seasonId || 'ALL')
+}
+
+function updateYear(value: string | number) {
+  year.value = String(value)
+  focusLatestWeek()
+}
+
+function updatePlatform(value: string | number) {
+  platform.value = String(value)
+  focusLatestWeek()
+}
+
+function updateSeries(value: string | number) {
+  seriesId.value = String(value)
+  if (!seasonBelongsToSeries(v4Seasons.value, seasonFilter.value, seriesId.value)) {
+    seasonFilter.value = 'ALL'
+  }
+  focusLatestWeek()
+}
+
 function updateSeason(value: string | number) {
   seasonFilter.value = String(value)
-  weekCursor.value = Math.max(0, weeks.value.length - 1)
+  const picked = v4Seasons.value.find((item) => String(item.seasonId || '') === seasonFilter.value)
+  const nextSeries = String(picked?.seriesId || '')
+  if (nextSeries && seriesId.value !== 'ALL' && nextSeries !== seriesId.value) {
+    seriesId.value = nextSeries
+  }
+  focusLatestWeek()
 }
 
 function updateWeek(value: string | number) {
@@ -202,6 +308,25 @@ function formatPct(value?: number | string | null) {
   <section class="weekly-best-panel">
     <HallPanelHead :title="t('publicPages.hall.weeklyTab')" subtitle="WEEKLY BEST" layout="inline">
       <template #filters>
+        <HallSelect
+          width="filter"
+          :model-value="year"
+          :options="yearOptions"
+          @update:model-value="updateYear"
+        />
+        <HallSelect
+          width="filter"
+          :model-value="platform"
+          :options="platformOptions"
+          @update:model-value="updatePlatform"
+        />
+        <HallSelect
+          width="filter"
+          trigger-variant="week"
+          :model-value="seriesId"
+          :options="seriesOptions"
+          @update:model-value="updateSeries"
+        />
         <HallSelect
           width="filter"
           :model-value="seasonFilter"

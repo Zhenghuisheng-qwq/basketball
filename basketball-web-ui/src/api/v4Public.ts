@@ -100,6 +100,7 @@ export function getV4PublicLeaderboard(params: {
   tab?: string
   mode?: string
   sortBy?: string
+  sortDir?: 'asc' | 'desc'
   page?: number
   keyword?: string
 }) {

@@ -18,10 +18,11 @@ import type {
   PublicHonorItemResp,
   PublicTournamentItemVo,
 } from '@/api/types/public'
-import { getPublicPlayerSeasonStat } from '@/api/publicPlayer'
+import { getPublicPlayerDetail, getPublicPlayerSeasonStat } from '@/api/publicPlayer'
 import type { PublicPlayerSeasonStatVo } from '@/api/types/public'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
 import { displayText, formatDateTime, localizedText } from '@/utils/publicDisplay'
+import { pickLatestPublishedSeason, platformTag, seasonBelongsToSeries, seasonsNewestFirst } from '../hallFilters'
 import type { ChampionRosterMember } from '../types'
 import mrtMidBackground from '@/assets/icon/mrt/mrt_mid.png'
 
@@ -39,45 +40,132 @@ const emit = defineEmits<{
   'update:tournamentId': [value: string]
   'update:rosterExpanded': [value: boolean]
   'update:seasonId': [value: string]
+  'update:scope': [payload: { tournamentId: string, seasonId: string }]
 }>()
 
 const router = useRouter()
-const { t } = useI18n()
+const { t, te } = useI18n()
+const LINEUP_POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C']
+const playerPosition = ref<Record<string, string>>({})
 
 const EVENT_HONOR_CODES = 'CHAMPION,RUNNER_UP,THIRD_PLACE,MVP,ALL_TOURNAMENT,ALL_DEFENSIVE'
 
 const tournaments = ref<PublicTournamentItemVo[]>([])
-const seasons = ref<V4PublicSeasonItem[]>([])
-const seasonId = ref('')
-const honors = ref<PublicHonorItemResp[]>([])
+const v4Seasons = ref<V4PublicSeasonItem[]>([])
+const allHonors = ref<PublicHonorItemResp[]>([])
+const year = ref('ALL')
+const platform = ref('ALL')
+const seasonId = ref(props.preferredSeasonId || 'ALL')
 const championDetail = ref<PublicHonorDetailResp | null>(null)
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
-let tournamentReq = 0
-let seasonReq = 0
-let honorReq = 0
+let loadReq = 0
+let defaultApplied = false
 
-const tournamentOptions = computed(() =>
-  tournaments.value.map((item) => ({
+const tournamentOptions = computed(() => [
+  { value: 'ALL', label: t('publicPages.hall.allEvents') },
+  ...tournaments.value.map((item) => ({
     value: item.tournamentId,
     label: displayText(item.tournamentName || item.shortName, t('publicPages.hall.publicEvent')),
   })),
-)
+])
+
+const yearOptions = computed(() => {
+  const years = new Set<string>()
+  scopedHonors.value.forEach((item) => {
+    const value = String(item.awardDate || '').slice(0, 4)
+    if (/^\d{4}$/.test(value)) years.add(value)
+  })
+  return [
+    { value: 'ALL', label: t('publicPages.hall.allYears') },
+    ...Array.from(years).sort((a, b) => Number(b) - Number(a)).map((value) => ({
+      value,
+      label: t('publicPages.hall.yearLabel', { year: value }),
+    })),
+  ]
+})
+
+const platformOptions = computed(() => {
+  const values = new Set<string>()
+  scopedHonors.value.forEach((item) => {
+    const tag = platformTag(item.platformCode)
+    if (tag) values.add(tag)
+  })
+  return [
+    { value: 'ALL', label: t('publicPages.hall.allPlatforms') },
+    ...Array.from(values).map((value) => ({ value, label: value })),
+  ]
+})
+
+const scopedHonors = computed(() => allHonors.value.filter((item) => {
+  if (props.tournamentId && String(item.tournamentId || '') !== props.tournamentId) return false
+  return true
+}))
+
+const seasonOptions = computed(() => {
+  const map = new Map<string, string>()
+  seasonsNewestFirst(v4Seasons.value).forEach((item) => {
+    const id = String(item.seasonId || '')
+    if (!id) return
+    map.set(id, displayText(item.displayTitle || item.seasonName, t('publicPages.hall.season')))
+  })
+  allHonors.value.forEach((item) => {
+    const id = String(item.seasonId || '')
+    if (!id || map.has(id)) return
+    map.set(id, displayText(item.seasonName, t('publicPages.hall.season')))
+  })
+  return [
+    { value: 'ALL', label: t('publicPages.hall.allSeasons') },
+    ...Array.from(map, ([value, label]) => ({ value, label })),
+  ]
+})
+
+const honors = computed(() => scopedHonors.value.filter((item) => {
+  if (year.value !== 'ALL' && !String(item.awardDate || '').startsWith(year.value)) return false
+  if (platform.value !== 'ALL' && platformTag(item.platformCode) !== platform.value) return false
+  if (seasonId.value && seasonId.value !== 'ALL' && String(item.seasonId || '') !== seasonId.value) return false
+  return true
+}))
+
+const viewState = computed(() => {
+  if (state.value === 'loading' || state.value === 'error') return state.value
+  return honors.value.length ? 'success' : 'empty'
+})
 
 const currentTournament = computed(
   () => tournaments.value.find((item) => item.tournamentId === props.tournamentId) ?? null,
 )
 
-const seasonOptions = computed(() =>
-  seasons.value.map((item) => ({
-    value: String(item.seasonId),
-    label: displayText(item.displayTitle || item.seasonName, t('publicPages.hall.season')),
-  })),
-)
-
 const championHonor = computed(
   () => honors.value.find((item) => (item.honorCode || '').toUpperCase() === 'CHAMPION') ?? null,
 )
+
+function lineupPositionCode(item: PublicHonorItemResp): string {
+  const picked = String(item.honorValue || '').trim().toUpperCase()
+  if (LINEUP_POSITIONS.includes(picked)) return picked
+  const playerId = String(item.playerId || '')
+  return playerPosition.value[playerId] || ''
+}
+
+function positionParts(item: PublicHonorItemResp) {
+  const code = lineupPositionCode(item)
+  if (!code) return null
+  const key = `accountIdentity.position.${code}`
+  const label = te(key) ? t(key) : code
+  const name = label.replace(new RegExp(`\\s*${code}$`, 'i'), '').trim()
+  return { code, name: name || label }
+}
+
+function sortLineup(items: PublicHonorItemResp[]) {
+  return [...items].sort((left, right) => {
+    const leftIndex = LINEUP_POSITIONS.indexOf(lineupPositionCode(left))
+    const rightIndex = LINEUP_POSITIONS.indexOf(lineupPositionCode(right))
+    const leftOrder = leftIndex < 0 ? LINEUP_POSITIONS.length : leftIndex
+    const rightOrder = rightIndex < 0 ? LINEUP_POSITIONS.length : rightIndex
+    if (leftOrder !== rightOrder) return leftOrder - rightOrder
+    return (left.displayOrder ?? 0) - (right.displayOrder ?? 0)
+  })
+}
 
 const featuredGroups = computed(() => {
   const groups = [
@@ -88,7 +176,7 @@ const featuredGroups = computed(() => {
   return groups
     .map((group) => ({
       ...group,
-      items: honors.value.filter((item) => (item.honorCode || '').toUpperCase() === group.key),
+      items: sortLineup(honors.value.filter((item) => (item.honorCode || '').toUpperCase() === group.key)),
     }))
     .filter((group) => group.items.length > 0)
 })
@@ -146,150 +234,152 @@ const rosterMembers = computed<ChampionRosterMember[]>(() => {
   })
 })
 
-async function loadTournaments() {
-  const current = ++tournamentReq
+async function loadPage() {
+  const current = ++loadReq
+  state.value = 'loading'
+  errorMessage.value = ''
   try {
-    const res = await getV4PublicSeriesList()
-    if (current !== tournamentReq) return
-    const records: PublicTournamentItemVo[] = (res.data || []).map((item) => ({
+    const [seriesRes, seasonRes] = await Promise.all([
+      getV4PublicSeriesList(),
+      getV4PublicSeasonList(),
+    ])
+    if (current !== loadReq) return
+    tournaments.value = (seriesRes.data || []).map((item) => ({
       tournamentId: String(item.seriesId),
       tournamentName: item.seriesName,
       shortName: item.seriesCode || item.seriesName,
     }))
-    tournaments.value = records
-    if (!records.length) {
-      state.value = 'empty'
-      return
-    }
-    const exists = records.some((item) => item.tournamentId === props.tournamentId)
-    if (!exists) {
-      emit('update:tournamentId', records[0]!.tournamentId)
-    }
-  } catch (err) {
-    if (current !== tournamentReq) return
-    tournaments.value = []
-    state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : t('publicPages.hall.loadEventsFailed')
-  }
-}
+    v4Seasons.value = seasonRes.data || []
 
-async function loadSeasons(seriesId: string) {
-  const current = ++seasonReq
-  seasons.value = []
-  seasonId.value = ''
-  honors.value = []
-  championDetail.value = null
-  if (!seriesId) {
-    state.value = 'empty'
-    return
-  }
-  state.value = 'loading'
-  errorMessage.value = ''
-  try {
-    const res = await getV4PublicSeasonList()
-    if (current !== seasonReq) return
-    const rows = (res.data || []).filter((item) => String(item.seriesId) === String(seriesId))
-    seasons.value = rows
-    if (!rows.length) {
-      state.value = 'empty'
-      return
-    }
-    const latest = [...rows].sort((a, b) =>
-      Number(b.seasonYear || 0) - Number(a.seasonYear || 0)
-      || String(b.seasonId).localeCompare(String(a.seasonId)),
-    )[0]
-    const preferred = rows.find((item) => props.preferredSeasonId && String(item.seasonId) === String(props.preferredSeasonId))
-    seasonId.value = String(preferred?.seasonId || latest?.seasonId || rows[0]!.seasonId)
-    await loadHonors(seriesId, seasonId.value)
-  } catch (err) {
-    if (current !== seasonReq) return
-    seasons.value = []
-    state.value = 'error'
-    errorMessage.value = err instanceof Error ? err.message : t('publicPages.hall.loadEventsFailed')
-  }
-}
+    const collected: PublicHonorItemResp[] = []
+    let page = 1
+    let pages = 1
+    do {
+      const res = await getPublicHallTournamentHonorPage({
+        currentPage: page,
+        pageSize: 100,
+        honorCodes: EVENT_HONOR_CODES,
+        sortField: 'awardDate',
+        sortOrder: 'desc',
+      })
+      if (current !== loadReq) return
+      const data = res.data
+      collected.push(...(data?.records ?? []))
+      pages = Math.max(1, Number(data?.pages || 1))
+      page += 1
+    } while (page <= pages && page <= 10)
 
-async function loadHonors(tournamentId: string, selectedSeasonId = seasonId.value) {
-  const current = ++honorReq
-  if (!tournamentId || !selectedSeasonId) {
-    honors.value = []
-    championDetail.value = null
-    state.value = 'empty'
-    return
-  }
-  state.value = 'loading'
-  errorMessage.value = ''
-  championDetail.value = null
-  try {
-    const res = await getPublicHallTournamentHonorPage({
-      currentPage: 1,
-      pageSize: 100,
-      tournamentId,
-      seasonId: selectedSeasonId,
-      honorCodes: EVENT_HONOR_CODES,
-      sortField: 'awardDate',
-      sortOrder: 'desc',
-    })
-    if (current !== honorReq) return
-    honors.value = res.data?.records ?? []
-    if (!honors.value.length) {
-      state.value = 'empty'
-      return
-    }
+    allHonors.value = collected
+    applyRunningDefault()
     state.value = 'success'
-    const champion = honors.value.find((item) => (item.honorCode || '').toUpperCase() === 'CHAMPION')
-    if (champion?.honorId) {
-      try {
-        const detailRes = await getPublicHallHonorDetail(champion.honorId)
-        if (current !== honorReq) return
-        championDetail.value = detailRes.data ?? null
-      } catch {
-        if (current !== honorReq) return
-        championDetail.value = null
-      }
-    }
   } catch (err) {
-    if (current !== honorReq) return
-    honors.value = []
+    if (current !== loadReq) return
+    tournaments.value = []
+    v4Seasons.value = []
+    allHonors.value = []
     state.value = 'error'
     errorMessage.value = err instanceof Error ? err.message : t('publicPages.hall.loadEventHonorsFailed')
   }
 }
 
 watch(
-  () => props.tournamentId,
+  () => props.preferredSeasonId,
   (id) => {
-    void loadSeasons(id)
+    seasonId.value = id || 'ALL'
   },
-  { immediate: true },
 )
+
+function selectionHasHonors(seriesId: string, nextSeasonId: string) {
+  return allHonors.value.some((item) => {
+    if (seriesId && String(item.tournamentId || '') !== seriesId) return false
+    if (nextSeasonId && String(item.seasonId || '') !== nextSeasonId) return false
+    return true
+  })
+}
+
+function applyRunningDefault() {
+  if (defaultApplied) return
+  defaultApplied = true
+  const active = pickLatestPublishedSeason(v4Seasons.value, allHonors.value)
+  if (!active) return
+  const tournamentId = String(active.seriesId || '')
+  const nextSeasonId = String(active.seasonId || '')
+  if (!tournamentId || !nextSeasonId) return
+  const pinnedSeries = props.tournamentId
+  const pinnedSeason = props.preferredSeasonId || ''
+  if ((pinnedSeries || pinnedSeason) && selectionHasHonors(pinnedSeries, pinnedSeason)) return
+  if (pinnedSeries === tournamentId && pinnedSeason === nextSeasonId) return
+  seasonId.value = nextSeasonId
+  emit('update:scope', { tournamentId, seasonId: nextSeasonId })
+}
+
+watch(allHonors, (rows) => {
+  const missing = new Set<string>()
+  rows.forEach((item) => {
+    const code = String(item.honorCode || '').toUpperCase()
+    if (code !== 'ALL_TOURNAMENT' && code !== 'ALL_DEFENSIVE') return
+    const picked = String(item.honorValue || '').trim().toUpperCase()
+    const playerId = String(item.playerId || '')
+    if (!playerId || LINEUP_POSITIONS.includes(picked) || playerPosition.value[playerId]) return
+    missing.add(playerId)
+  })
+  missing.forEach((playerId) => {
+    void getPublicPlayerDetail(playerId).then((res) => {
+      const code = String(res.data?.positionCode || '').trim().toUpperCase()
+      if (!code) return
+      playerPosition.value = { ...playerPosition.value, [playerId]: code }
+    }).catch(() => {})
+  })
+})
 
 watch(
   () => true,
   () => {
-    void loadTournaments()
+    void loadPage()
   },
   { immediate: true },
 )
 
 function updateTournament(value: string | number) {
-  emit('update:tournamentId', String(value))
+  const id = String(value)
+  const nextSeason = seasonBelongsToSeries(v4Seasons.value, seasonId.value, id) ? seasonId.value : 'ALL'
+  seasonId.value = nextSeason
+  emit('update:scope', {
+    tournamentId: id === 'ALL' ? '' : id,
+    seasonId: nextSeason === 'ALL' ? '' : nextSeason,
+  })
+  emit('update:rosterExpanded', false)
+}
+
+function updateYear(value: string | number) {
+  year.value = String(value)
+  emit('update:rosterExpanded', false)
+}
+
+function updatePlatform(value: string | number) {
+  platform.value = String(value)
   emit('update:rosterExpanded', false)
 }
 
 function updateSeason(value: string | number) {
-  seasonId.value = String(value)
-  emit('update:seasonId', seasonId.value)
+  const next = String(value)
+  seasonId.value = next
   emit('update:rosterExpanded', false)
-  void loadHonors(props.tournamentId, seasonId.value)
+  if (next === 'ALL') {
+    emit('update:seasonId', '')
+    return
+  }
+  const picked = v4Seasons.value.find((item) => String(item.seasonId || '') === next)
+  const seriesId = String(picked?.seriesId || '')
+  if (props.tournamentId && seriesId && seriesId !== props.tournamentId) {
+    emit('update:scope', { tournamentId: seriesId, seasonId: next })
+    return
+  }
+  emit('update:seasonId', next)
 }
 
 function retryLoad() {
-  if (props.tournamentId && seasonId.value) {
-    void loadHonors(props.tournamentId, seasonId.value)
-    return
-  }
-  void loadSeasons(props.tournamentId)
+  void loadPage()
 }
 
 function toggleRoster() {
@@ -326,6 +416,20 @@ function formatPct(value?: number | string | null) {
   return `${pct.toFixed(1)}%`
 }
 
+watch(championHonor, async (item) => {
+  championDetail.value = null
+  if (!item?.honorId) return
+  const current = loadReq
+  try {
+    const detailRes = await getPublicHallHonorDetail(item.honorId)
+    if (current !== loadReq) return
+    championDetail.value = detailRes.data ?? null
+  } catch {
+    if (current !== loadReq) return
+    championDetail.value = null
+  }
+})
+
 watch(mvpHonor, async (item) => {
   mvpStat.value = null
   if (!item?.playerId) return
@@ -344,26 +448,39 @@ watch(mvpHonor, async (item) => {
     <HallPanelHead :title="t('publicPages.hall.eventHonors')" subtitle="EVENT HONORS" layout="inline">
       <template #filters>
         <HallSelect
-          :model-value="tournamentId || tournamentOptions[0]?.value || ''"
+          width="filter"
+          :model-value="year"
+          :options="yearOptions"
+          @update:model-value="updateYear"
+        />
+        <HallSelect
+          width="filter"
+          :model-value="platform"
+          :options="platformOptions"
+          @update:model-value="updatePlatform"
+        />
+        <HallSelect
+          width="filter"
+          trigger-variant="week"
+          :model-value="tournamentId || 'ALL'"
           :options="tournamentOptions"
-          :disabled="!tournamentOptions.length"
           @update:model-value="updateTournament"
         />
         <HallSelect
-          v-if="seasonOptions.length"
-          :model-value="seasonId"
+          width="filter"
+          :model-value="seasonId || 'ALL'"
           :options="seasonOptions"
           @update:model-value="updateSeason"
         />
       </template>
     </HallPanelHead>
 
-    <div v-if="state === 'loading'" class="hall-empty">{{ t('publicPages.hall.loading') }}</div>
-    <div v-else-if="state === 'error'" class="hall-empty">
+    <div v-if="viewState === 'loading'" class="hall-empty">{{ t('publicPages.hall.loading') }}</div>
+    <div v-else-if="viewState === 'error'" class="hall-empty">
       <p>{{ errorMessage }}</p>
       <button type="button" @click="retryLoad">{{ t('publicPages.hall.retry') }}</button>
     </div>
-    <div v-else-if="state === 'empty'" class="hall-empty">{{ t('publicPages.hall.noSeasonPublishedHonors') }}</div>
+    <div v-else-if="viewState === 'empty'" class="hall-empty">{{ t('publicPages.hall.noSeasonPublishedHonors') }}</div>
 
     <template v-else>
       <article
@@ -453,7 +570,12 @@ watch(mvpHonor, async (item) => {
             <span>{{ group.key === 'ALL_DEFENSIVE' ? 'ALL-DEFENSIVE TEAM' : 'ALL-TOURNAMENT TEAM' }}</span>
           </h3>
           <div class="event-lineup__grid">
-            <article v-for="item in group.items" :key="item.honorId" class="event-lineup__card">
+            <article
+              v-for="item in group.items"
+              :key="item.honorId"
+              class="event-lineup__card"
+              :data-pos="lineupPositionCode(item) || 'NA'"
+            >
               <div class="event-lineup__photo">
                 <HallPlayerSilhouette
                   :name="displayText(item.playerName, t('publicPages.hall.player'))"
@@ -461,22 +583,28 @@ watch(mvpHonor, async (item) => {
                   size="lineup"
                 />
               </div>
-              <button type="button" :disabled="!item.playerId" @click="openPlayer(item.playerId)">
-                {{ displayText(item.playerName, t('publicPages.hall.unknownPlayer')) }}
-              </button>
-              <p>
-                <TeamLogo
-                  v-if="item.teamName || item.teamLogoUrl"
-                  :team="{
-                    id: String(item.eventTeamId || item.teamId || item.honorId),
-                    name: displayText(item.teamName, 'CN'),
-                    shortName: displayText(item.teamName, 'CN'),
-                    logoUrl: item.teamLogoUrl || '',
-                  }"
-                  size="xs"
-                />
-                {{ displayText(item.teamName) }}
-              </p>
+              <div class="event-lineup__body">
+                <button type="button" class="event-lineup__name" :disabled="!item.playerId" @click="openPlayer(item.playerId)">
+                  {{ displayText(item.playerName, t('publicPages.hall.unknownPlayer')) }}
+                </button>
+                <p v-if="positionParts(item)" class="event-lineup__position">
+                  <span>{{ positionParts(item)?.name }}</span>
+                  <span class="event-lineup__code">{{ positionParts(item)?.code }}</span>
+                </p>
+                <p class="event-lineup__team">
+                  <TeamLogo
+                    v-if="item.teamName || item.teamLogoUrl"
+                    :team="{
+                      id: String(item.eventTeamId || item.teamId || item.honorId),
+                      name: displayText(item.teamName, 'CN'),
+                      shortName: displayText(item.teamName, 'CN'),
+                      logoUrl: item.teamLogoUrl || '',
+                    }"
+                    size="xs"
+                  />
+                  <span>{{ displayText(item.teamName) }}</span>
+                </p>
+              </div>
             </article>
           </div>
         </section>
@@ -804,40 +932,82 @@ watch(mvpHonor, async (item) => {
 }
 
 .event-lineup__card {
-  background: #111;
+  display: flex;
+  flex-direction: column;
+  background: #141414;
   color: #fff;
+  overflow: hidden;
 
-  button,
-  p {
-    margin: 0;
+  &[data-pos='PG'] { --lineup-accent: #d2a648; --lineup-panel: #2a2112; }
+  &[data-pos='SG'] { --lineup-accent: #e10613; --lineup-panel: #2a1014; }
+  &[data-pos='SF'] { --lineup-accent: #e07a3d; --lineup-panel: #2a1a12; }
+  &[data-pos='PF'] { --lineup-accent: #3d8bfd; --lineup-panel: #121a2a; }
+  &[data-pos='C'] { --lineup-accent: #2fbf71; --lineup-panel: #10241a; }
+  &[data-pos='NA'] { --lineup-accent: #d2a648; --lineup-panel: #1c1c1c; }
+}
+
+.event-lineup__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 16px 16px 18px;
+  background: var(--lineup-panel, #1c1c1c);
+  border-top: 3px solid var(--lineup-accent, #d2a648);
+}
+
+.event-lineup__name {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  font-family: inherit;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  text-align: left;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
   }
+}
 
-  button {
-    display: block;
-    width: 100%;
-    padding: 12px 12px 0;
-    border: 0;
-    background: transparent;
-    color: #fff;
-    font: inherit;
-    font-size: 16px;
-    font-weight: 900;
-    text-align: left;
-    cursor: pointer;
+.event-lineup__position {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 2px 0 0;
+  color: var(--lineup-accent, #d2a648);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.04em;
+}
 
-    &:disabled {
-      cursor: default;
-    }
-  }
+.event-lineup__code {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  opacity: 0.9;
+}
 
-  p {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px 14px;
-    color: rgba(255, 255, 255, 0.72);
-    font-size: 12px;
-    font-weight: 800;
+.event-lineup__team {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+
+  :deep(.team-logo--xs) {
+    width: 22px;
+    height: 22px;
   }
 }
 

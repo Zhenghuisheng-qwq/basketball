@@ -30,6 +30,8 @@ const { t, locale } = useI18n()
 
 const activeDataType = ref<DataType>('team')
 const activeStatisticType = ref<StatisticType>('average')
+const sortKey = ref('winLoss')
+const sortDir = ref<'asc' | 'desc'>('desc')
 /** master 选择器 id：这里存 divisionId（统计维度） */
 const selectedSeasonId = ref('')
 const currentPage = ref(1)
@@ -148,6 +150,53 @@ function applyRouteQuery() {
   if (typeof scope === 'string' && scope) {
     selectedScope.value = scope
   }
+  const sort = route.query.sort
+  const dir = route.query.dir
+  if (typeof sort === 'string' && sort && !(activeDataType.value === 'player' && sort === 'games')) {
+    sortKey.value = sort
+  } else {
+    sortKey.value = activeDataType.value === 'team' ? 'winLoss' : 'totalPoints'
+    sortDir.value = 'desc'
+  }
+  if (dir === 'asc' || dir === 'desc') {
+    sortDir.value = dir
+  }
+}
+
+function onColumnSort(key: string, dir: 'asc' | 'desc') {
+  if (sortKey.value === key && sortDir.value === dir) return
+  sortKey.value = key
+  sortDir.value = dir
+  if (currentPage.value !== 1) currentPage.value = 1
+}
+
+function leaderboardMode() {
+  if (activeDataType.value !== 'player') return activeStatisticType.value
+  if (sortKey.value === 'totalPoints' || sortKey.value === 'rank') return 'total'
+  return activeStatisticType.value
+}
+
+function apiSortBy(tab: DataType, key: string) {
+  if (key === 'rank' || key === 'totalPoints') return tab === 'team' ? 'WINS' : 'PTS'
+  const metrics: Record<string, string> = {
+    team: 'TEAM_NAME',
+    player: 'PLAYER_NAME',
+    position: 'POSITION',
+    games: 'GAMES',
+    winLoss: 'WINS',
+    winRate: 'WIN_RATE',
+    points: 'PTS',
+    rebounds: 'REB',
+    assists: 'AST',
+    steals: 'STL',
+    blocks: 'BLK',
+    turnovers: 'TOV',
+    fouls: 'FOUL',
+    fieldGoals: 'FG_PCT',
+    threePoints: 'THREE_PCT',
+    freeThrows: 'FT_PCT',
+  }
+  return metrics[key] || (tab === 'team' ? 'WINS' : 'PTS')
 }
 
 async function loadSeasons() {
@@ -235,7 +284,7 @@ function emptyTextFor(reason: string) {
   return ''
 }
 
-async function loadTable() {
+async function loadTable(soft = false) {
   const divisionId = selectedSeasonId.value
   const current = ++reqId
   if (!divisionId) {
@@ -244,17 +293,23 @@ async function loadTable() {
     emptyReason.value = ''
     return
   }
-  tableLoading.value = true
-  tableError.value = ''
+  const keepRows = soft && allRows.value.length > 0
+  if (!keepRows) {
+    tableLoading.value = true
+    tableError.value = ''
+  }
   try {
-    await loadScopes(divisionId)
-    if (current !== reqId) return
+    if (!keepRows) {
+      await loadScopes(divisionId)
+      if (current !== reqId) return
+    }
     const res = await getV4PublicLeaderboard({
       divisionId,
       scope: selectedScope.value,
       tab: activeDataType.value,
-      mode: activeStatisticType.value,
-      sortBy: 'PTS',
+      mode: leaderboardMode(),
+      sortBy: apiSortBy(activeDataType.value, sortKey.value),
+      sortDir: sortDir.value,
       page: currentPage.value,
       keyword: appliedKeyword.value.trim() || undefined,
     })
@@ -291,15 +346,19 @@ function syncBoardQuery() {
     scope: selectedScope.value || undefined,
     tab: activeDataType.value,
     mode: activeStatisticType.value,
+    sort: sortKey.value,
+    dir: sortDir.value,
     page: String(currentPage.value),
   }
   router.replace({ path: '/data', query })
 }
 
-watch(activeDataType, () => {
+watch(activeDataType, (tab) => {
   currentPage.value = 1
   searchKeyword.value = ''
   appliedKeyword.value = ''
+  sortKey.value = tab === 'team' ? 'winLoss' : 'totalPoints'
+  sortDir.value = 'desc'
 })
 
 watch([activeDataType, selectedSeasonId, activeStatisticType], () => {
@@ -311,9 +370,12 @@ function applySearch() {
   if (currentPage.value !== 1) currentPage.value = 1
 }
 
-watch([selectedSeasonId, activeDataType, activeStatisticType, selectedScope, currentPage, appliedKeyword], () => {
+watch([selectedSeasonId, activeDataType, activeStatisticType, selectedScope, currentPage, appliedKeyword, sortKey, sortDir], (next, prev) => {
   syncBoardQuery()
-  void loadTable()
+  const [division, tab, , scope] = next
+  const [prevDivision, prevTab, , prevScope] = prev
+  const soft = division === prevDivision && tab === prevTab && scope === prevScope
+  void loadTable(soft)
 })
 
 watch(
@@ -394,6 +456,9 @@ onMounted(async () => {
                 :loading="tableLoading"
                 :error="tableError"
                 :empty-text="boardEmptyText"
+                :sort-key="sortKey"
+                :sort-dir="sortDir"
+                @sort="onColumnSort"
               />
 
               <DataPagination

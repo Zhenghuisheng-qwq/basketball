@@ -157,7 +157,9 @@
             :disabled="!form.seasonId"
             :remote-method="searchFormPlayers"
             :loading="formPlayerLoading"
-            :placeholder="form.seasonId ? '搜索球员姓名 / CNPA ID / 游戏ID' : '请先选择所属赛季'"
+            allow-create
+            default-first-option
+            :placeholder="form.seasonId ? '搜索或输入球员姓名 / CNPA ID / 游戏ID' : '请先选择所属赛季'"
             style="width: 100%"
             @change="onPlayerChange"
             @visible-change="onPlayerVisible"
@@ -191,7 +193,9 @@
             :disabled="!form.seasonId"
             :remote-method="searchFormTeams"
             :loading="formTeamLoading"
-            :placeholder="form.seasonId ? '搜索球队名称 / 简称' : '请先选择所属赛季'"
+            allow-create
+            default-first-option
+            :placeholder="form.seasonId ? '搜索或输入球队名称 / 简称 / 编号' : '请先选择所属赛季'"
             style="width: 100%"
             @change="onTeamChange"
             @visible-change="onTeamVisible"
@@ -570,27 +574,94 @@ function onSeasonChange() {
   clearTargetSelection()
 }
 
-function onPlayerChange(selectKey?: number | string) {
-  const selected = formPlayerOptions.value.find(item => String(item.eventPlayerId || item.id) === String(selectKey))
-  form.playerId = selected?.id
-  form.memberId = selected?.memberId
-  form.teamId = selected?.teamId
-  form.eventTeamId = selected?.eventTeamId
-  selectedTeamName.value = selected?.teamName || ''
+function optionTextMatches(item: DisciplineSelectorOption, keyword: string) {
+  return [item.id, item.eventPlayerId, item.eventTeamId, item.teamId, item.playerNo, item.gameId, item.label, item.teamName]
+    .some(value => value != null && String(value).trim() === keyword)
 }
 
-function onTeamChange(id?: number) {
-  const selected = formTeamOptions.value.find(item => item.id === id)
+function pickTypedOption(options: DisciplineSelectorOption[], keyword: string) {
+  const text = keyword.trim()
+  if (!text) return undefined
+  const exact = options.filter(item => optionTextMatches(item, text))
+  if (exact.length === 1) return exact[0]
+  if (options.length === 1) return options[0]
+  return undefined
+}
+
+function clearPlayerBinding() {
+  form.playerId = undefined
+  form.memberId = undefined
+  form.teamId = undefined
+  form.eventTeamId = undefined
+  selectedTeamName.value = ''
+}
+
+function applyPlayer(selected: DisciplineSelectorOption) {
+  form.playerId = selected.id
+  form.memberId = selected.memberId
+  form.teamId = selected.teamId
+  form.eventTeamId = selected.eventTeamId
+  selectedTeamName.value = selected.teamName || ''
+}
+
+async function onPlayerChange(selectKey?: number | string) {
+  if (selectKey == null || selectKey === '') {
+    clearPlayerBinding()
+    return
+  }
+  let selected = formPlayerOptions.value.find(item => String(item.eventPlayerId || item.id) === String(selectKey))
+  if (!selected) {
+    await fetchPlayers(String(selectKey))
+    selected = formPlayerOptions.value.find(item => String(item.eventPlayerId || item.id) === String(selectKey))
+      || pickTypedOption(formPlayerOptions.value, String(selectKey))
+    if (!selected) {
+      playerSelectId.value = undefined
+      clearPlayerBinding()
+      ElMessage.warning(formPlayerOptions.value.length ? '找到多个球员，请从下拉列表选择' : '没有匹配的球员')
+      return
+    }
+    const nextId = selected.eventPlayerId || selected.id
+    if (String(playerSelectId.value) !== String(nextId)) {
+      playerSelectId.value = nextId
+    }
+  }
+  applyPlayer(selected)
+}
+
+async function onTeamChange(id?: number | string) {
+  if (id == null || id === '') {
+    form.teamId = undefined
+    form.eventTeamId = undefined
+    selectedTeamName.value = ''
+    return
+  }
+  let selected = formTeamOptions.value.find(item => String(item.id) === String(id))
+  if (!selected) {
+    await fetchTeams(String(id))
+    selected = formTeamOptions.value.find(item => String(item.id) === String(id))
+      || pickTypedOption(formTeamOptions.value, String(id))
+    if (!selected) {
+      teamSelectId.value = undefined
+      form.teamId = undefined
+      form.eventTeamId = undefined
+      selectedTeamName.value = ''
+      ElMessage.warning(formTeamOptions.value.length ? '找到多个球队，请从下拉列表选择' : '没有匹配的球队')
+      return
+    }
+    if (String(teamSelectId.value) !== String(selected.id)) {
+      teamSelectId.value = selected.id
+    }
+  }
   if (form.targetType === 'EVENT_TEAM') {
-    form.eventTeamId = id
-    form.teamId = selected?.teamId
+    form.eventTeamId = selected.id
+    form.teamId = selected.teamId
   } else {
-    form.teamId = id
+    form.teamId = selected.id
     form.eventTeamId = undefined
   }
   form.playerId = undefined
   form.memberId = undefined
-  selectedTeamName.value = selected?.teamName || selected?.label || ''
+  selectedTeamName.value = selected.teamName || selected.label || ''
 }
 
 function onPenaltyCodeChange() {

@@ -100,6 +100,10 @@
                 or et.team_name_snapshot like concat('%', #{keyword}, '%')
                 or d.division_name like concat('%', #{keyword}, '%')
                 or d.platform_code like concat('%', #{keyword}, '%')
+                <if test='keyword.matches("[0-9]+")'>
+                    or p.id = #{keyword}
+                    or ep.id = #{keyword}
+                </if>
             )
         </if>
         order by d.sort_order asc, d.id asc, p.player_no asc, ep.id asc
@@ -148,6 +152,9 @@
                 or t.english_name like concat('%', #{keyword}, '%')
                 or d.division_name like concat('%', #{keyword}, '%')
                 or d.platform_code like concat('%', #{keyword}, '%')
+                <if test='keyword.matches("[0-9]+")'>
+                    or t.id = #{keyword}
+                </if>
             )
         </if>
         order by d.sort_order asc, d.id asc, t.team_name asc, t.id asc
@@ -202,8 +209,88 @@
                 or t.short_name like concat('%', #{keyword}, '%')
                 or d.division_name like concat('%', #{keyword}, '%')
                 or d.platform_code like concat('%', #{keyword}, '%')
+                <if test='keyword.matches("[0-9]+")'>
+                    or et.id = #{keyword}
+                    or t.id = #{keyword}
+                </if>
             )
         </if>
         order by d.sort_order asc, d.id asc, et.team_name_snapshot asc, et.id asc
+    </select>
+
+    <select id="selectArchivePlayerOptions" resultType="com.zhs.basket.vo.DisciplineSelectorOptionVo">
+        select
+            p.id as id,
+            concat(
+                coalesce(nullif(trim(p.player_no), ''), concat('球员#', p.id)),
+                ' · ',
+                coalesce(nullif(trim(p.game_nickname), ''), nullif(trim(mp.nickname), ''), '-')
+            ) as label,
+            concat(
+                coalesce(nullif(trim(p.game_account), ''), nullif(trim(pa.display_game_id), ''), '-'),
+                ' · ',
+                coalesce(nullif(trim(t.team_name), ''), '未关联球队')
+            ) as secondaryLabel,
+            p.member_id as memberId,
+            p.current_team_id as teamId,
+            t.team_name as teamName,
+            p.player_no as playerNo,
+            coalesce(nullif(trim(p.game_account), ''), nullif(trim(pa.display_game_id), '')) as gameId
+        from basket_player_profile p
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
+        left join basket_member_account acc on acc.id = p.member_id and acc.is_delete = 0
+        left join basket_team t on t.id = p.current_team_id and t.is_delete = 0
+        left join basket_player_platform_account pa on pa.player_id = p.id and pa.is_delete = 0 and pa.is_primary = 1
+        where p.is_delete = 0
+        <if test="keyword != null and keyword != ''">
+            and (
+                p.player_no like concat('%', #{keyword}, '%')
+                or p.game_nickname like concat('%', #{keyword}, '%')
+                or p.game_account like concat('%', #{keyword}, '%')
+                or mp.nickname like concat('%', #{keyword}, '%')
+                or acc.email like concat('%', #{keyword}, '%')
+                or pa.display_game_id like concat('%', #{keyword}, '%')
+                or t.team_name like concat('%', #{keyword}, '%')
+                <if test='keyword.matches("[0-9]+")'>
+                    or p.id = #{keyword}
+                </if>
+            )
+        </if>
+        order by p.id desc
+    </select>
+
+    <select id="selectArchiveTeamOptions" resultType="com.zhs.basket.vo.DisciplineSelectorOptionVo">
+        select
+            t.id as id,
+            concat(
+                coalesce(nullif(trim(t.team_name), ''), concat('球队#', t.id)),
+                case when t.short_name is null or trim(t.short_name) = '' then '' else concat(' · ', t.short_name) end
+            ) as label,
+            concat(
+                coalesce(nullif(trim(t.team_no), ''), '-'),
+                ' · ',
+                coalesce(nullif(trim(d.division_name), ''), '历史球队')
+            ) as secondaryLabel,
+            t.id as teamId,
+            t.team_name as teamName,
+            t.team_no as playerNo,
+            t.short_name as gameId,
+            d.division_name as divisionName
+        from basket_team t
+        left join basket_division d on d.id = t.division_id and d.is_delete = 0
+        where t.is_delete = 0
+        <if test="keyword != null and keyword != ''">
+            and (
+                t.team_name like concat('%', #{keyword}, '%')
+                or t.short_name like concat('%', #{keyword}, '%')
+                or t.team_no like concat('%', #{keyword}, '%')
+                or t.english_name like concat('%', #{keyword}, '%')
+                or d.division_name like concat('%', #{keyword}, '%')
+                <if test='keyword.matches("[0-9]+")'>
+                    or t.id = #{keyword}
+                </if>
+            )
+        </if>
+        order by t.id desc
     </select>
 </mapper>

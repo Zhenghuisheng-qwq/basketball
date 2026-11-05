@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketMailNoticeMapper">
+
+    <resultMap type="com.zhs.basket.domain.BasketMailNotice" id="BasketMailNoticeResult">
+        <id property="id" column="id"/>
+        <result property="title" column="title"/>
+        <result property="contentHtml" column="content_html"/>
+        <result property="sendStatus" column="send_status"/>
+        <result property="recipientCount" column="recipient_count"/>
+        <result property="successCount" column="success_count"/>
+        <result property="failCount" column="fail_count"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="sendTime" column="send_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="noticeColumns">
+        id, title, content_html, send_status, recipient_count, success_count, fail_count,
+        create_by, create_time, update_time, send_time, is_delete
+    </sql>
+
+    <sql id="respColumns">
+        id, title, send_status as sendStatus,
+        case send_status when 0 then '草稿' when 1 then '发送中' when 2 then '已完成' else '' end as sendStatusName,
+        recipient_count as recipientCount, success_count as successCount, fail_count as failCount,
+        create_by as createBy, create_time as createTime, update_time as updateTime, send_time as sendTime
+    </sql>
+
+    <select id="selectById" resultMap="BasketMailNoticeResult">
+        select <include refid="noticeColumns"/>
+        from basket_mail_notice
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectByIdForUpdate" resultMap="BasketMailNoticeResult">
+        select <include refid="noticeColumns"/>
+        from basket_mail_notice
+        where id = #{id} and is_delete = 0
+        for update
+    </select>
+
+    <select id="selectDetail" resultType="com.zhs.basket.resp.MailNoticeResp">
+        select <include refid="respColumns"/>, content_html as contentHtml
+        from basket_mail_notice
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectList" resultType="com.zhs.basket.resp.MailNoticeResp">
+        select <include refid="respColumns"/>
+        from basket_mail_notice
+        where is_delete = 0
+        <if test="sendStatus != null">and send_status = #{sendStatus}</if>
+        <if test="keyword != null and keyword != ''">and title like concat('%', #{keyword}, '%')</if>
+        order by id desc
+    </select>
+
+    <select id="selectSendingIds" resultType="long">
+        select id
+        from basket_mail_notice
+        where is_delete = 0 and send_status = 1
+        order by id asc
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_mail_notice (
+            title, content_html, send_status, recipient_count, success_count, fail_count,
+            create_by, create_time, update_time, is_delete
+        ) values (
+            #{title}, #{contentHtml}, 0, 0, 0, 0,
+            #{createBy}, now(), now(), 0
+        )
+    </insert>
+
+    <update id="updateDraft">
+        update basket_mail_notice
+        set title = #{title},
+            content_html = #{contentHtml},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and send_status = 0
+    </update>
+
+    <update id="markDeleted">
+        update basket_mail_notice
+        set is_delete = 1, update_time = now()
+        where id = #{id} and is_delete = 0 and send_status = 0
+    </update>
+
+    <update id="markSending">
+        update basket_mail_notice
+        set send_status = 1,
+            recipient_count = #{recipientCount},
+            success_count = 0,
+            fail_count = 0,
+            send_time = null,
+            update_time = now()
+        where id = #{id} and is_delete = 0 and send_status = 0
+    </update>
+
+    <update id="refreshCounts">
+        update basket_mail_notice n
+        set success_count = (
+                select count(*) from basket_mail_notice_recipient r
+                where r.notice_id = n.id and r.send_status = 1
+            ),
+            fail_count = (
+                select count(*) from basket_mail_notice_recipient r
+                where r.notice_id = n.id and r.send_status = 2
+            ),
+            update_time = now()
+        where n.id = #{id} and n.is_delete = 0
+    </update>
+
+    <update id="markCompletedIfNoPending">
+        update basket_mail_notice n
+        set send_status = 2,
+            send_time = ifnull(send_time, now()),
+            update_time = now()
+        where n.id = #{id}
+          and n.is_delete = 0
+          and n.send_status = 1
+          and not exists (
+              select 1 from basket_mail_notice_recipient r
+              where r.notice_id = n.id and r.send_status = 0
+          )
+    </update>
+</mapper>

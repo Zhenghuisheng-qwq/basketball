@@ -25,12 +25,14 @@ import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.text.Collator;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -67,6 +69,11 @@ public class BasketV4PublicLeaderboardService {
 
     public V4PublicLeaderboardResp query(Long divisionId, String scope, String tab, String mode, String sortBy,
                                          Integer page, Integer pageSize, String keyword) {
+        return query(divisionId, scope, tab, mode, sortBy, page, pageSize, keyword, null);
+    }
+
+    public V4PublicLeaderboardResp query(Long divisionId, String scope, String tab, String mode, String sortBy,
+                                         Integer page, Integer pageSize, String keyword, String sortDir) {
         String normalizedScope = scope == null || scope.isBlank() ? "OVERALL" : scope.trim();
         String normalizedTab = "player".equalsIgnoreCase(tab) ? "PLAYER" : "TEAM";
         String normalizedMode = "total".equalsIgnoreCase(mode) ? "total" : "average";
@@ -105,7 +112,12 @@ public class BasketV4PublicLeaderboardService {
                 ranked.add(entry);
             }
         }
-        ranked.sort(comparator(metric, "average".equals(normalizedMode)));
+        boolean ascending = sortAscending(metric, sortDir);
+        if (isLabelMetric(metric)) {
+            sortByLabel(ranked, metric, ascending);
+        } else {
+            ranked.sort(comparator(metric, "average".equals(normalizedMode), ascending));
+        }
         for (int i = 0; i < ranked.size(); i++) {
             ranked.get(i).setRankNo(i + 1);
         }
@@ -324,14 +336,93 @@ public class BasketV4PublicLeaderboardService {
         return attempts > 0 && attempts >= perGame * Math.max(n(entry.getValidGames()), 0);
     }
 
-    private Comparator<BasketLeaderboardEntry> comparator(String metric, boolean average) {
-        boolean ascending = "TOV".equals(metric);
+    private boolean sortAscending(String metric, String sortDir) {
+        if (sortDir != null && !sortDir.isBlank()) {
+            return "asc".equalsIgnoreCase(sortDir.trim());
+        }
+        return "TOV".equals(metric) || isLabelMetric(metric);
+    }
+
+    private boolean isLabelMetric(String metric) {
+        return "TEAM_NAME".equals(metric) || "PLAYER_NAME".equals(metric) || "POSITION".equals(metric);
+    }
+
+    private void sortByLabel(List<BasketLeaderboardEntry> ranked, String metric, boolean ascending) {
+        Set<Long> teamIds = new HashSet<>();
+        Set<Long> playerIds = new HashSet<>();
+        for (BasketLeaderboardEntry entry : ranked) {
+            if (entry.getEventTeamId() != null) {
+                teamIds.add(entry.getEventTeamId());
+            }
+            if (entry.getEventPlayerId() != null && entry.getEventPlayerId() > 0) {
+                playerIds.add(entry.getEventPlayerId());
+            }
+        }
+        Map<Long, BasketEventTeam> teams = loadTeams(teamIds);
+        Map<Long, BasketEventPlayer> players = loadPlayers(playerIds);
+        Collator collator = Collator.getInstance(Locale.CHINA);
+        ranked.sort((left, right) -> {
+            int compared = compareText(label(left, metric, teams, players), label(right, metric, teams, players), collator, ascending);
+            if (compared != 0) {
+                return compared;
+            }
+            long leftId = nLong(left.getEventPlayerId()) > 0 ? left.getEventPlayerId() : nLong(left.getEventTeamId());
+            long rightId = nLong(right.getEventPlayerId()) > 0 ? right.getEventPlayerId() : nLong(right.getEventTeamId());
+            return Long.compare(leftId, rightId);
+        });
+    }
+
+    private String label(BasketLeaderboardEntry entry, String metric, Map<Long, BasketEventTeam> teams,
+                         Map<Long, BasketEventPlayer> players) {
+        if ("PLAYER_NAME".equals(metric) || "POSITION".equals(metric)) {
+            BasketEventPlayer player = players.get(entry.getEventPlayerId());
+            if (player == null) {
+                return "";
+            }
+            if ("POSITION".equals(metric)) {
+                return player.getPosition() == null ? "" : player.getPosition();
+            }
+            return player.getPlayerNameSnapshot() == null ? "" : player.getPlayerNameSnapshot();
+        }
+        BasketEventTeam team = teams.get(entry.getEventTeamId());
+        return team == null || team.getTeamNameSnapshot() == null ? "" : team.getTeamNameSnapshot();
+    }
+
+    private int compareText(String left, String right, Collator collator, boolean ascending) {
+        boolean leftBlank = left == null || left.isBlank();
+        boolean rightBlank = right == null || right.isBlank();
+        if (leftBlank && rightBlank) {
+            return 0;
+        }
+        if (leftBlank) {
+            return 1;
+        }
+        if (rightBlank) {
+            return -1;
+        }
+        int compared = collator.compare(left, right);
+        return ascending ? compared : -compared;
+    }
+
+    private Comparator<BasketLeaderboardEntry> comparator(String metric, boolean average, boolean ascending) {
         return (left, right) -> {
             BigDecimal lv = value(left, metric, average);
             BigDecimal rv = value(right, metric, average);
             int compared = compareNullable(lv, rv, ascending);
             if (compared != 0) {
                 return compared;
+            }
+            if ("WINS".equals(metric)) {
+                int losses = Integer.compare(n(left.getLosses()), n(right.getLosses()));
+                if (losses != 0) {
+                    return ascending ? -losses : losses;
+                }
+            }
+            if ("GAMES".equals(metric)) {
+                int points = Integer.compare(n(left.getPoints()), n(right.getPoints()));
+                if (points != 0) {
+                    return ascending ? points : -points;
+                }
             }
             int games = Integer.compare(n(right.getValidGames()), n(left.getValidGames()));
             if (games != 0) {
@@ -348,6 +439,25 @@ public class BasketV4PublicLeaderboardService {
     }
 
     private BigDecimal value(BasketLeaderboardEntry entry, String metric, boolean average) {
+        if ("WIN_RATE".equals(metric)) {
+            int games = n(entry.getValidGames());
+            if (games <= 0) {
+                return null;
+            }
+            return BigDecimal.valueOf(n(entry.getWins())).divide(BigDecimal.valueOf(games), 6, RoundingMode.HALF_UP);
+        }
+        if ("GAMES".equals(metric)) {
+            return BigDecimal.valueOf(n(entry.getValidGames()));
+        }
+        if ("WINS".equals(metric)) {
+            return BigDecimal.valueOf(n(entry.getWins()));
+        }
+        if ("LOSSES".equals(metric)) {
+            return BigDecimal.valueOf(n(entry.getLosses()));
+        }
+        if ("FOUL".equals(metric)) {
+            return BigDecimal.ZERO;
+        }
         if ("FG_PCT".equals(metric) || "THREE_PCT".equals(metric) || "FT_PCT".equals(metric)) {
             int attempts = switch (metric) {
                 case "THREE_PCT" -> n(entry.getThreePointAttempt());
@@ -381,6 +491,9 @@ public class BasketV4PublicLeaderboardService {
             case "FG_PCT" -> n(entry.getFieldGoalMade());
             case "THREE_PCT" -> n(entry.getThreePointMade());
             case "FT_PCT" -> n(entry.getFreeThrowMade());
+            case "WIN_RATE", "WINS" -> n(entry.getWins());
+            case "LOSSES" -> n(entry.getLosses());
+            case "GAMES" -> n(entry.getValidGames());
             default -> n(entry.getPoints());
         };
     }

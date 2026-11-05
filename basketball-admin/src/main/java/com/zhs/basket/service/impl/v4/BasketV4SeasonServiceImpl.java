@@ -46,7 +46,11 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
 
     @Override
     public List<BasketSeasonListVo> selectList(BasketSeasonQuery query) {
-        return seasonMapper.selectVoList(query);
+        List<BasketSeasonListVo> rows = seasonMapper.selectVoList(query);
+        for (BasketSeasonListVo row : rows) {
+            reconcileDisplayedStatus(row);
+        }
+        return rows;
     }
 
     @Override
@@ -58,8 +62,10 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
         if (rows.isEmpty()) {
             throw new ServiceException("Season 不存在");
         }
+        BasketSeasonListVo row = rows.get(0);
+        reconcileDisplayedStatus(row);
         BasketSeasonDetailVo vo = new BasketSeasonDetailVo();
-        BeanUtils.copyBeanProp(vo, rows.get(0));
+        BeanUtils.copyBeanProp(vo, row);
         BasketDivisionQuery divisionQuery = new BasketDivisionQuery();
         divisionQuery.setSeasonId(id);
         vo.setDivisions(divisionMapper.selectVoList(divisionQuery));
@@ -217,6 +223,9 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
     @Transactional(rollbackFor = Exception.class)
     public void refreshAggregatedStatus(Long seasonId) {
         BasketSeason season = requireSeason(seasonId);
+        if (SeasonStatusEnum.ARCHIVED.getCode().equals(season.getSeasonStatus())) {
+            return;
+        }
         String next = resolveSeasonStatusOnPublish(seasonId);
         if (next.equals(season.getSeasonStatus())) {
             return;
@@ -326,36 +335,110 @@ public class BasketV4SeasonServiceImpl implements IBasketV4SeasonService {
     }
 
     /**
-     * 赛季业务状态按下属 Division 聚合；无 Division 或未开放报名时保持未开始。
+     * 赛季业务状态按赛区比赛时间计算。赛区没填时沿用赛季周期。
+     * 当前时间落在比赛周期内为比赛中，晚于结束时间为已结束。不看单场赛果，也不改赛区状态。
      */
     private String resolveSeasonStatusOnPublish(Long seasonId) {
-        List<BasketDivision> divisions = divisionMapper.selectBySeasonId(seasonId);
-        if (divisions.isEmpty()) {
+        BasketSeason season = seasonMapper.selectById(seasonId);
+        if (season == null) {
             return SeasonStatusEnum.NOT_STARTED.getCode();
         }
-        boolean anyRegistrationOpen = divisions.stream()
-                .anyMatch(d -> DivisionStatusEnum.REGISTRATION_OPEN.getCode().equals(d.getDivisionStatus()));
-        if (anyRegistrationOpen) {
-            return SeasonStatusEnum.REGISTRATION_OPEN.getCode();
+        List<BasketDivision> divisions = divisionMapper.selectBySeasonId(seasonId);
+        Date now = new Date();
+        if (divisions.isEmpty()) {
+            return statusByMatchPeriod(season.getSeasonStartTime(), season.getSeasonEndTime(), now,
+                    SeasonStatusEnum.NOT_STARTED.getCode());
         }
-        boolean anyPlaying = divisions.stream()
-                .anyMatch(d -> DivisionStatusEnum.PLAYING.getCode().equals(d.getDivisionStatus()));
+        boolean anyPlaying = false;
+        boolean anyUpcoming = false;
+        boolean anyEnded = false;
+        boolean anyRegistrationOpen = false;
+        boolean anyRegistrationClosed = false;
+        boolean anyFinished = false;
+        boolean allTerminal = true;
+        for (BasketDivision division : divisions) {
+            Date start = division.getMatchStartTime() != null
+                    ? division.getMatchStartTime() : season.getSeasonStartTime();
+            Date end = division.getMatchEndTime() != null
+                    ? division.getMatchEndTime() : season.getSeasonEndTime();
+            String periodStatus = statusByMatchPeriod(start, end, now, null);
+            if (SeasonStatusEnum.PLAYING.getCode().equals(periodStatus)) {
+                anyPlaying = true;
+            } else if (SeasonStatusEnum.FINISHED.getCode().equals(periodStatus)) {
+                anyEnded = true;
+            } else if (periodStatus == null && start != null && now.before(start)) {
+                anyUpcoming = true;
+            }
+            String stored = division.getDivisionStatus();
+            if (DivisionStatusEnum.REGISTRATION_OPEN.getCode().equals(stored)
+                    || inRegistrationWindow(division, now)) {
+                anyRegistrationOpen = true;
+            }
+            if (DivisionStatusEnum.REGISTRATION_CLOSED.getCode().equals(stored)
+                    || DivisionStatusEnum.SCHEDULED.getCode().equals(stored)) {
+                anyRegistrationClosed = true;
+            }
+            if (DivisionStatusEnum.FINISHED.getCode().equals(stored)
+                    || DivisionStatusEnum.ARCHIVED.getCode().equals(stored)) {
+                anyFinished = true;
+            } else {
+                allTerminal = false;
+            }
+        }
         if (anyPlaying) {
             return SeasonStatusEnum.PLAYING.getCode();
         }
-        boolean allFinished = divisions.stream()
-                .allMatch(d -> DivisionStatusEnum.FINISHED.getCode().equals(d.getDivisionStatus())
-                        || DivisionStatusEnum.ARCHIVED.getCode().equals(d.getDivisionStatus()));
-        if (allFinished) {
+        if (anyEnded && !anyUpcoming) {
             return SeasonStatusEnum.FINISHED.getCode();
         }
-        boolean anyRegistrationClosed = divisions.stream()
-                .anyMatch(d -> DivisionStatusEnum.REGISTRATION_CLOSED.getCode().equals(d.getDivisionStatus())
-                        || DivisionStatusEnum.SCHEDULED.getCode().equals(d.getDivisionStatus()));
-        if (anyRegistrationClosed) {
+        if (anyRegistrationOpen && !anyEnded) {
+            return SeasonStatusEnum.REGISTRATION_OPEN.getCode();
+        }
+        if (allTerminal && anyFinished) {
+            return SeasonStatusEnum.FINISHED.getCode();
+        }
+        if (anyRegistrationClosed || anyUpcoming) {
             return SeasonStatusEnum.REGISTRATION_CLOSED.getCode();
         }
         return SeasonStatusEnum.NOT_STARTED.getCode();
+    }
+
+    /**
+     * @return PLAYING、FINISHED，或周期未开始/未填完整时返回 fallback
+     */
+    private String statusByMatchPeriod(Date start, Date end, Date now, String fallback) {
+        if (start == null || end == null || start.after(end)) {
+            return fallback;
+        }
+        if (now.before(start)) {
+            return fallback;
+        }
+        if (now.after(end)) {
+            return SeasonStatusEnum.FINISHED.getCode();
+        }
+        return SeasonStatusEnum.PLAYING.getCode();
+    }
+
+    private boolean inRegistrationWindow(BasketDivision division, Date now) {
+        Date start = division.getRegistrationStartTime();
+        Date end = division.getRegistrationEndTime();
+        if (start == null || end == null || start.after(end)) {
+            return false;
+        }
+        return !now.before(start) && !now.after(end);
+    }
+
+    private void reconcileDisplayedStatus(BasketSeasonListVo row) {
+        if (row == null || row.getId() == null
+                || SeasonStatusEnum.ARCHIVED.getCode().equals(row.getSeasonStatus())) {
+            return;
+        }
+        String resolved = resolveSeasonStatusOnPublish(row.getId());
+        if (resolved.equals(row.getSeasonStatus())) {
+            return;
+        }
+        refreshAggregatedStatus(row.getId());
+        row.setSeasonStatus(resolved);
     }
 
     private void rejectKeyFieldChange(Object oldVal, Object newVal, String message) {

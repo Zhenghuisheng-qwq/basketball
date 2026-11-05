@@ -30,9 +30,10 @@ public class BasketV4PublicLeaderboardController {
                                              @RequestParam(required = false) String tab,
                                              @RequestParam(required = false) String mode,
                                              @RequestParam(required = false) String sortBy,
+                                             @RequestParam(required = false) String sortDir,
                                              @RequestParam(required = false) Integer page,
                                              @RequestParam(required = false) String keyword) {
-        return R.ok(leaderboardService.query(divisionId, scope, tab, mode, sortBy, page, 10, keyword));
+        return R.ok(leaderboardService.query(divisionId, scope, tab, mode, sortBy, page, 10, keyword, sortDir));
     }
 
     @ApiOperation("数据中心默认赛区")

@@ -107,6 +107,20 @@ const latestRejectedChange = computed(() => {
   return profile.value?.latestRejectedChange || null
 })
 const formalAvatarUrl = computed(() => resolveMemberAvatarUrl(profile.value?.avatarUrl || profileForm.avatarUrl))
+const pendingNicknameChanged = computed(() => {
+  const change = pendingChange.value
+  if (!change) return false
+  if (change.changeSummary?.includes('昵称')) return true
+  if (!change.changeSummary && (change.oldNickname || '') !== (change.newNickname || '')) return true
+  return false
+})
+const pendingAvatarChanged = computed(() => {
+  const change = pendingChange.value
+  if (!change) return false
+  if (change.changeSummary?.includes('头像')) return true
+  if (!change.changeSummary && change.oldAvatarUrl && change.newAvatarUrl && change.oldAvatarUrl !== change.newAvatarUrl) return true
+  return false
+})
 const canEditPublicProfile = computed(() => !hasPendingChange.value)
 
 const breadcrumbs = computed(() => [
@@ -460,14 +474,14 @@ function toggleSetting(target: Record<string, number | undefined>, key: string) 
               <dt>{{ t('accountShell.settings.submitTime') }}</dt>
               <dd>{{ formatDateTime(pendingChange.submitTime || '') }}</dd>
             </div>
-            <div class="account-field-row settings-audit-list__compare">
+            <div v-if="pendingNicknameChanged" class="account-field-row settings-audit-list__compare">
               <dt>{{ t('accountShell.settings.nicknameLabel') }}</dt>
               <dd>
                 <span>{{ t('accountShell.settings.currentValue', { value: pendingChange.oldNickname || profile?.nickname || '-' }) }}</span>
                 <span>{{ t('accountShell.settings.requestedValue', { value: pendingChange.newNickname || '-' }) }}</span>
               </dd>
             </div>
-            <div class="account-field-row settings-audit-list__avatars">
+            <div v-if="pendingAvatarChanged" class="account-field-row settings-audit-list__avatars">
               <dt>{{ t('accountShell.settings.avatarLabel') }}</dt>
               <dd>
                 <div class="settings-avatar-compare">

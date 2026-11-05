@@ -47,7 +47,8 @@
       <el-table-column label="申请昵称" prop="newNickname" min-width="120" :show-overflow-tooltip="true" />
       <el-table-column label="头像变更" width="140" align="center">
         <template #default="scope">
-          <div class="avatar-pair">
+          <span v-if="!avatarChanged(scope.row)" class="sub-text">未变更</span>
+          <div v-else class="avatar-pair">
             <el-image
               v-if="scope.row.oldAvatarUrl"
               :src="scope.row.oldAvatarUrl"
@@ -117,16 +118,16 @@
           </div>
           <div class="compare-col">
             <h4>申请资料</h4>
-            <p>昵称：{{ detail.newNickname || '-' }}</p>
+            <p>昵称：{{ nicknameChanged(detail) ? (detail.newNickname || '-') : '未变更' }}</p>
             <p>头像：</p>
             <el-image
-              v-if="detail.newAvatarUrl"
+              v-if="avatarChanged(detail) && detail.newAvatarUrl"
               :src="detail.newAvatarUrl"
               fit="contain"
               style="width: 120px; height: 120px"
               :preview-src-list="[detail.newAvatarUrl]"
             />
-            <span v-else class="sub-text">未设置</span>
+            <span v-else class="sub-text">{{ avatarChanged(detail) ? '未设置' : '未变更' }}</span>
           </div>
         </div>
         <p v-if="detail.auditRemark" class="audit-remark">审核意见：{{ detail.auditRemark }}</p>
@@ -206,6 +207,18 @@ function auditTagType(status?: number) {
 
 function previewList(row: MemberProfileChangeListItem) {
   return [row.oldAvatarUrl, row.newAvatarUrl].filter(Boolean) as string[]
+}
+
+function avatarChanged(row: { changeSummary?: string; oldAvatarUrl?: string; newAvatarUrl?: string }) {
+  if (row.changeSummary?.includes('头像')) return true
+  if (!row.changeSummary && row.oldAvatarUrl && row.newAvatarUrl && row.oldAvatarUrl !== row.newAvatarUrl) return true
+  return false
+}
+
+function nicknameChanged(row: { changeSummary?: string; oldNickname?: string; newNickname?: string }) {
+  if (row.changeSummary?.includes('昵称')) return true
+  if (!row.changeSummary && (row.oldNickname || '') !== (row.newNickname || '')) return true
+  return false
 }
 
 function getList() {

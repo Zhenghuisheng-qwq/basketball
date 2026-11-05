@@ -94,11 +94,35 @@
           </el-select>
         </el-form-item>
         <el-form-item label="荣誉编码" prop="honorCode">
-          <el-select v-model="form.honorCode" style="width: 100%">
+          <el-select v-model="form.honorCode" style="width: 100%" @change="onHonorCodeChange">
             <el-option v-for="item in codeOptions" :key="item.value" :label="item.label" :value="item.value" />
           </el-select>
         </el-form-item>
-        <el-form-item label="球员" prop="playerId">
+        <el-form-item v-if="isLineupHonor" label="五个位置" required>
+          <div class="honor-lineup">
+            <div v-for="slot in lineupSlots" :key="slot.code" class="honor-lineup__slot">
+              <div class="honor-lineup__label">{{ slot.label }}</div>
+              <el-select
+                v-model="slot.playerId"
+                filterable
+                clearable
+                :disabled="slot.locked"
+                placeholder="选择一名球员"
+                style="width: 100%"
+              >
+                <el-option
+                  v-for="item in seasonPlayers"
+                  :key="item.sourcePlayerId"
+                  :label="playerOptionLabel(item)"
+                  :value="item.sourcePlayerId"
+                  :disabled="lineupSlots.some(other => other.code !== slot.code && other.playerId === item.sourcePlayerId)"
+                />
+              </el-select>
+              <div v-if="slot.locked" class="honor-lineup__hint">已发布，需先下线后才能更换</div>
+            </div>
+          </div>
+        </el-form-item>
+        <el-form-item v-if="!isLineupHonor" label="球员" prop="playerId">
           <el-select v-model="form.playerId" filterable style="width: 100%" @change="syncPlayerTeam">
             <el-option
               v-for="item in seasonPlayers"
@@ -108,7 +132,7 @@
             />
           </el-select>
         </el-form-item>
-        <el-form-item label="球队">
+        <el-form-item v-if="!isLineupHonor" label="球队">
           <el-select v-model="form.teamId" filterable clearable style="width: 100%">
             <el-option
               v-for="item in seasonTeams"
@@ -244,6 +268,26 @@ const codeOptions = computed(() => {
   return PLAYER_HONOR_CODE_OPTIONS.filter(item => props.lockedCodes.includes(item.value))
 })
 const singleLock = computed(() => props.lockedCodes.length === 1)
+const LINEUP_HONOR_CODES = ['ALL_TOURNAMENT', 'ALL_DEFENSIVE']
+const LINEUP_POSITIONS = [
+  { code: 'PG', label: '控球后卫 PG' },
+  { code: 'SG', label: '得分后卫 SG' },
+  { code: 'SF', label: '小前锋 SF' },
+  { code: 'PF', label: '大前锋 PF' },
+  { code: 'C', label: '中锋 C' }
+]
+type LineupSlot = {
+  code: string
+  label: string
+  playerId?: number
+  recordId?: number
+  playerName?: string
+  locked?: boolean
+}
+function emptyLineupSlots(): LineupSlot[] {
+  return LINEUP_POSITIONS.map(item => ({ code: item.code, label: item.label }))
+}
+const lineupSlots = ref<LineupSlot[]>(emptyLineupSlots())
 const showCandidate = computed(() =>
   codeOptions.value.some(item => ['SCORING_CHAMPION', 'REBOUND_CHAMPION', 'ASSIST_CHAMPION', 'STEAL_CHAMPION', 'BLOCK_CHAMPION'].includes(item.value))
 )
@@ -280,6 +324,7 @@ const form = ref<HonorRecordAddReq>({
   displayOrder: 0,
   awardDate: undefined
 })
+const isLineupHonor = computed(() => LINEUP_HONOR_CODES.includes(form.value.honorCode || ''))
 
 const candidateQuery = ref<PlayerHonorCandidateQuery>({
   seasonId: undefined,
@@ -291,7 +336,13 @@ const rules = {
   tournamentId: [{ required: true, message: '请选择赛事', trigger: 'change' }],
   seasonId: [{ required: true, message: '请选择赛季', trigger: 'change' }],
   honorCode: [{ required: true, message: '请选择荣誉编码', trigger: 'change' }],
-  playerId: [{ required: true, message: '请选择球员', trigger: 'change' }],
+  playerId: [{
+    validator: (_rule: unknown, value: number | undefined, callback: (error?: Error) => void) => {
+      if (isLineupHonor.value || value) callback()
+      else callback(new Error('请选择球员'))
+    },
+    trigger: 'change'
+  }],
   awardDate: [{ required: true, message: '请选择授予日期', trigger: 'change' }]
 }
 
@@ -396,6 +447,92 @@ function loadSeasonRoster(seasonId?: number) {
   return Promise.all([players, teams])
 }
 
+function teamIdForPlayer(playerId?: number) {
+  const player = seasonPlayers.value.find(item => item.sourcePlayerId === playerId)
+  if (!player) return undefined
+  return seasonTeams.value.find(item => item.teamName === player.teamNameSnapshot)?.teamId
+}
+
+function onHonorCodeChange() {
+  if (!isLineupHonor.value) return
+  if (form.value.seasonId && form.value.honorCode) {
+    void fillLineupSlots(form.value.seasonId, form.value.honorCode)
+    return
+  }
+  lineupSlots.value = emptyLineupSlots()
+}
+
+async function fillLineupSlots(seasonId: number, honorCode: string) {
+  const slots = emptyLineupSlots()
+  const res = await listPlayerHonor({ seasonId, honorCode, pageNum: 1, pageSize: 50 })
+  const rows = (res.rows || []).filter(item => item.displayStatus !== 3)
+  const used = new Set<number>()
+  for (const row of rows) {
+    const index = LINEUP_POSITIONS.findIndex(item => item.code === row.honorValue)
+    if (index < 0 || slots[index].recordId) continue
+    slots[index].playerId = row.playerId
+    slots[index].recordId = row.id
+    slots[index].playerName = row.playerName
+    slots[index].locked = row.displayStatus === 1
+    used.add(row.id)
+  }
+  for (const row of rows) {
+    if (used.has(row.id)) continue
+    const slot = slots.find(item => !item.recordId)
+    if (!slot) break
+    slot.playerId = row.playerId
+    slot.recordId = row.id
+    slot.playerName = row.playerName
+    slot.locked = row.displayStatus === 1
+  }
+  ensureSlotPlayers(slots)
+  lineupSlots.value = slots
+}
+
+function ensureSlotPlayers(slots: LineupSlot[]) {
+  for (const slot of slots) {
+    if (!slot.playerId || seasonPlayers.value.some(item => item.sourcePlayerId === slot.playerId)) continue
+    seasonPlayers.value.unshift({
+      sourcePlayerId: slot.playerId,
+      playerNameSnapshot: slot.playerName || String(slot.playerId)
+    })
+  }
+}
+
+function lineupPayload(slot: LineupSlot, index: number): HonorRecordAddReq {
+  return {
+    ...form.value,
+    playerId: slot.playerId,
+    teamId: teamIdForPlayer(slot.playerId),
+    honorSubtitle: slot.label,
+    honorValue: slot.code,
+    displayOrder: index
+  }
+}
+
+function validateLineupSlots() {
+  if (lineupSlots.value.some(slot => !slot.playerId)) {
+    proxy.$modal.msgError('请为五个位置各选择一名球员')
+    return false
+  }
+  const ids = lineupSlots.value.map(slot => slot.playerId)
+  if (new Set(ids).size !== ids.length) {
+    proxy.$modal.msgError('五个位置不能选择同一名球员')
+    return false
+  }
+  return true
+}
+
+async function submitLineupHonor() {
+  for (let index = 0; index < lineupSlots.value.length; index++) {
+    const slot = lineupSlots.value[index]
+    if (slot.locked) continue
+    const payload = lineupPayload(slot, index)
+    if (slot.recordId) await updatePlayerHonor(slot.recordId, payload)
+    else await addPlayerHonor(payload)
+  }
+}
+
 function syncPlayerTeam() {
   const player = seasonPlayers.value.find(item => item.sourcePlayerId === form.value.playerId)
   if (!player?.eventTeamId) return
@@ -406,7 +543,15 @@ function syncPlayerTeam() {
 function onFormSeasonChange() {
   form.value.playerId = undefined
   form.value.teamId = undefined
-  loadSeasonRoster(form.value.seasonId)
+  const roster = loadSeasonRoster(form.value.seasonId)
+  if (!isLineupHonor.value) {
+    lineupSlots.value = emptyLineupSlots()
+    return
+  }
+  roster?.then(() => {
+    if (form.value.seasonId && form.value.honorCode) return fillLineupSlots(form.value.seasonId, form.value.honorCode)
+    lineupSlots.value = emptyLineupSlots()
+  })
 }
 
 function loadFormSeasons() {
@@ -440,6 +585,7 @@ function resetFormData() {
     remark: undefined
   }
   coverPreview.value = ''
+  lineupSlots.value = emptyLineupSlots()
   formSeasonOptions.value = seasonOptions.value
   if (form.value.seasonId) loadSeasonRoster(form.value.seasonId)
   else {
@@ -495,6 +641,9 @@ function handleUpdate(row: HonorRecordListItem) {
         if (data.teamId && !seasonTeams.value.some(item => item.teamId === data.teamId)) {
           seasonTeams.value.unshift({ teamId: data.teamId!, teamName: data.teamName || String(data.teamId) })
         }
+        if (LINEUP_HONOR_CODES.includes(data.honorCode || '')) {
+          return fillLineupSlots(data.seasonId!, data.honorCode!)
+        }
       })
     }
     dialogTitle.value = '修改球员荣誉'
@@ -512,6 +661,17 @@ function handleDetail(row: HonorRecordListItem) {
 function submitForm() {
   proxy.$refs.formRef.validate((valid: boolean) => {
     if (!valid) return
+    if (isLineupHonor.value) {
+      if (!validateLineupSlots()) return
+      submitLineupHonor().then(() => {
+        proxy.$modal.msgSuccess(lineupSlots.value.some(slot => slot.recordId) ? '阵容已保存' : '新增成功')
+        dialogOpen.value = false
+        getList()
+      }).catch(() => {
+        getList()
+      })
+      return
+    }
     const req = currentId.value
       ? updatePlayerHonor(currentId.value, form.value)
       : addPlayerHonor(form.value)
@@ -607,5 +767,26 @@ loadTournaments()
 <style scoped>
 .mb8 {
   margin-bottom: 8px;
+}
+.honor-lineup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+.honor-lineup__slot {
+  border: 1px solid var(--el-border-color);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+.honor-lineup__label {
+  margin-bottom: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+.honor-lineup__hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 </style>

@@ -81,7 +81,7 @@ public class BasketAnnouncementServiceImpl implements IBasketAnnouncementService
             throw new ServiceException("公告标题不能为空");
         }
         AnnouncementCategoryEnum category = AnnouncementCategoryEnum.fromCode(req.getCategoryCode());
-        String content = ContentTextSanitizer.requirePlainText(req.getContentText());
+        String content = ContentTextSanitizer.requireRichText(req.getContentText());
 
         Date now = new Date();
         BasketAnnouncement announcement = new BasketAnnouncement();
@@ -94,7 +94,7 @@ public class BasketAnnouncementServiceImpl implements IBasketAnnouncementService
         announcement.setSummaryEn(req.getSummaryEn());
         announcement.setCoverFileId(req.getCoverFileId());
         announcement.setContentText(content);
-        announcement.setContentTextEn(ContentTextSanitizer.optionalPlainText(req.getContentTextEn()));
+        announcement.setContentTextEn(ContentTextSanitizer.optionalRichText(req.getContentTextEn()));
         try {
             announcement.setAuthorId(SecurityUtils.getUserId());
             announcement.setAuthorName(SecurityUtils.getUsername());
@@ -154,10 +154,10 @@ public class BasketAnnouncementServiceImpl implements IBasketAnnouncementService
             existing.setCoverFileId(req.getCoverFileId());
         }
         if (req.getContentText() != null) {
-            existing.setContentText(ContentTextSanitizer.requirePlainText(req.getContentText()));
+            existing.setContentText(ContentTextSanitizer.requireRichText(req.getContentText()));
         }
         if (req.getContentTextEn() != null) {
-            existing.setContentTextEn(ContentTextSanitizer.optionalPlainText(req.getContentTextEn()));
+            existing.setContentTextEn(ContentTextSanitizer.optionalRichText(req.getContentTextEn()));
         }
         if (req.getPublicScope() != null) {
             existing.setPublicScope(req.getPublicScope());

@@ -12,12 +12,14 @@ import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.query.v4.BasketScheduleBatchQuery;
 import com.zhs.basket.query.v4.BasketV4MatchQuery;
 import com.zhs.basket.service.v4.IBasketV4ScheduleBatchService;
+import com.zhs.basket.service.v4.IBasketV4SeasonService;
 import com.zhs.basket.vo.v4.BasketScheduleBatchDetailVo;
 import com.zhs.basket.vo.v4.BasketScheduleBatchListVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +37,9 @@ public class BasketV4ScheduleBatchServiceImpl implements IBasketV4ScheduleBatchS
     private BasketMatchSeriesMapper matchSeriesMapper;
     @Autowired
     private BasketDivisionMapper divisionMapper;
+    @Autowired
+    @Lazy
+    private IBasketV4SeasonService seasonService;
 
     @Override
     public List<BasketScheduleBatchListVo> selectList(BasketScheduleBatchQuery query) {
@@ -86,6 +91,7 @@ public class BasketV4ScheduleBatchServiceImpl implements IBasketV4ScheduleBatchS
         division.setDivisionStatus(DivisionStatusEnum.SCHEDULED.getCode());
         division.setUpdateTime(now);
         divisionMapper.updateById(division);
+        seasonService.refreshAggregatedStatus(division.getSeasonId());
     }
 
     @Override

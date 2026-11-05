@@ -86,6 +86,15 @@ function updateEventSeasonId(value: string) {
   })
 }
 
+function updateEventScope(payload: { tournamentId: string, seasonId: string }) {
+  replaceQuery({
+    tab: 'event',
+    tournamentId: payload.tournamentId || undefined,
+    seasonId: payload.seasonId || undefined,
+    showRoster: undefined,
+  })
+}
+
 function updateRosterExpanded(value: boolean) {
   replaceQuery({
     tab: 'event',
@@ -155,6 +164,7 @@ watch(
               :roster-expanded="rosterExpanded"
               @update:tournament-id="updateEventTournamentId"
               @update:season-id="updateEventSeasonId"
+              @update:scope="updateEventScope"
               @update:roster-expanded="updateRosterExpanded"
             />
             <PastChampionsPanel

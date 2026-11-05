@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { renderPublicMarkdown } from '@/utils/publicMarkdown'
 
 const props = defineProps<{
   text?: string | null
@@ -8,27 +9,13 @@ const props = defineProps<{
 
 const { t } = useI18n()
 
-const paragraphs = computed(() => {
-  const raw = props.text ?? ''
-  if (!raw.trim()) return []
-  return raw
-    .replace(/\r\n/g, '\n')
-    .split(/\n{2,}/)
-    .map((part) => part.trim())
-    .filter(Boolean)
-})
+const html = computed(() => renderPublicMarkdown(props.text))
 </script>
 
 <template>
   <div class="announcement-content-renderer">
-    <p v-if="paragraphs.length === 0" class="announcement-content-renderer__empty">{{ t('publicPages.announcement.noBody') }}</p>
-    <p
-      v-for="(paragraph, index) in paragraphs"
-      :key="index"
-      class="announcement-content-renderer__paragraph"
-    >
-      {{ paragraph }}
-    </p>
+    <div v-if="html" class="announcement-content-renderer__html" v-html="html"></div>
+    <p v-else class="announcement-content-renderer__empty">{{ t('publicPages.announcement.noBody') }}</p>
   </div>
 </template>
 
@@ -37,17 +24,64 @@ const paragraphs = computed(() => {
   color: #272727;
   font-size: 16px;
   line-height: 1.9;
-  white-space: pre-wrap;
   word-break: break-word;
-}
-
-.announcement-content-renderer__paragraph {
-  margin: 0 0 24px;
-  white-space: pre-wrap;
 }
 
 .announcement-content-renderer__empty {
   margin: 0;
   color: var(--cnpa-paper-text-secondary, #666);
+}
+
+.announcement-content-renderer__html {
+  :deep(p) {
+    margin: 0 0 16px;
+  }
+
+  :deep(h1),
+  :deep(h2),
+  :deep(h3),
+  :deep(h4) {
+    margin: 28px 0 12px;
+    color: #111;
+    font-weight: 800;
+    line-height: 1.35;
+  }
+
+  :deep(h1) {
+    font-size: 28px;
+  }
+
+  :deep(h2) {
+    font-size: 22px;
+  }
+
+  :deep(h3),
+  :deep(h4) {
+    font-size: 18px;
+  }
+
+  :deep(strong) {
+    font-weight: 800;
+  }
+
+  :deep(ul),
+  :deep(ol) {
+    margin: 0 0 16px;
+    padding-left: 1.4em;
+  }
+
+  :deep(li) {
+    margin: 0 0 8px;
+  }
+
+  :deep(img),
+  :deep(video) {
+    max-width: 100%;
+    height: auto;
+  }
+
+  :deep(a) {
+    color: #111;
+  }
 }
 </style>

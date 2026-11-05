@@ -3,6 +3,7 @@ import { useRoute } from 'vue-router'
 import {
   getV4PublicDivisionDetail,
   getV4PublicSeasonDetail,
+  getV4PublicStageSeries,
   getV4PublicStanding,
   getV4PublicStageList,
   getV4PublicTeamDetail,
@@ -14,7 +15,11 @@ import type {
   PublicTeamRosterItemVo,
   PublicTeamSeasonStatVo,
 } from '@/api/types/public'
-import type { V4PublicDivisionDetail } from '@/api/types/v4Public'
+import type {
+  V4PublicDivisionDetail,
+  V4PublicMatchSeriesDetail,
+  V4PublicStageItem,
+} from '@/api/types/v4Public'
 import { translate } from '@/i18n'
 import { descriptionToText, displayText, toNumber } from '@/utils/publicDisplay'
 import { v4PlatformLabel } from '@/utils/v4Display'
@@ -30,6 +35,34 @@ import {
   resolvePublicStageLabel,
   resolveTeamStageKind,
 } from '../utils/publicStageLabel'
+
+function isTerminalKnockoutStage(stage: V4PublicStageItem): boolean {
+  const format = String(stage.competitionFormat || '').toUpperCase()
+  const type = String(stage.stageType || '').toUpperCase()
+  const knockout = type === 'KNOCKOUT' || format.includes('ELIM') || format.includes('KNOCK')
+  return knockout && !String(stage.nextStageCode || '').trim()
+}
+
+function seriesWinnerIsChampion(series: V4PublicMatchSeriesDetail[], eventTeamId: string): boolean {
+  let finalSeries = series.find((row) => row.finalStage)
+  if (!finalSeries) {
+    const maxRound = series.reduce((max, row) => Math.max(max, Number(row.roundNo) || 0), 0)
+    const last = maxRound ? series.filter((row) => Number(row.roundNo) === maxRound) : []
+    finalSeries = last.length === 1 ? last[0] : undefined
+  }
+  if (!finalSeries) return false
+  return String(finalSeries.seriesStatus || '').toUpperCase() === 'COMPLETED'
+    && String(finalSeries.winnerEventTeamId || '') === String(eventTeamId)
+}
+
+async function teamWonChampionship(stages: V4PublicStageItem[], eventTeamId: string): Promise<boolean> {
+  const targets = stages.filter(isTerminalKnockoutStage)
+  if (!targets.length) return false
+  const lists = await Promise.all(
+    targets.map((stage) => getV4PublicStageSeries(String(stage.stageId)).catch(() => ({ data: [] }))),
+  )
+  return lists.some((res) => seriesWinnerIsChampion(res.data ?? [], eventTeamId))
+}
 
 export interface PublicTeamPageContext {
   teamId: Ref<string>
@@ -65,6 +98,7 @@ export function usePublicTeamPage() {
   const ranking = ref<PublicTeamRankItemVo[]>([])
   const standingWins = ref(0)
   const standingLosses = ref(0)
+  const isChampion = ref(false)
   const stageList = ref<import('@/api/types/v4Public').V4PublicStageItem[]>([])
   const captainName = ref('--')
   const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
@@ -104,6 +138,7 @@ export function usePublicTeamPage() {
       wins,
       losses,
       ranking: toNumber(rank?.rankNo, 0),
+      isChampion: isChampion.value,
       themeColor: '#c9a360',
       secondaryColor: '#111111',
       seriesName: displayText(seriesName.value || d.seriesName, ''),
@@ -135,6 +170,7 @@ export function usePublicTeamPage() {
     seasonTitle.value = ''
     seriesName.value = ''
     stageList.value = []
+    isChampion.value = false
 
     try {
       const detailRes = await getV4PublicTeamDetail(id)
@@ -149,6 +185,7 @@ export function usePublicTeamPage() {
         ranking.value = []
         standingWins.value = 0
         standingLosses.value = 0
+        isChampion.value = false
         state.value = 'empty'
         errorMessage.value = translate('publicPages.team.notPublic')
         return
@@ -169,6 +206,7 @@ export function usePublicTeamPage() {
         ranking.value = []
         standingWins.value = 0
         standingLosses.value = 0
+        isChampion.value = false
         state.value = 'success'
         return
       }
@@ -215,6 +253,8 @@ export function usePublicTeamPage() {
 
       const activeStages = stageRes.data ?? []
       stageList.value = activeStages
+      isChampion.value = await teamWonChampionship(activeStages, id)
+      if (current !== reqId) return
 
       detail.value = mapV4TeamDetailToPublic(teamDetail, {
         divisionId: resolvedDivisionId,
@@ -248,6 +288,7 @@ export function usePublicTeamPage() {
       ranking.value = []
       standingWins.value = 0
       standingLosses.value = 0
+      isChampion.value = false
       divisionId.value = ''
       seasonId.value = ''
       state.value = 'error'

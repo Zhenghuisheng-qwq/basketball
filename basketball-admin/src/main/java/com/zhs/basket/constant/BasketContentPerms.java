@@ -67,6 +67,13 @@ public final class BasketContentPerms {
     public static final String SOCIAL_LINK_QUERY = "basket:socialLink:query";
     public static final String SOCIAL_LINK_EDIT = "basket:socialLink:edit";
 
+    public static final String MAIL_NOTICE_LIST = "basket:mailNotice:list";
+    public static final String MAIL_NOTICE_QUERY = "basket:mailNotice:query";
+    public static final String MAIL_NOTICE_ADD = "basket:mailNotice:add";
+    public static final String MAIL_NOTICE_EDIT = "basket:mailNotice:edit";
+    public static final String MAIL_NOTICE_REMOVE = "basket:mailNotice:remove";
+    public static final String MAIL_NOTICE_SEND = "basket:mailNotice:send";
+
     public static final String PARTNER_SUPPORT_LIST = "basket:partnerSupport:list";
     public static final String PARTNER_SUPPORT_QUERY = "basket:partnerSupport:query";
     public static final String PARTNER_SUPPORT_ADD = "basket:partnerSupport:add";

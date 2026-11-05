@@ -56,20 +56,23 @@ function playerAverageValue(
   return calculateAverage(item[totalKey], item.matchCount)
 }
 
-function pickAverageLeader(
+function pickTotalLeader(
   rows: V4PublicPlayerStatItem[],
   avgKey: 'avgPoints' | 'avgAssist' | 'avgRebound',
   totalKey: 'points' | 'assist' | 'rebound',
 ): V4PublicPlayerStatItem | null {
   let best: V4PublicPlayerStatItem | null = null
-  let bestValue = Number.NEGATIVE_INFINITY
+  let bestTotal = Number.NEGATIVE_INFINITY
+  let bestAverage = Number.NEGATIVE_INFINITY
   for (const row of rows) {
     const games = toNumber(row.matchCount, 0)
     if (games <= 0) continue
-    const value = playerAverageValue(row, avgKey, totalKey)
-    if (value > bestValue) {
+    const total = toNumber(row[totalKey], 0)
+    const average = playerAverageValue(row, avgKey, totalKey)
+    if (total > bestTotal || (total === bestTotal && average > bestAverage)) {
       best = row
-      bestValue = value
+      bestTotal = total
+      bestAverage = average
     }
   }
   return best
@@ -116,7 +119,7 @@ async function load(divisionId: string) {
       (teamRes.data ?? []).map((team) => [String(team.eventTeamId || ''), team.teamLogoUrl?.trim() || '']),
     )
     const results = LEADER_CONFIG.map((config, index) => {
-      const leader = pickAverageLeader(rows, config.key, config.totalKey)
+      const leader = pickTotalLeader(rows, config.key, config.totalKey)
       if (!leader) return null
       const teamId = String(leader.eventTeamId || '')
       return {

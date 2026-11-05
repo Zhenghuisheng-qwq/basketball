@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketMailNoticeRecipientMapper">
+
+    <select id="selectSendableMembers" resultType="com.zhs.basket.domain.BasketMailNoticeRecipient">
+        select acc.id as memberId,
+               acc.username as username,
+               acc.email as email,
+               mp.nickname as nickname
+        from basket_member_account acc
+        left join basket_member_profile mp on mp.member_id = acc.id and mp.is_delete = 0
+        where acc.is_delete = 0
+          and acc.account_status = 1
+          and acc.email is not null
+          and trim(acc.email) &lt;&gt; ''
+        order by acc.id asc
+    </select>
+
+    <insert id="insertBatch">
+        insert into basket_mail_notice_recipient (
+            notice_id, member_id, username, nickname, email, send_status, create_time
+        ) values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.noticeId}, #{item.memberId}, #{item.username}, #{item.nickname}, #{item.email}, 0, now())
+        </foreach>
+    </insert>
+
+    <select id="selectPending" resultType="com.zhs.basket.domain.BasketMailNoticeRecipient">
+        select id, notice_id as noticeId, member_id as memberId, username, nickname, email,
+               send_status as sendStatus
+        from basket_mail_notice_recipient
+        where notice_id = #{noticeId} and send_status = 0
+        order by id asc
+    </select>
+
+    <update id="markResult">
+        update basket_mail_notice_recipient
+        set send_status = #{sendStatus},
+            fail_reason = #{failReason},
+            send_time = now()
+        where id = #{id} and send_status = 0
+    </update>
+
+    <select id="selectList" resultType="com.zhs.basket.resp.MailNoticeRecipientResp">
+        select id, notice_id as noticeId, member_id as memberId, username, nickname, email,
+               send_status as sendStatus,
+               case send_status when 0 then '待发送' when 1 then '成功' when 2 then '失败' else '' end as sendStatusName,
+               fail_reason as failReason, send_time as sendTime
+        from basket_mail_notice_recipient
+        where notice_id = #{noticeId}
+        <if test="sendStatus != null">and send_status = #{sendStatus}</if>
+        <if test="keyword != null and keyword != ''">
+            and (
+                email like concat('%', #{keyword}, '%')
+                or username like concat('%', #{keyword}, '%')
+                or nickname like concat('%', #{keyword}, '%')
+            )
+        </if>
+        order by id desc
+    </select>
+</mapper>

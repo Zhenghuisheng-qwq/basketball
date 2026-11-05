@@ -7,8 +7,11 @@ import HallPanelHead from './HallPanelHead.vue'
 import HallSelect from './HallSelect.vue'
 import HallPagination from './HallPagination.vue'
 import { getPublicHallTournamentHonorPage } from '@/api/publicHallOfFame'
+import { getV4PublicSeasonList, getV4PublicSeriesList } from '@/api/v4Public'
 import type { PublicHonorItemResp } from '@/api/types/public'
+import type { V4PublicSeasonItem, V4PublicSeriesItem } from '@/api/types/v4Public'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
+import { pickLatestPublishedSeason, platformTag, seasonBelongsToSeries, seasonsNewestFirst } from '../hallFilters'
 
 const props = defineProps<{
   year: string
@@ -26,17 +29,24 @@ const panelRef = ref<HTMLElement | null>(null)
 const pageSize = 8
 
 const allChampions = ref<PublicHonorItemResp[]>([])
+const seriesList = ref<V4PublicSeriesItem[]>([])
+const v4Seasons = ref<V4PublicSeasonItem[]>([])
 const platform = ref('ALL')
 const series = ref('ALL')
+const seasonId = ref('ALL')
 const state = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const errorMessage = ref('')
 let reqId = 0
+let defaultApplied = false
 
 const yearOptions = computed(() => {
   const years = new Set<string>()
   allChampions.value.forEach((item) => {
     const year = String(item.awardDate || '').slice(0, 4)
     if (/^\d{4}$/.test(year)) years.add(year)
+  })
+  v4Seasons.value.forEach((item) => {
+    if (item.seasonYear) years.add(String(item.seasonYear))
   })
   const sorted = Array.from(years).sort((a, b) => Number(b) - Number(a))
   return [
@@ -51,6 +61,12 @@ const platformOptions = computed(() => {
     const tag = platformTag(item.platformCode)
     if (tag) values.add(tag)
   })
+  v4Seasons.value.forEach((item) => {
+    item.platformCodes?.forEach((code) => {
+      const tag = platformTag(code)
+      if (tag) values.add(tag)
+    })
+  })
   return [
     { value: 'ALL', label: t('publicPages.hall.allPlatforms') },
     ...Array.from(values).map((value) => ({ value, label: value })),
@@ -59,9 +75,12 @@ const platformOptions = computed(() => {
 
 const seriesOptions = computed(() => {
   const map = new Map<string, string>()
+  seriesList.value.forEach((item) => {
+    map.set(String(item.seriesId), displayText(item.seriesName, t('publicPages.hall.publicEvent')))
+  })
   allChampions.value.forEach((item) => {
     const id = String(item.tournamentId || '')
-    if (!id) return
+    if (!id || map.has(id)) return
     map.set(id, displayText(item.tournamentName, t('publicPages.hall.publicEvent')))
   })
   return [
@@ -70,10 +89,29 @@ const seriesOptions = computed(() => {
   ]
 })
 
+const seasonOptions = computed(() => {
+  const map = new Map<string, string>()
+  seasonsNewestFirst(v4Seasons.value).forEach((item) => {
+    const id = String(item.seasonId || '')
+    if (!id) return
+    map.set(id, displayText(item.displayTitle || item.seasonName, t('publicPages.hall.season')))
+  })
+  allChampions.value.forEach((item) => {
+    const id = String(item.seasonId || '')
+    if (!id || map.has(id)) return
+    map.set(id, displayText(item.seasonName, t('publicPages.hall.season')))
+  })
+  return [
+    { value: 'ALL', label: t('publicPages.hall.allSeasons') },
+    ...Array.from(map, ([value, label]) => ({ value, label })),
+  ]
+})
+
 const filtered = computed(() => allChampions.value.filter((item) => {
   if (props.year !== 'ALL' && !String(item.awardDate || '').startsWith(props.year)) return false
   if (platform.value !== 'ALL' && platformTag(item.platformCode) !== platform.value) return false
   if (series.value !== 'ALL' && String(item.tournamentId || '') !== series.value) return false
+  if (seasonId.value !== 'ALL' && String(item.seasonId || '') !== seasonId.value) return false
   return true
 }))
 
@@ -102,6 +140,14 @@ async function loadAll() {
   state.value = 'loading'
   errorMessage.value = ''
   try {
+    const [seriesRes, seasonRes] = await Promise.all([
+      getV4PublicSeriesList(),
+      getV4PublicSeasonList(),
+    ])
+    if (current !== reqId) return
+    seriesList.value = seriesRes.data || []
+    v4Seasons.value = seasonRes.data || []
+
     const collected: PublicHonorItemResp[] = []
     let page = 1
     let pages = 1
@@ -123,6 +169,7 @@ async function loadAll() {
     allChampions.value = collected.filter(
       (item) => (item.honorCode || '').toUpperCase() === 'CHAMPION',
     )
+    applyRunningDefault()
     state.value = allChampions.value.length ? 'success' : 'empty'
   } catch (err) {
     if (current !== reqId) return
@@ -161,15 +208,29 @@ function updatePlatform(value: string | number) {
 
 function updateSeries(value: string | number) {
   series.value = String(value)
+  if (!seasonBelongsToSeries(v4Seasons.value, seasonId.value, series.value)) {
+    seasonId.value = 'ALL'
+  }
   emit('update:page', 1)
 }
 
-function platformTag(code?: string | null): string {
-  const value = String(code || '').trim().toUpperCase()
-  if (!value) return ''
-  if (value === 'PC') return 'PC'
-  if (value === 'PS_XBOX' || value === 'PS' || value === 'XBOX') return '主机'
-  return value
+function updateSeason(value: string | number) {
+  seasonId.value = String(value)
+  const picked = v4Seasons.value.find((item) => String(item.seasonId || '') === seasonId.value)
+  const nextSeries = String(picked?.seriesId || '')
+  if (nextSeries && series.value !== 'ALL' && nextSeries !== series.value) {
+    series.value = nextSeries
+  }
+  emit('update:page', 1)
+}
+
+function applyRunningDefault() {
+  if (defaultApplied) return
+  defaultApplied = true
+  const active = pickLatestPublishedSeason(v4Seasons.value, allChampions.value)
+  if (!active) return
+  series.value = String(active.seriesId || 'ALL')
+  seasonId.value = String(active.seasonId || 'ALL')
 }
 
 function teamLabel(record: PublicHonorItemResp): string {
@@ -243,6 +304,12 @@ function teamNameText(record: PublicHonorItemResp) {
           :model-value="series"
           :options="seriesOptions"
           @update:model-value="updateSeries"
+        />
+        <HallSelect
+          width="filter"
+          :model-value="seasonId"
+          :options="seasonOptions"
+          @update:model-value="updateSeason"
         />
       </template>
     </HallPanelHead>

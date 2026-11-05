@@ -167,7 +167,11 @@ const infoCards = computed<HeroInfoCard[]>(() => [
           <div class="team-hero__stats">
             <span class="team-hero__stat">{{ recordText }}</span>
             <span class="team-hero__stat-divider">|</span>
-            <span class="team-hero__stat">{{ t('publicPages.team.rankNo', { rank: team.ranking }) }}</span>
+            <span class="team-hero__stat">{{
+              team.isChampion
+                ? t('publicPages.team.champion')
+                : t('publicPages.team.rankNo', { rank: team.ranking })
+            }}</span>
             <button type="button" class="team-hero__compare-btn" @click="openCompareModal">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
                 <path d="M7 7h11l-3-3M17 17H6l3 3" stroke-linecap="round" stroke-linejoin="round" />

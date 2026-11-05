@@ -8,9 +8,11 @@ import com.zhs.basket.query.DisciplineQuery;
 import com.zhs.basket.req.HonorRecordQueryReq;
 import com.zhs.basket.resp.HonorRecordListResp;
 import com.zhs.basket.service.IBasketPermanentArchiveService;
+import com.zhs.basket.vo.DisciplineSelectorOptionVo;
 import com.zhs.basket.vo.PermanentPlayerArchiveVo;
 import com.zhs.basket.vo.PermanentTeamArchiveVo;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +30,7 @@ public class BasketPermanentArchiveServiceImpl implements IBasketPermanentArchiv
     @Autowired private BasketHonorRecordMapper honorRecordMapper;
     @Autowired private BasketTeamMapper teamMapper;
     @Autowired private BasketTeamAuditRecordMapper teamAuditRecordMapper;
+    @Autowired private BasketDisciplineSelectorMapper disciplineSelectorMapper;
 
     @Override
     public PermanentPlayerArchiveVo getPlayerArchive(Long playerId) {
@@ -74,5 +77,15 @@ public class BasketPermanentArchiveServiceImpl implements IBasketPermanentArchiv
         List<HonorRecordListResp> honors = honorRecordMapper.selectList(honorQuery);
         vo.setHonors(honors != null ? honors : Collections.emptyList());
         return vo;
+    }
+
+    @Override
+    public List<DisciplineSelectorOptionVo> selectPlayerOptions(String keyword) {
+        return disciplineSelectorMapper.selectArchivePlayerOptions(StringUtils.trim(keyword));
+    }
+
+    @Override
+    public List<DisciplineSelectorOptionVo> selectTeamOptions(String keyword) {
+        return disciplineSelectorMapper.selectArchiveTeamOptions(StringUtils.trim(keyword));
     }
 }

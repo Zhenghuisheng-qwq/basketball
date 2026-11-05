@@ -204,6 +204,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (divisionMapper.updateById(division) != 1) {
             throw new ServiceException("开放 Division 报名失败");
         }
+        seasonService.refreshAggregatedStatus(division.getSeasonId());
         publicReadCachePublisher.divisionMutation(id, division.getSeasonId());
     }
 
@@ -219,6 +220,7 @@ public class BasketV4DivisionServiceImpl implements IBasketV4DivisionService {
         if (divisionMapper.updateById(division) != 1) {
             throw new ServiceException("关闭 Division 报名失败");
         }
+        seasonService.refreshAggregatedStatus(division.getSeasonId());
         publicReadCachePublisher.divisionMutation(id, division.getSeasonId());
     }
 

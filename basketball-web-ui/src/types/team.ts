@@ -21,6 +21,8 @@ export interface TeamBase {
   wins: number
   losses: number
   ranking: number
+  /** 已夺得该赛区决赛冠军时，页头展示冠军而不是积分榜名次 */
+  isChampion?: boolean
   themeColor: string
   secondaryColor: string
   seriesName?: string

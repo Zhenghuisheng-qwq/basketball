@@ -41,6 +41,12 @@
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
+        <!-- SMTP，用于内容运营的邮件通知 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
         <!-- Spring Boot Starter AOP -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

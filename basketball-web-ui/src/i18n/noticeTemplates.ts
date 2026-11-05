@@ -43,8 +43,8 @@ const NOTICE_TEMPLATES: Record<string, LocaleCopy> = {
     'en-US': { title: 'Team review declined', body: '{remark}' },
   },
   PROFILE_CHANGE_APPROVED: {
-    'zh-CN': { title: '资料修改已通过', body: '你的昵称 / 头像修改已审核通过，公开资料已更新。' },
-    'en-US': { title: 'Profile update approved', body: 'Your nickname or avatar update was approved and is now public.' },
+    'zh-CN': { title: '资料修改已通过', body: '你的{summary}修改已审核通过，公开资料已更新。' },
+    'en-US': { title: 'Profile update approved', body: 'Your profile update was approved and is now public.' },
   },
   PROFILE_CHANGE_REJECTED: {
     'zh-CN': { title: '资料修改未通过', body: '你的资料修改未通过审核：{remark}' },
@@ -100,6 +100,9 @@ export function renderNotice(
   if (!template) return null
   const copy = locale.toLowerCase().startsWith('en') ? template['en-US'] : template['zh-CN']
   const params = parseNoticeParams(paramsJson)
+  if (templateCode === 'PROFILE_CHANGE_APPROVED' && !params.summary) {
+    params.summary = '资料'
+  }
   return {
     title: fill(copy.title, params),
     body: fill(copy.body, params),

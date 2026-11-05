@@ -425,7 +425,7 @@ public class V4MatchSeriesDisplaySupport {
             vo.setAwayEventTeamId(null);
         }
 
-        fillStageInfo(vo, series, ctx.stages);
+        fillStageInfo(vo, series, ctx);
         fillTeamNames(vo, series, ctx.teamMap, ctx.urlMap, ctx.currentFaces);
         fillForfeitSummary(vo, series);
         fillDisqualificationDisplay(vo, series, ctx.teamMap);
@@ -434,25 +434,43 @@ public class V4MatchSeriesDisplaySupport {
     }
 
     private void fillStageInfo(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series,
-                               List<V4PublicStageItemResp> stages) {
-        if (series.getDivisionId() == null || series.getStageId() == null) {
+                               SeriesBuildContext ctx) {
+        if (series.getDivisionId() == null || series.getStageId() == null || ctx == null) {
             return;
         }
-        if (CollectionUtils.isEmpty(stages)) {
+        if (CollectionUtils.isEmpty(ctx.stages)) {
             return;
         }
-        for (V4PublicStageItemResp stage : stages) {
+        for (V4PublicStageItemResp stage : ctx.stages) {
             if (series.getStageId().equals(stage.getStageId())) {
                 vo.setStageName(stage.getStageName());
-                boolean finalStage = (stage.getNextStageCode() == null || stage.getNextStageCode().isEmpty())
-                        && "NONE".equalsIgnoreCase(String.valueOf(stage.getAdvancementType()));
+                boolean finalStage = championshipSeries(stage, series, ctx);
                 vo.setFinalStage(finalStage);
                 if ("COMPLETED".equals(series.getSeriesStatus()) && series.getWinnerEventTeamId() != null) {
-                    vo.setResultLabel(Boolean.TRUE.equals(vo.getFinalStage()) ? "冠军" : "本轮胜者");
+                    vo.setResultLabel(finalStage ? "冠军" : "本轮胜者");
                 }
                 break;
             }
         }
+    }
+
+    /**
+     * 没有下一阶段，且本轮是该赛段唯一的最后一轮系列赛时，胜者是冠军。
+     */
+    private boolean championshipSeries(V4PublicStageItemResp stage, BasketMatchSeries series, SeriesBuildContext ctx) {
+        if (stage.getNextStageCode() != null && !stage.getNextStageCode().isEmpty()) {
+            return false;
+        }
+        Integer maxRound = ctx.maxRoundByStage.get(series.getStageId());
+        Integer atMax = ctx.seriesCountAtMaxRound.get(series.getStageId());
+        if (maxRound == null || atMax == null || atMax != 1 || !maxRound.equals(series.getRoundNo())) {
+            return false;
+        }
+        String format = stage.getCompetitionFormat() == null ? "" : stage.getCompetitionFormat().toUpperCase();
+        String stageType = stage.getStageType() == null ? "" : stage.getStageType().toUpperCase();
+        boolean knockout = format.contains("ELIM") || format.contains("KNOCK") || "KNOCKOUT".equals(stageType);
+        boolean closed = "NONE".equalsIgnoreCase(String.valueOf(stage.getAdvancementType()));
+        return knockout || closed;
     }
 
     private void fillTeamNames(V4PublicMatchSeriesDetailResp vo, BasketMatchSeries series,
@@ -707,6 +725,7 @@ public class V4MatchSeriesDisplaySupport {
         private Map<Long, CurrentTeamFace> currentFaces = Map.of();
         private Map<Long, List<BasketV4Match>> matchesBySeries = new HashMap<>();
         private final Map<Long, Integer> maxRoundByStage = new HashMap<>();
+        private final Map<Long, Integer> seriesCountAtMaxRound = new HashMap<>();
     }
 
     private SeriesBuildContext prepareSeriesBuildContext(List<BasketMatchSeries> seriesList,
@@ -717,28 +736,37 @@ public class V4MatchSeriesDisplaySupport {
         if (CollectionUtils.isEmpty(seriesList)) {
             return ctx;
         }
-        Map<Long, Integer> seriesCountByStage = new HashMap<>();
+        Map<Long, List<BasketMatchSeries>> knownByStage = new HashMap<>();
         for (BasketMatchSeries series : seriesList) {
-            if (series.getStageId() != null && series.getRoundNo() != null) {
-                ctx.maxRoundByStage.merge(series.getStageId(), series.getRoundNo(), Math::max);
-            }
             if (series.getStageId() != null) {
-                seriesCountByStage.merge(series.getStageId(), 1, Integer::sum);
+                knownByStage.computeIfAbsent(series.getStageId(), key -> new ArrayList<>()).add(series);
             }
         }
-        for (Map.Entry<Long, Integer> entry : seriesCountByStage.entrySet()) {
-            if (entry.getValue() != null && entry.getValue() > 1) {
-                continue;
-            }
-            List<BasketMatchSeries> siblings = matchSeriesMapper.selectByStageId(entry.getKey());
-            if (CollectionUtils.isEmpty(siblings)) {
-                continue;
-            }
-            for (BasketMatchSeries sibling : siblings) {
-                if (sibling != null && sibling.getRoundNo() != null) {
-                    ctx.maxRoundByStage.merge(entry.getKey(), sibling.getRoundNo(), Math::max);
+        for (Map.Entry<Long, List<BasketMatchSeries>> entry : knownByStage.entrySet()) {
+            List<BasketMatchSeries> known = entry.getValue();
+            if (known.size() <= 1) {
+                List<BasketMatchSeries> siblings = matchSeriesMapper.selectByStageId(entry.getKey());
+                if (!CollectionUtils.isEmpty(siblings)) {
+                    known = siblings;
                 }
             }
+            Integer maxRound = null;
+            for (BasketMatchSeries item : known) {
+                if (item != null && item.getRoundNo() != null) {
+                    maxRound = maxRound == null ? item.getRoundNo() : Math.max(maxRound, item.getRoundNo());
+                }
+            }
+            if (maxRound == null) {
+                continue;
+            }
+            ctx.maxRoundByStage.put(entry.getKey(), maxRound);
+            int atMax = 0;
+            for (BasketMatchSeries item : known) {
+                if (item != null && maxRound.equals(item.getRoundNo())) {
+                    atMax++;
+                }
+            }
+            ctx.seriesCountAtMaxRound.put(entry.getKey(), atMax);
         }
         Long divisionId = seriesList.stream()
                 .map(BasketMatchSeries::getDivisionId)

@@ -2360,3 +2360,5 @@ export interface RosterOperationUpdateRoleReq {
   operateReason: string
 }
 
+export * from './mailNotice'
+

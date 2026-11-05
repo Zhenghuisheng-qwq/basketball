@@ -86,6 +86,31 @@ spring:
           max-active: 8
           # #连接池最大阻塞等待时间（使用负值表示没有限制）
           max-wait: -1ms
+  # 与官网会员邮件同一套 QQ SMTP，供内容运营「邮件通知」使用
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: 416743310@qq.com
+    password: olrplytzxytpbgfe
+    protocol: smtp
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          starttls:
+            enable: false
+          connectiontimeout: 10000
+          timeout: 15000
+          writetimeout: 15000
+
+# 邮件通知发件人。未单独配置时回退到 spring.mail.username
+cnpa:
+  mail:
+    from: 416743310@qq.com
+    from-name: CNPA
 
 # token配置
 token:

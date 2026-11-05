@@ -10,8 +10,29 @@
     />
 
     <el-form :inline="true" class="mb8">
-      <el-form-item label="球员ID">
-        <el-input-number v-model="playerId" :min="1" controls-position="right" style="width: 160px" />
+      <el-form-item label="球员">
+        <el-select
+          v-model="playerSelectId"
+          filterable
+          remote
+          allow-create
+          default-first-option
+          reserve-keyword
+          clearable
+          :remote-method="searchPlayers"
+          :loading="playerLoading"
+          placeholder="搜索或输入球员姓名 / 编号 / ID"
+          style="width: 360px"
+          @change="onPlayerChange"
+          @visible-change="onPlayerVisible"
+        >
+          <el-option v-for="item in playerOptions" :key="item.id" :label="item.label" :value="item.id">
+            <div class="selector-option">
+              <div>{{ item.label }}</div>
+              <div v-if="item.secondaryLabel" class="selector-option__sub">{{ item.secondaryLabel }}</div>
+            </div>
+          </el-option>
+        </el-select>
       </el-form-item>
       <el-form-item>
         <el-button type="primary" icon="Search" @click="loadArchive" v-hasPermi="['basket:permanentPlayer:list']">查看档案</el-button>
@@ -66,23 +87,79 @@
       </el-card>
     </template>
 
-    <el-empty v-else-if="!searched" description="请输入球员 ID 后查看永久档案" />
+    <el-empty v-else-if="!searched" description="搜索或输入球员后查看永久档案" />
   </div>
 </template>
 
 <script setup lang="ts" name="BasketPermanentPlayer">
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
-import { getPermanentPlayerArchive } from '@/api/basket/permanentArchive'
+import type { DisciplineSelectorOption } from '@/api/basket/discipline'
+import { getPermanentPlayerArchive, searchPermanentPlayers } from '@/api/basket/permanentArchive'
 import { parseTime } from '@/utils/ruoyi'
 
+const playerSelectId = ref<number | string>()
 const playerId = ref<number>()
+const playerOptions = ref<DisciplineSelectorOption[]>([])
+const playerLoading = ref(false)
 const archive = ref<any>(null)
 const searched = ref(false)
+let playerTimer: ReturnType<typeof setTimeout> | undefined
+
+function sameText(item: DisciplineSelectorOption, keyword: string) {
+  return [item.id, item.playerNo, item.gameId, item.label, item.teamName]
+    .some(value => value != null && String(value).trim() === keyword)
+}
+
+async function fetchPlayers(keyword = '') {
+  playerLoading.value = true
+  try {
+    const res = await searchPermanentPlayers({ keyword: keyword || undefined, pageNum: 1, pageSize: 20 })
+    playerOptions.value = res.rows || []
+  } finally {
+    playerLoading.value = false
+  }
+}
+
+function searchPlayers(keyword: string) {
+  clearTimeout(playerTimer)
+  playerTimer = setTimeout(() => fetchPlayers(keyword), 300)
+}
+
+function onPlayerVisible(visible: boolean) {
+  if (visible && !playerOptions.value.length) fetchPlayers('')
+}
+
+async function onPlayerChange(selectKey?: number | string) {
+  if (selectKey == null || selectKey === '') {
+    playerId.value = undefined
+    return
+  }
+  let selected = playerOptions.value.find(item => String(item.id) === String(selectKey))
+  if (!selected) {
+    await fetchPlayers(String(selectKey))
+    const text = String(selectKey).trim()
+    const exact = playerOptions.value.filter(item => sameText(item, text))
+    selected = playerOptions.value.find(item => String(item.id) === text)
+      || (exact.length === 1 ? exact[0] : undefined)
+      || (playerOptions.value.length === 1 ? playerOptions.value[0] : undefined)
+    if (!selected) {
+      playerSelectId.value = undefined
+      playerId.value = undefined
+      ElMessage.warning(playerOptions.value.length ? '找到多个球员，请从下拉列表选择' : '没有匹配的球员')
+      return
+    }
+    if (String(playerSelectId.value) !== String(selected.id)) {
+      playerSelectId.value = selected.id
+    }
+  }
+  playerId.value = Number(selected.id)
+  await loadArchive()
+}
 
 async function loadArchive() {
   if (!playerId.value) {
-    ElMessage.warning('请输入球员 ID')
+    ElMessage.warning('请搜索或输入球员')
     return
   }
   searched.value = true
@@ -91,3 +168,15 @@ async function loadArchive() {
   archive.value = res.data
 }
 </script>
+
+<style scoped>
+.selector-option {
+  line-height: 1.3;
+  padding: 4px 0;
+}
+.selector-option__sub {
+  margin-top: 2px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+}
+</style>

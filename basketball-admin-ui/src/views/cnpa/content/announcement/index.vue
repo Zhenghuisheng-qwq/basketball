@@ -81,7 +81,12 @@
         <el-descriptions-item label="状态">{{ detail.announcementStatusName }}</el-descriptions-item>
         <el-descriptions-item label="摘要">{{ detail.summary || '-' }}</el-descriptions-item>
         <el-descriptions-item label="正文">
-          <pre class="content-text">{{ detail.contentText || '-' }}</pre>
+          <div v-if="isRichHtml(detail.contentText)" class="content-html" v-html="detail.contentText"></div>
+          <pre v-else class="content-text">{{ detail.contentText || '-' }}</pre>
+        </el-descriptions-item>
+        <el-descriptions-item v-if="detail.contentTextEn" label="英文正文">
+          <div v-if="isRichHtml(detail.contentTextEn)" class="content-html" v-html="detail.contentTextEn"></div>
+          <pre v-else class="content-text">{{ detail.contentTextEn }}</pre>
         </el-descriptions-item>
         <el-descriptions-item label="封面">
           <el-image v-if="detail.coverUrl" :src="detail.coverUrl" style="width: 160px; height: 90px" fit="cover" />
@@ -90,7 +95,7 @@
       </el-descriptions>
     </el-dialog>
 
-    <el-dialog :title="dialogTitle" v-model="dialogOpen" width="720px" align-center append-to-body>
+    <el-dialog :title="dialogTitle" v-model="dialogOpen" width="920px" align-center append-to-body destroy-on-close>
       <el-form ref="formRef" :model="form" :rules="rules" label-width="100px">
         <el-form-item label="分类" prop="categoryCode">
           <el-select v-model="form.categoryCode" style="width: 100%">
@@ -122,7 +127,7 @@
           <el-input v-model="form.summary" type="textarea" :rows="2" maxlength="300" show-word-limit />
         </el-form-item>
         <el-form-item label="正文" prop="contentText">
-          <el-input v-model="form.contentText" type="textarea" :rows="10" placeholder="纯文本正文，不支持 HTML" />
+          <editor v-model="form.contentText" :min-height="260" />
         </el-form-item>
         <el-divider content-position="left">英文内容</el-divider>
         <div class="el-form-item__tip bilingual-tip">英文选填，与中文正文分开保存。留空时官网英文页面显示中文。规则公告使用同一套字段。</div>
@@ -133,7 +138,7 @@
           <el-input v-model="form.summaryEn" type="textarea" :rows="2" maxlength="1000" show-word-limit />
         </el-form-item>
         <el-form-item label="英文正文">
-          <el-input v-model="form.contentTextEn" type="textarea" :rows="8" placeholder="纯文本，不支持 HTML" />
+          <editor v-model="form.contentTextEn" :min-height="220" />
         </el-form-item>
         <el-form-item label="封面文件ID">
           <el-input-number v-model="form.coverFileId" :min="1" controls-position="right" style="width: 100%" />
@@ -249,10 +254,46 @@ function loadFormSeasons() {
   })
 }
 
+function isRichHtml(value?: string | null) {
+  return /<\/?[a-z][\s\S]*>/i.test(String(value || ''))
+}
+
+function toEditorHtml(value?: string | null) {
+  const raw = String(value || '')
+  if (!raw.trim() || isRichHtml(raw)) return raw
+  return raw
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .split(/\n{2,}/)
+    .map((part) => `<p>${part.replace(/\n/g, '<br>')}</p>`)
+    .join('')
+}
+
+function richTextEmpty(value?: string) {
+  const raw = String(value || '')
+  if (/<img\b/i.test(raw)) return false
+  const text = raw
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/\u00a0/g, ' ')
+    .trim()
+  return !text
+}
+
 const rules = {
   categoryCode: [{ required: true, message: '请选择分类', trigger: 'change' }],
   title: [{ required: true, message: '标题不能为空', trigger: 'blur' }],
-  contentText: [{ required: true, message: '正文不能为空', trigger: 'blur' }]
+  contentText: [{
+    validator: (_rule: unknown, value: string, callback: (error?: Error) => void) => {
+      if (richTextEmpty(value)) {
+        callback(new Error('正文不能为空'))
+        return
+      }
+      callback()
+    },
+    trigger: 'change'
+  }]
 }
 
 function getList() {
@@ -311,8 +352,8 @@ function handleUpdate(row: AnnouncementListItem) {
       summary: data.summary,
       summaryEn: data.summaryEn || '',
       coverFileId: data.coverFileId,
-      contentText: data.contentText || '',
-      contentTextEn: data.contentTextEn || '',
+      contentText: toEditorHtml(data.contentText),
+      contentTextEn: toEditorHtml(data.contentTextEn),
       publicScope: data.publicScope || 'PUBLIC',
       isImportant: data.isImportant ?? 0,
       tournamentId: data.tournamentId,
@@ -438,5 +479,13 @@ getList()
   white-space: pre-wrap;
   word-break: break-word;
   font-family: inherit;
+}
+.content-html {
+  line-height: 1.7;
+  word-break: break-word;
+}
+.content-html :deep(img) {
+  max-width: 100%;
+  height: auto;
 }
 </style>

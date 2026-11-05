@@ -17,4 +17,8 @@ public interface BasketDisciplineSelectorMapper {
 
     List<DisciplineSelectorOptionVo> selectEventTeamOptions(@Param("seasonId") Long seasonId,
             @Param("keyword") String keyword);
+
+    List<DisciplineSelectorOptionVo> selectArchivePlayerOptions(@Param("keyword") String keyword);
+
+    List<DisciplineSelectorOptionVo> selectArchiveTeamOptions(@Param("keyword") String keyword);
 }

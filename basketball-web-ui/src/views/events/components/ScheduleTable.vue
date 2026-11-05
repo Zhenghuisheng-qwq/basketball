@@ -10,6 +10,7 @@ import {
   isScheduleSeries,
   isWinningSide,
   scheduleBestOfLabel,
+  scheduleReplayUrl,
   scheduleScoreView,
   scheduleStatusLabel,
   scheduleStatusTone,
@@ -65,6 +66,10 @@ function onOpenDetail(item: V4PublicScheduleItem) {
 
 function detailLabel(item: V4PublicScheduleItem): string {
   return publicContestDetailLabel(item.unitType)
+}
+
+function replayHref(item: V4PublicScheduleItem): string {
+  return scheduleReplayUrl(item)
 }
 
 function teamName(item: V4PublicScheduleItem, side: 'home' | 'away'): string {
@@ -168,6 +173,15 @@ function roundText(item: V4PublicScheduleItem): string {
         >
           {{ detailLabel(item) }}
         </button>
+        <a
+          v-if="replayHref(item)"
+          class="match-action-btn"
+          :href="replayHref(item)"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {{ t('eventsPage.schedule.watchReplay') }}
+        </a>
       </div>
     </article>
   </div>
@@ -250,6 +264,11 @@ function roundText(item: V4PublicScheduleItem): string {
   align-items: center;
   justify-content: center;
   text-align: center;
+}
+
+.action-cell {
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .stage-cell {
@@ -486,7 +505,8 @@ function roundText(item: V4PublicScheduleItem): string {
   }
 
   .match-action-btn {
-    width: 100%;
+    flex: 1;
+    width: auto;
   }
 }
 

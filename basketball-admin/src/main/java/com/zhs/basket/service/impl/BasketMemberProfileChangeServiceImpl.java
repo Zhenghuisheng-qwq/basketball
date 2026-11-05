@@ -82,15 +82,16 @@ public class BasketMemberProfileChangeServiceImpl implements IBasketMemberProfil
                 0);
         assertSingleRow(rows, "审核通过失败，状态已变更");
 
+        String changed = StringUtils.hasText(change.getChangeSummary()) ? change.getChangeSummary().trim() : "资料";
         messageService.sendSiteMessage(
                 change.getMemberId(),
                 reviewerId,
                 "MEMBER_PROFILE_CHANGE",
                 id,
                 "资料修改已通过",
-                "你的昵称 / 头像修改已审核通过，公开资料已更新。",
+                "你的" + changed + "修改已审核通过，公开资料已更新。",
                 "PROFILE_CHANGE_APPROVED",
-                null);
+                NoticeParams.json("summary", changed));
         currentDisplayCacheEvictor.afterMemberProfile(change.getMemberId());
     }
 

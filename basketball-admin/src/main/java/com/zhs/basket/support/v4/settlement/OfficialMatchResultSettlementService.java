@@ -20,6 +20,7 @@ import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchPlayerStatMapper;
 import com.zhs.basket.mapper.v4.BasketV4MatchTeamStatMapper;
 import com.zhs.basket.service.v4.IBasketMatchSeriesService;
+import com.zhs.basket.service.v4.IBasketV4SeasonService;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
 import com.zhs.basket.support.v4.leaderboard.LeaderboardApplicationService;
 import com.zhs.basket.support.v4.schedule.PairingResolutionGuard;
@@ -74,6 +75,9 @@ public class OfficialMatchResultSettlementService {
     @Autowired
     @Lazy
     private LeaderboardApplicationService leaderboardApplicationService;
+    @Autowired
+    @Lazy
+    private IBasketV4SeasonService seasonService;
 
     @Transactional(rollbackFor = Exception.class)
     public void settleFromSubmission(Long submissionId) {
@@ -512,6 +516,9 @@ public class OfficialMatchResultSettlementService {
                 match.getAwayEventTeamId(),
                 match.getSeriesId()));
         leaderboardApplicationService.scheduleRecalc(match.getDivisionId(), match.getStageId());
+        if (match.getSeasonId() != null) {
+            seasonService.refreshAggregatedStatus(match.getSeasonId());
+        }
     }
 
     private BasketV4Match requireMatchForUpdate(Long matchId) {
