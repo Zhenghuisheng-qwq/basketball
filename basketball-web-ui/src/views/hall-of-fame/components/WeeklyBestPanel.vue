@@ -134,12 +134,12 @@ const weekOptions = computed(() =>
 const statBoxes = computed(() => {
   const row = stat.value
   return [
-    { key: 'games', label: t('publicPages.player.games'), value: formatCount(row?.games), accent: false },
-    { key: 'pts', label: t('publicPages.player.avgPoints'), value: formatAvg(row?.avgPoints), accent: true },
-    { key: 'reb', label: t('publicPages.player.avgRebounds'), value: formatAvg(row?.avgRebounds), accent: true },
-    { key: 'ast', label: t('publicPages.player.avgAssists'), value: formatAvg(row?.avgAssists), accent: true },
-    { key: 'stl', label: t('publicPages.team.avgSteals'), value: formatAvg(row?.avgSteals), accent: true },
-    { key: 'fg', label: t('publicPages.player.fgPct'), value: formatPct(row?.fieldGoalPct), accent: true },
+    { key: 'games', label: t('publicPages.player.games'), value: formatCount(row?.games) },
+    { key: 'pts', label: t('publicPages.player.avgPoints'), value: formatAvg(row?.avgPoints) },
+    { key: 'reb', label: t('publicPages.player.avgRebounds'), value: formatAvg(row?.avgRebounds) },
+    { key: 'ast', label: t('publicPages.player.avgAssists'), value: formatAvg(row?.avgAssists) },
+    { key: 'stl', label: t('publicPages.team.avgSteals'), value: formatAvg(row?.avgSteals) },
+    { key: 'fg', label: t('publicPages.hall.fieldGoalPct'), value: formatPct(row?.fieldGoalPct) },
   ]
 })
 
@@ -353,20 +353,17 @@ function formatPct(value?: number | string | null) {
     <div v-else-if="!current" class="hall-empty">{{ t('publicPages.hall.noWeeklyBestSeason') }}</div>
 
     <template v-else>
-      <article class="weekly-feature hall-card-surface">
-        <div class="weekly-feature__hero">
-          <div class="weekly-feature__mark">
-            <span>PLAYER</span>
-            <span>OF THE</span>
-            <strong>WEEK</strong>
-          </div>
-          <div class="weekly-feature__photo">
-            <HallPlayerSilhouette
-              :name="displayText(current.playerName, t('publicPages.hall.player'))"
-              :avatar-url="current.playerAvatarUrl || ''"
-              size="feature"
-            />
-          </div>
+      <article class="weekly-feature">
+        <div class="weekly-feature__mark">
+          <span>PLAYER</span>
+          <strong>OF THE WEEK</strong>
+        </div>
+        <div class="weekly-feature__photo">
+          <HallPlayerSilhouette
+            :name="displayText(current.playerName, t('publicPages.hall.player'))"
+            :avatar-url="current.playerAvatarUrl || ''"
+            size="feature"
+          />
         </div>
         <div class="weekly-feature__identity">
           <button
@@ -395,14 +392,13 @@ function formatPct(value?: number | string | null) {
             />
             <span>{{ displayText(current.teamName, t('publicPages.hall.championTeam')) }}</span>
           </button>
-          <p v-if="current.honorTitle" class="weekly-feature__meta">{{ current.honorTitle }}</p>
           <p class="weekly-feature__meta">{{ displayText(current.seasonName || current.tournamentName, t('publicPages.hall.season')) }}</p>
           <p v-if="awardRange(current)" class="weekly-feature__meta">{{ awardRange(current) }}</p>
         </div>
         <dl class="weekly-feature__stats">
           <div v-for="box in statBoxes" :key="box.key">
             <dt>{{ box.label }}</dt>
-            <dd :class="{ 'is-accent': box.accent }">{{ box.value }}</dd>
+            <dd>{{ box.value }}</dd>
           </div>
         </dl>
       </article>
@@ -429,43 +425,77 @@ function formatPct(value?: number | string | null) {
 
 .weekly-feature {
   display: grid;
-  grid-template-columns: minmax(360px, 1.2fr) minmax(170px, 0.75fr) minmax(240px, 1fr);
-  gap: 12px 20px;
+  grid-template-columns: 180px 240px minmax(220px, 300px) minmax(0, 1fr);
+  column-gap: 28px;
   align-items: center;
-  min-height: 196px;
-  padding: 8px 22px 8px 8px;
-}
-
-.weekly-feature__hero {
-  display: grid;
-  grid-template-columns: auto minmax(88px, 1fr);
-  align-items: end;
-  min-height: 180px;
-  min-width: 0;
+  min-height: 320px;
+  padding: 0 12px 0 8px;
+  overflow: hidden;
+  background: #0c0c0c;
+  color: #fff;
 }
 
 .weekly-feature__mark {
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
-  height: 100%;
-  padding: 0 12px 0 16px;
-  color: #fff;
-  font-size: 30px;
+  text-align: center;
+  color: #e10613;
+  font-size: 42px;
+  font-style: italic;
   font-weight: 900;
-  line-height: 0.92;
-  letter-spacing: 0;
-  white-space: nowrap;
+  line-height: 0.9;
 
   strong {
-    color: var(--cnpa-red, #e10613);
+    display: block;
+    margin-top: 6px;
+    color: #fff;
+    font-size: 16px;
+    font-style: italic;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1.1;
   }
 }
 
 .weekly-feature__photo {
-  height: 180px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
   min-width: 0;
   overflow: hidden;
+
+  :deep(.hall-player-visual) {
+    height: 280px;
+    min-height: 0;
+    border: 0;
+    background: transparent;
+  }
+
+  :deep(.hall-player-visual__photo) {
+    object-fit: contain;
+    object-position: center center;
+  }
+
+  :deep(.hall-player-visual__silhouette) {
+    top: 50%;
+    bottom: auto;
+    transform: translate(-50%, -50%);
+  }
+
+  :deep(.hall-player-visual__glow) {
+    display: none;
+  }
+}
+
+.weekly-feature__identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 
 .weekly-feature__name,
@@ -475,7 +505,7 @@ function formatPct(value?: number | string | null) {
   background: transparent;
   color: #fff;
   font: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 
   &:disabled {
@@ -484,26 +514,34 @@ function formatPct(value?: number | string | null) {
 }
 
 .weekly-feature__name {
-  font-size: clamp(28px, 3vw, 40px);
+  font-size: clamp(36px, 3vw, 52px);
   font-weight: 900;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .weekly-feature__team {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  font-size: 14px;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+  font-size: 20px;
   font-weight: 800;
+
+  :deep(.team-logo--sm) {
+    width: 42px;
+    height: 42px;
+  }
 }
 
 .weekly-feature__meta,
 .weekly-feature__code {
-  margin: 6px 0 0;
+  margin: 8px 0 0;
   color: rgba(255, 255, 255, 0.62);
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .weekly-feature__code {
@@ -511,27 +549,55 @@ function formatPct(value?: number | string | null) {
 }
 
 .weekly-feature__stats {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
+  align-content: center;
+  height: 100%;
   margin: 0;
+  padding-left: 22px;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 16%;
+    bottom: 16%;
+    left: 0;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.78);
+  }
+
+  > div {
+    position: relative;
+    padding: 0 10px;
+    text-align: center;
+  }
+
+  > div + div::before {
+    content: '';
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    left: 0;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.28);
+  }
 
   dt {
-    color: rgba(255, 255, 255, 0.72);
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 14px;
     font-weight: 700;
   }
 
   dd {
-    margin: 8px 0 0;
-    color: #fff;
-    font-size: 32px;
-    font-weight: 900;
+    margin: 10px 0 0;
+    color: #e10613;
+    font-size: 36px;
+    font-weight: 700;
+    font-synthesis: none;
+    font-variant-numeric: tabular-nums;
     line-height: 1;
-  }
-
-  .is-accent {
-    color: var(--cnpa-red, #e10613);
+    -webkit-font-smoothing: antialiased;
   }
 }
 
@@ -575,22 +641,15 @@ function formatPct(value?: number | string | null) {
 
 @media (max-width: 1100px) {
   .weekly-feature {
-    grid-template-columns: 1fr;
+    grid-template-columns: 140px 180px minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    min-height: 0;
     padding: 16px;
   }
 
-  .weekly-feature__mark {
-    white-space: normal;
-  }
-
   .weekly-feature__stats {
+    grid-column: 1 / -1;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 767px) {
-  .weekly-feature__hero {
-    grid-template-columns: 1fr;
   }
 }
 </style>

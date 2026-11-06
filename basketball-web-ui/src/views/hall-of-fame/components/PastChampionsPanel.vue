@@ -11,6 +11,7 @@ import { getV4PublicSeasonList, getV4PublicSeriesList } from '@/api/v4Public'
 import type { PublicHonorItemResp } from '@/api/types/public'
 import type { V4PublicSeasonItem, V4PublicSeriesItem } from '@/api/types/v4Public'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
+import cnpaShield from '@/assets/icon/cnpa-shield.png'
 import { pickLatestPublishedSeason, platformTag, seasonBelongsToSeries, seasonsNewestFirst } from '../hallFilters'
 
 const props = defineProps<{
@@ -276,6 +277,12 @@ function teamNameText(record: PublicHonorItemResp) {
   const name = teamLabel(record)
   return name ? name.toLocaleUpperCase() : t('publicPages.hall.championTeam')
 }
+
+function seriesIcon(record: PublicHonorItemResp) {
+  const id = String(record.tournamentId || '')
+  if (!id) return ''
+  return seriesList.value.find((item) => String(item.seriesId) === id)?.iconUrl || ''
+}
 </script>
 
 <template>
@@ -333,28 +340,19 @@ function teamNameText(record: PublicHonorItemResp) {
             class="past-champion-card"
           >
             <div class="past-champion-card__copy">
-              <div class="past-champion-card__series">
-                <span class="past-champion-card__mark" aria-hidden="true" />
-                <span>{{ displayText(record.tournamentName, t('publicPages.hall.championFallback')) }}</span>
-              </div>
-              <h4 class="past-champion-card__name">{{ cardTitle(record) }}</h4>
-              <span v-if="platformTag(record.platformCode)" class="past-champion-card__platform">
-                {{ platformTag(record.platformCode) }}
-              </span>
-              <p class="past-champion-card__date">
-                <span>{{ t('publicPages.hall.crownedDate') }}</span>
-                <strong>{{ awardDateText(record.awardDate) }}</strong>
-              </p>
-              <div class="past-champion-card__actions">
-                <button type="button" @click="openEventHonor(record.tournamentId, true, record.seasonId)">
-                  {{ t('publicPages.hall.viewChampionRoster') }}
-                  <span aria-hidden="true">→</span>
-                </button>
-                <span class="past-champion-card__divider" aria-hidden="true" />
-                <button type="button" @click="openEventHonor(record.tournamentId, false, record.seasonId)">
-                  {{ t('publicPages.hall.enterEventHonors') }}
-                  <span aria-hidden="true">→</span>
-                </button>
+              <div class="past-champion-card__main">
+                <div class="past-champion-card__series">
+                  <img class="past-champion-card__series-icon" :src="seriesIcon(record) || cnpaShield" alt="" />
+                  <span>{{ displayText(record.tournamentName, t('publicPages.hall.championFallback')) }}</span>
+                </div>
+                <h4 class="past-champion-card__name">{{ cardTitle(record) }}</h4>
+                <span v-if="platformTag(record.platformCode)" class="past-champion-card__platform">
+                  {{ platformTag(record.platformCode) }}
+                </span>
+                <p class="past-champion-card__date">
+                  <span>{{ t('publicPages.hall.crownedDate') }}</span>
+                  <strong>{{ awardDateText(record.awardDate) }}</strong>
+                </p>
               </div>
             </div>
 
@@ -375,6 +373,16 @@ function teamNameText(record: PublicHonorItemResp) {
               />
               <strong>{{ teamNameText(record) }}</strong>
             </button>
+            <div class="past-champion-card__actions">
+              <button type="button" @click="openEventHonor(record.tournamentId, true, record.seasonId)">
+                {{ t('publicPages.hall.viewChampionRoster') }}
+                <span aria-hidden="true">›</span>
+              </button>
+              <button type="button" @click="openEventHonor(record.tournamentId, false, record.seasonId)">
+                {{ t('publicPages.hall.enterEventHonors') }}
+                <span aria-hidden="true">›</span>
+              </button>
+            </div>
           </article>
         </div>
       </div>
@@ -398,9 +406,9 @@ function teamNameText(record: PublicHonorItemResp) {
 }
 
 .past-champions-group__year {
-  margin: 2px 0 16px;
+  margin: 2px 0 18px;
   color: #e10613;
-  font-size: 36px;
+  font-size: 42px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -408,23 +416,36 @@ function teamNameText(record: PublicHonorItemResp) {
 
 .past-champions-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 680px));
+  justify-content: start;
   gap: 18px;
 }
 
 .past-champion-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 200px;
-  align-items: center;
-  gap: 12px 0;
-  min-height: 214px;
-  padding: 22px 10px 18px 24px;
-  background: #0a0a0a;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr auto;
+  align-items: stretch;
+  min-height: 400px;
+  padding: 28px 0 0;
+  background: #111;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  overflow: hidden;
 }
 
 .past-champion-card__copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
+  min-width: 0;
+  height: 100%;
+  padding: 0 20px 0 28px;
+}
+
+.past-champion-card__main {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -436,8 +457,8 @@ function teamNameText(record: PublicHonorItemResp) {
   align-items: center;
   gap: 8px;
   max-width: 100%;
-  color: rgba(255, 255, 255, 0.62);
-  font-size: 12px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -450,18 +471,25 @@ function teamNameText(record: PublicHonorItemResp) {
 }
 
 .past-champion-card__mark {
-  width: 6px;
-  height: 6px;
+  width: 14px;
+  height: 16px;
   flex-shrink: 0;
   background: #e10613;
-  transform: rotate(45deg);
+  clip-path: polygon(50% 0, 100% 18%, 82% 100%, 18% 100%, 0 18%);
+}
+
+.past-champion-card__series-icon {
+  width: 52px;
+  height: 58px;
+  flex-shrink: 0;
+  object-fit: contain;
 }
 
 .past-champion-card__name {
-  margin: 10px 0 0;
+  margin: 12px 0 0;
   max-width: 100%;
   color: #fff;
-  font-size: 22px;
+  font-size: 32px;
   font-weight: 900;
   line-height: 1.15;
 }
@@ -469,52 +497,63 @@ function teamNameText(record: PublicHonorItemResp) {
 .past-champion-card__platform {
   display: inline-flex;
   align-items: center;
-  height: 22px;
-  margin-top: 10px;
-  padding: 0 8px;
-  border: 1px solid rgba(255, 255, 255, 0.55);
+  align-self: center;
+  justify-content: center;
+  height: 30px;
+  margin-top: 14px;
+  padding: 0 12px;
+  border: 1px solid #e10613;
+  background: #e10613;
   color: #fff;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1;
+  text-align: center;
 }
 
 .past-champion-card__date {
+  align-self: center;
   margin: 12px 0 0;
+  text-align: center;
 
   span {
     display: block;
-    color: rgba(255, 255, 255, 0.46);
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.55);
+    font-size: 16px;
     font-weight: 700;
   }
 
   strong {
     display: block;
-    margin-top: 4px;
+    margin-top: 6px;
     color: #fff;
-    font-size: 16px;
+    font-size: 24px;
     font-weight: 800;
     letter-spacing: 0.04em;
   }
 }
 
 .past-champion-card__actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 14px;
-  margin-top: 16px;
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 1fr 1fr;
+  background: transparent;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
 
   button {
-    padding: 0;
+    padding: 16px 8px;
     border: 0;
     background: transparent;
     color: rgba(255, 255, 255, 0.88);
     font: inherit;
-    font-size: 13px;
+    font-size: 18px;
     font-weight: 800;
+    text-align: center;
     cursor: pointer;
+
+    & + button {
+      border-left: 1px solid rgba(255, 255, 255, 0.22);
+    }
 
     span {
       margin-left: 4px;
@@ -526,19 +565,13 @@ function teamNameText(record: PublicHonorItemResp) {
   }
 }
 
-.past-champion-card__divider {
-  width: 1px;
-  height: 12px;
-  background: rgba(255, 255, 255, 0.22);
-}
-
 .past-champion-card__team {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
-  width: 200px;
+  gap: 10px;
+  width: 100%;
   min-width: 0;
   max-width: 100%;
   padding: 0;
@@ -554,30 +587,29 @@ function teamNameText(record: PublicHonorItemResp) {
   }
 
   strong {
-    max-width: 180px;
+    max-width: 100%;
     color: #fff;
-    font-size: 20px;
+    font-size: 36px;
     font-weight: 900;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.08em;
     line-height: 1.1;
     text-align: center;
   }
 
   :deep(.team-logo.team-logo--xl) {
-    width: 132px;
-    height: 120px;
+    width: 200px;
+    height: 180px;
     background: transparent;
   }
 
   :deep(.team-logo__img) {
-    mix-blend-mode: lighten;
     object-fit: contain;
   }
 }
 
 @media (max-width: 1023px) {
   .past-champions-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 680px);
   }
 }
 
@@ -587,37 +619,23 @@ function teamNameText(record: PublicHonorItemResp) {
   }
 
   .past-champion-card {
-    grid-template-columns: minmax(0, 1fr) 104px;
-    min-height: 0;
-    padding: 16px 8px 14px 16px;
+    min-height: 260px;
+    padding: 16px 0 0;
   }
 
   .past-champion-card__name {
-    font-size: 18px;
-  }
-
-  .past-champion-card__actions {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 6px;
-  }
-
-  .past-champion-card__divider {
-    display: none;
+    font-size: 22px;
   }
 
   .past-champion-card__team {
-    width: 104px;
-
     strong {
-      max-width: 96px;
-      font-size: 13px;
+      font-size: 20px;
       letter-spacing: 0.04em;
     }
 
     :deep(.team-logo.team-logo--xl) {
-      width: 72px;
-      height: 64px;
+      width: 120px;
+      height: 108px;
     }
   }
 }
