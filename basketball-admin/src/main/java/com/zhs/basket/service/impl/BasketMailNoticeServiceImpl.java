@@ -43,7 +43,7 @@ public class BasketMailNoticeServiceImpl implements IBasketMailNoticeService {
     private static final int NAME_MAX = 128;
     private static final int INSERT_BATCH = 200;
     /** 每分钟匀速发出的封数。间隔按「上一封开始」到「下一封开始」计算。 */
-    private static final int SENDS_PER_MINUTE = 10;
+    private static final int SENDS_PER_MINUTE = 1;
     private static final long SEND_INTERVAL_MS = 60_000L / SENDS_PER_MINUTE;
     private static final int STATUS_DRAFT = 0;
     private static final int STATUS_SENDING = 1;

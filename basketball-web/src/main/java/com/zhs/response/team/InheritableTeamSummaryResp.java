@@ -34,6 +34,12 @@ public class InheritableTeamSummaryResp implements Serializable {
     @ApiModelProperty("当前成员数")
     private Integer currentMemberCount;
 
+    @ApiModelProperty("上一届赛事名称")
+    private String previousEventName;
+
+    @ApiModelProperty("挂在这支球队上的荣誉条数")
+    private Integer honorCount;
+
     @ApiModelProperty("是否可继承")
     private Boolean canInherit;
 

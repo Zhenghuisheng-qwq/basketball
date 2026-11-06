@@ -2,11 +2,13 @@ package com.zhs.service.impl;
 
 import cn.hutool.core.util.IdUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.zhs.common.UserContext;
 import com.zhs.config.AccountTeamProperties;
 import com.zhs.dao.BasketFileAssetDao;
+import com.zhs.dao.BasketHonorRecordDao;
 import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamAuditRecordDao;
@@ -32,6 +34,7 @@ import com.zhs.dao.v4.BasketRegistrationDao;
 import com.zhs.dao.v4.BasketSeasonDao;
 import com.zhs.dao.v4.BasketSeriesDao;
 import com.zhs.enums.v4.DivisionStatusEnum;
+import com.zhs.enums.v4.SeasonStatusEnum;
 import com.zhs.enums.v4.FormationStatusEnum;
 import com.zhs.enums.v4.RegistrationStatusEnum;
 import com.zhs.model.v4.BasketCaptainGrant;
@@ -42,6 +45,7 @@ import com.zhs.model.v4.BasketRegistration;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketSeries;
 import com.zhs.model.BasketFileAsset;
+import com.zhs.model.BasketHonorRecord;
 import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerProfile;
@@ -66,6 +70,7 @@ import com.zhs.service.IAccountTeamService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.util.AccountSecurityLogHelper;
 import jakarta.annotation.Resource;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.CollectionUtils;
@@ -116,6 +121,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     private BasketMemberProfileDao memberProfileDao;
     @Resource
     private BasketFileAssetDao fileAssetDao;
+    @Resource
+    private BasketHonorRecordDao honorRecordDao;
     @Resource
     private ICaptainPermissionService captainPermissionService;
     @Resource
@@ -217,11 +224,12 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
 
         captainPermissionService.requireCertifiedPlayer(memberId);
 
-        List<BasketDivision> openDivisions = divisionDao.selectList(new LambdaQueryWrapper<BasketDivision>()
-                .eq(BasketDivision::getIsDelete, NOT_DELETED)
-                .notIn(BasketDivision::getDivisionStatus,
-                        DivisionStatusEnum.FINISHED.getCode(),
-                        DivisionStatusEnum.ARCHIVED.getCode()));
+        List<BasketDivision> openDivisions = excludeEndedDivisions(divisionDao.selectList(
+                new LambdaQueryWrapper<BasketDivision>()
+                        .eq(BasketDivision::getIsDelete, NOT_DELETED)
+                        .notIn(BasketDivision::getDivisionStatus,
+                                DivisionStatusEnum.FINISHED.getCode(),
+                                DivisionStatusEnum.ARCHIVED.getCode())));
         if (CollectionUtils.isEmpty(openDivisions)) {
             return fillJoinablePageMeta(
                     emptyJoinablePage(page, size, "暂无可加入的赛事球队"),
@@ -274,6 +282,54 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         JoinableTeamPageResp respPage = new JoinableTeamPageResp(page, size, total);
         respPage.setRecords(items);
         return fillJoinablePageMeta(respPage, hasActiveTeam, currentTeam, pendingApplicationStatus);
+    }
+
+    /**
+     * 赛事是否已结束以后台填写的比赛结束时间为准：先用赛区比赛结束时间，没填则用赛季比赛结束时间。
+     * 赛区状态仍可能停在报名截止，不能用来判断赛事是否结束。
+     */
+    private List<BasketDivision> excludeEndedDivisions(List<BasketDivision> divisions) {
+        if (CollectionUtils.isEmpty(divisions)) {
+            return divisions == null ? Collections.emptyList() : divisions;
+        }
+        Set<Long> seasonIds = divisions.stream()
+                .map(BasketDivision::getSeasonId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, BasketSeason> seasons = new HashMap<>();
+        if (!seasonIds.isEmpty()) {
+            List<BasketSeason> rows = seasonDao.selectByIds(seasonIds);
+            if (rows != null) {
+                for (BasketSeason season : rows) {
+                    if (season != null && season.getId() != null && NOT_DELETED.equals(season.getIsDelete())) {
+                        seasons.put(season.getId(), season);
+                    }
+                }
+            }
+        }
+        Date now = new Date();
+        return divisions.stream()
+                .filter(division -> !eventMatchPeriodEnded(division, seasons.get(division.getSeasonId()), now))
+                .collect(Collectors.toList());
+    }
+
+    private boolean eventMatchPeriodEnded(BasketDivision division, BasketSeason season, Date now) {
+        if (division == null || now == null) {
+            return false;
+        }
+        Date end = division.getMatchEndTime();
+        if (end == null && season != null) {
+            end = season.getMatchEndTime();
+        }
+        if (end != null) {
+            return now.after(end);
+        }
+        if (DivisionStatusEnum.FINISHED.getCode().equals(division.getDivisionStatus())
+                || DivisionStatusEnum.ARCHIVED.getCode().equals(division.getDivisionStatus())) {
+            return true;
+        }
+        return season != null && (SeasonStatusEnum.FINISHED.getCode().equals(season.getSeasonStatus())
+                || SeasonStatusEnum.ARCHIVED.getCode().equals(season.getSeasonStatus()));
     }
 
     private LambdaQueryWrapper<BasketTeam> buildJoinableTeamWrapper(Set<Long> openDivisionIds,
@@ -330,15 +386,89 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     }
 
     @Override
-    public List<InheritableTeamSummaryResp> listInheritableTeams() {
-        // 历史球队复活已废弃：始终返回空列表，兼容旧前端
-        return Collections.emptyList();
+    public List<InheritableTeamSummaryResp> listInheritableTeams(Long divisionId) {
+        Long memberId = UserContext.getRequiredUserId();
+        Long targetDivisionId = resolveInheritDivisionId(memberId, divisionId, false);
+        if (targetDivisionId == null) {
+            return Collections.emptyList();
+        }
+        List<BasketTeam> teams = teamDao.selectList(new LambdaQueryWrapper<BasketTeam>()
+                .eq(BasketTeam::getCaptainMemberId, memberId)
+                .eq(BasketTeam::getIsDelete, NOT_DELETED)
+                .in(BasketTeam::getTeamStatus,
+                        TeamStatusEnum.ACTIVE.getCode(), TeamStatusEnum.ARCHIVED.getCode())
+                .orderByDesc(BasketTeam::getUpdateTime)
+                .orderByDesc(BasketTeam::getId));
+        if (CollectionUtils.isEmpty(teams)) {
+            return Collections.emptyList();
+        }
+        List<InheritableTeamSummaryResp> result = new ArrayList<>();
+        for (BasketTeam team : teams) {
+            if (Objects.equals(team.getDivisionId(), targetDivisionId)) {
+                continue;
+            }
+            InheritableTeamSummaryResp item = new InheritableTeamSummaryResp();
+            item.setTeamId(toStringId(team.getId()));
+            item.setTeamNo(team.getTeamNo());
+            item.setTeamName(team.getTeamName());
+            item.setShortName(team.getShortName());
+            item.setLogoUrl(resolveLogoUrl(team.getLogoFileId()));
+            item.setAuditStatus(team.getAuditStatus());
+            TeamAuditStatusEnum auditStatus = safeAuditStatus(team.getAuditStatus());
+            item.setAuditStatusText(auditStatus == null ? null : auditStatus.getDescription());
+            item.setCurrentMemberCount(team.getCurrentMemberCount());
+            item.setPreviousEventName(previousEventName(team));
+            item.setHonorCount(countTeamHonors(team.getId()));
+            String reason = inheritBlockReason(team, targetDivisionId, memberId);
+            item.setCanInherit(reason == null);
+            item.setCannotInheritReason(reason);
+            result.add(item);
+        }
+        return result;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public TeamDetailResp bindGrantToTeam(String teamId) {
-        throw new ServiceException("不再支持将队长授权绑定到历史球队，请在当前赛事重新创建球队", 403);
+    public TeamDetailResp bindGrantToTeam(String teamId, Long divisionId, String clientIp) {
+        Long memberId = UserContext.getRequiredUserId();
+        Long teamPk = parseLongId(teamId, "球队主键");
+        Long targetDivisionId = resolveInheritDivisionId(memberId, divisionId, true);
+        BasketDivision division = teamWritableSupport.requireDivisionForTeamCreate(targetDivisionId);
+        BasketPlayerProfile playerProfile = captainPermissionService.requireCertifiedPlayer(memberId);
+        BasketCaptainGrant grant = captainPermissionService.requireValidQualificationForDivision(
+                memberId, null, division.getId());
+        captainGrantSupport.assertGrantUnbound(grant);
+        BasketTeam team = teamDao.selectById(teamPk);
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            throw new ServiceException("球队不存在");
+        }
+        if (!Objects.equals(team.getCaptainMemberId(), memberId)) {
+            throw new ServiceException("只有原球队队长可以继承这支球队", 403);
+        }
+        String reason = inheritBlockReason(team, division.getId(), memberId);
+        if (reason != null) {
+            throw new ServiceException(reason, 403);
+        }
+        if (Objects.equals(team.getDivisionId(), division.getId())) {
+            throw new ServiceException("这支球队已经在本届赛事中", 403);
+        }
+        moveRosterToDivision(team, division.getId(), memberId, playerProfile);
+        team.setDivisionId(division.getId());
+        if (Objects.equals(TeamStatusEnum.ARCHIVED.getCode(), team.getTeamStatus())) {
+            team.setTeamStatus(TeamStatusEnum.ACTIVE.getCode());
+        }
+        team.setUpdateTime(new Date());
+        teamDao.updateById(team);
+        BasketTeamMember captainMember = loadCurrentMembership(memberId, team.getId());
+        if (captainMember == null) {
+            throw new ServiceException("队长成员关系不存在");
+        }
+        captainGrantSupport.assertGrantTeamDivisionMatch(grant, team);
+        captainGrantSupport.bindGrantToTeam(grant, team.getId());
+        updatePlayerCurrentTeam(playerProfile, team.getId());
+        securityLogHelper.write(memberId, "TEAM_INHERIT", "TEAM_INHERIT",
+                null, team.getTeamName(), memberId, clientIp);
+        return toDetailResp(team, captainMember, resolveLogoUrl(team.getLogoFileId()), true);
     }
 
     @Override
@@ -725,6 +855,203 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
             return "球队当前不可加入";
         }
         return null;
+    }
+
+    private Long resolveInheritDivisionId(Long memberId, Long divisionId, boolean required) {
+        if (divisionId != null) {
+            BasketCaptainGrant grant = captainGrantSupport.findActiveGrantForDivision(memberId, divisionId);
+            if (grant == null || grant.getTeamId() != null) {
+                if (required) {
+                    throw new ServiceException(grant == null
+                            ? CaptainGrantSupport.NO_ACTIVE_GRANT_MESSAGE
+                            : CaptainGrantSupport.GRANT_ALREADY_BOUND_MESSAGE, 403);
+                }
+                return null;
+            }
+            return divisionId;
+        }
+        List<BasketCaptainGrant> unbound = captainGrantSupport.findActiveGrantsForMember(memberId).stream()
+                .filter(grant -> grant.getTeamId() == null && grant.getDivisionId() != null)
+                .toList();
+        if (unbound.size() == 1) {
+            return unbound.get(0).getDivisionId();
+        }
+        if (required) {
+            throw new ServiceException("请选择要继承到的赛事");
+        }
+        return null;
+    }
+
+    private String inheritBlockReason(BasketTeam team, Long targetDivisionId, Long captainMemberId) {
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            return "球队不存在";
+        }
+        if (!Objects.equals(team.getCaptainMemberId(), captainMemberId)) {
+            return "只有原球队队长可以继承这支球队";
+        }
+        if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())
+                && !Objects.equals(TeamStatusEnum.ARCHIVED.getCode(), team.getTeamStatus())) {
+            return "这支球队已解散或停用，不能继承";
+        }
+        if (Objects.equals(team.getDivisionId(), targetDivisionId)) {
+            return "这支球队已经在本届赛事中";
+        }
+        if (!sourceCompetitionClosed(team)) {
+            return "这支球队所在赛事尚未结束，结束后才能继承到新赛事";
+        }
+        if (StringUtils.hasText(team.getTeamName())) {
+            Long sameName = teamDao.selectCount(new LambdaQueryWrapper<BasketTeam>()
+                    .eq(BasketTeam::getDivisionId, targetDivisionId)
+                    .eq(BasketTeam::getTeamName, team.getTeamName())
+                    .eq(BasketTeam::getIsDelete, NOT_DELETED)
+                    .ne(BasketTeam::getId, team.getId()));
+            if (sameName != null && sameName > 0) {
+                return "本届赛事已有同名球队";
+            }
+        }
+        BasketTeamMember occupied = teamMembershipSupport.findActiveMembership(captainMemberId, targetDivisionId);
+        if (occupied != null && !Objects.equals(occupied.getTeamId(), team.getId())) {
+            return "你已在本届赛事加入其他球队，请先离队后再继承原球队";
+        }
+        return null;
+    }
+
+    private boolean sourceCompetitionClosed(BasketTeam team) {
+        if (team.getDivisionId() == null) {
+            return true;
+        }
+        BasketDivision division = divisionDao.selectById(team.getDivisionId());
+        if (division == null || !NOT_DELETED.equals(division.getIsDelete())) {
+            return true;
+        }
+        BasketSeason season = null;
+        if (division.getSeasonId() != null) {
+            season = seasonDao.selectById(division.getSeasonId());
+            if (season != null && !NOT_DELETED.equals(season.getIsDelete())) {
+                season = null;
+            }
+        }
+        return eventMatchPeriodEnded(division, season, new Date());
+    }
+
+    private String previousEventName(BasketTeam team) {
+        if (team.getDivisionId() == null) {
+            return "历史球队";
+        }
+        BasketDivision division = divisionDao.selectById(team.getDivisionId());
+        if (division == null) {
+            return "历史球队";
+        }
+        String seasonLabel = null;
+        String seriesLabel = null;
+        if (division.getSeasonId() != null) {
+            BasketSeason season = seasonDao.selectById(division.getSeasonId());
+            if (season != null) {
+                seasonLabel = StringUtils.hasText(season.getDisplayTitle())
+                        ? season.getDisplayTitle() : season.getSeasonName();
+                if (season.getSeriesId() != null) {
+                    BasketSeries series = seriesDao.selectById(season.getSeriesId());
+                    if (series != null) {
+                        seriesLabel = series.getSeriesName();
+                    }
+                }
+            }
+        }
+        List<String> parts = new ArrayList<>();
+        if (StringUtils.hasText(seriesLabel)) {
+            parts.add(seriesLabel);
+        }
+        if (StringUtils.hasText(seasonLabel)) {
+            parts.add(seasonLabel);
+        }
+        if (StringUtils.hasText(division.getDivisionName())) {
+            parts.add(division.getDivisionName());
+        }
+        return parts.isEmpty() ? "历史球队" : String.join(" · ", parts);
+    }
+
+    private int countTeamHonors(Long teamId) {
+        if (teamId == null) {
+            return 0;
+        }
+        Long count = honorRecordDao.selectCount(new LambdaQueryWrapper<BasketHonorRecord>()
+                .eq(BasketHonorRecord::getTeamId, teamId)
+                .eq(BasketHonorRecord::getIsDelete, NOT_DELETED));
+        return count == null ? 0 : count.intValue();
+    }
+
+    private void moveRosterToDivision(BasketTeam team, Long targetDivisionId, Long captainMemberId,
+                                       BasketPlayerProfile captainProfile) {
+        List<BasketTeamMember> members = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getTeamId, team.getId())
+                .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
+                .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode())
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED));
+        int kept = 0;
+        boolean captainKept = false;
+        Date now = new Date();
+        for (BasketTeamMember member : members) {
+            if (Objects.equals(member.getMemberId(), captainMemberId)) {
+                member.setRoleType(TeamMemberRoleEnum.CAPTAIN.getCode());
+            }
+            BasketTeamMember occupied = teamMembershipSupport.findActiveMembership(member.getMemberId(), targetDivisionId);
+            if (occupied != null && !Objects.equals(occupied.getId(), member.getId())) {
+                if (Objects.equals(member.getMemberId(), captainMemberId)) {
+                    throw new ServiceException("你已在本届赛事加入其他球队，请先离队后再继承原球队", 403);
+                }
+                releaseMemberFromInheritedTeam(member);
+                retargetPlayerCurrentTeam(member.getPlayerId(), team.getId(), occupied.getTeamId());
+                continue;
+            }
+            teamMembershipSupport.applyActiveMemberSlot(member, targetDivisionId, member.getMemberId());
+            member.setUpdateTime(now);
+            try {
+                teamMemberDao.updateById(member);
+            } catch (DuplicateKeyException ex) {
+                throw new ServiceException("队员已在本届赛事加入其他球队，暂时不能整队继承", 403);
+            }
+            kept++;
+            if (Objects.equals(member.getMemberId(), captainMemberId)) {
+                captainKept = true;
+            }
+        }
+        if (!captainKept) {
+            BasketTeamMember captainMember = new BasketTeamMember();
+            captainMember.setMembershipNo("MB" + IdUtil.getSnowflakeNextIdStr());
+            captainMember.setTeamId(team.getId());
+            captainMember.setMemberId(captainMemberId);
+            captainMember.setPlayerId(captainProfile.getId());
+            teamMembershipSupport.applyActiveMemberSlot(captainMember, targetDivisionId, captainMemberId);
+            captainMember.setRoleType(TeamMemberRoleEnum.CAPTAIN.getCode());
+            captainMember.setRosterType(TeamRosterTypeEnum.OFFICIAL.getCode());
+            captainMember.setJoinSource(TeamJoinSourceEnum.CREATE.getCode());
+            captainMember.setMembershipStatus(TeamMembershipStatusEnum.ACTIVE.getCode());
+            captainMember.setIsCurrent(IS_CURRENT);
+            captainMember.setJoinTime(now);
+            captainMember.setIsDelete(NOT_DELETED);
+            teamMembershipSupport.insertMember(captainMember);
+            kept++;
+        }
+        team.setCurrentMemberCount(kept);
+    }
+
+    private void releaseMemberFromInheritedTeam(BasketTeamMember member) {
+        member.setMembershipStatus(TeamMembershipStatusEnum.LEFT.getCode());
+        member.setIsCurrent(0);
+        member.setLeaveTime(new Date());
+        member.setLeaveReason("继承到新赛事时，该成员已在本届加入其他球队");
+        teamMemberDao.updateById(member);
+        teamMembershipSupport.clearActiveMemberSlot(member);
+    }
+
+    private void retargetPlayerCurrentTeam(Long playerId, Long fromTeamId, Long toTeamId) {
+        if (playerId == null || fromTeamId == null) {
+            return;
+        }
+        playerProfileDao.update(null, new LambdaUpdateWrapper<BasketPlayerProfile>()
+                .eq(BasketPlayerProfile::getId, playerId)
+                .eq(BasketPlayerProfile::getCurrentTeamId, fromTeamId)
+                .set(BasketPlayerProfile::getCurrentTeamId, toTeamId));
     }
 
     private void assertTeamNameUnique(Long divisionId, String teamName, Long excludeTeamId) {

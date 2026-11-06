@@ -173,10 +173,9 @@ function handleError() {
 
 .hall-player-visual--mvp .hall-player-visual__photo {
   position: absolute;
-  left: 8%;
-  bottom: 0;
-  width: 88%;
-  height: 94%;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   object-fit: contain;
   object-position: center bottom;
 }
@@ -212,8 +211,8 @@ function handleError() {
 .hall-player-visual--lineup .hall-player-visual__photo {
   width: 100%;
   height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
+  object-fit: cover;
+  object-position: center 18%;
 }
 
 .hall-player-visual--lineup .hall-player-visual__silhouette {
@@ -236,9 +235,7 @@ function handleError() {
 }
 
 .hall-player-visual--lineup .hall-player-visual__initials {
-  bottom: 14%;
-  font-size: 12px;
-  letter-spacing: 0.2em;
+  display: none;
 }
 
 .hall-player-visual--roster {

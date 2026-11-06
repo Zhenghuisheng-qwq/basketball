@@ -7,10 +7,13 @@ export interface InheritableTeamSummaryDto {
   auditStatus?: number
   auditStatusText?: string
   currentMemberCount?: number
+  previousEventName?: string
+  honorCount?: number
   canInherit?: boolean
   cannotInheritReason?: string
 }
 
 export interface CaptainGrantBindTeamReq {
   teamId: string
+  divisionId?: string
 }

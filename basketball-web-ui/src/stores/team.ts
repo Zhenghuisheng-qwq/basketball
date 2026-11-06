@@ -707,11 +707,11 @@ export const useTeamStore = defineStore('team', () => {
     }
   }
 
-  async function loadInheritableTeams() {
+  async function loadInheritableTeams(divisionId?: string) {
     inheritableLoading.value = true
     lastError.value = ''
     try {
-      const res = await getInheritableTeamList()
+      const res = await getInheritableTeamList(divisionId)
       inheritableTeams.value = res.data ?? []
       return inheritableTeams.value
     } catch (error) {
@@ -723,11 +723,11 @@ export const useTeamStore = defineStore('team', () => {
     }
   }
 
-  async function inheritTeamAction(teamId: string) {
+  async function inheritTeamAction(teamId: string, divisionId: string) {
     actionLoading.value = true
     lastError.value = ''
     try {
-      const res = await bindCaptainGrantToTeam({ teamId })
+      const res = await bindCaptainGrantToTeam({ teamId, divisionId })
       teamDetail.value = res.data
       myTeamSummary.value = {
         teamId: res.data.teamId,
@@ -744,7 +744,7 @@ export const useTeamStore = defineStore('team', () => {
       await Promise.all([
         loadQualification(res.data.teamId),
         loadMyTeam(),
-        loadInheritableTeams(),
+        loadInheritableTeams(divisionId),
       ])
       return res.data
     } catch (error) {

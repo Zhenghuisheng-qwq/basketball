@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import cupIcon from '@/assets/icon/home/cup.png'
+import HonorPlaque from '@/components/honor/HonorPlaque.vue'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import type { PlayerDetailData, PlayerHonor, PlayerTeamHistory } from '../types'
 
@@ -12,10 +12,6 @@ defineProps<{
 const router = useRouter()
 const { t } = useI18n()
 
-function honorMeta(honor: PlayerHonor): string {
-  return honor.honorValue || honor.honorDate || ''
-}
-
 function teamPath(item: PlayerTeamHistory) {
   return {
     path: `/tournament/team/${item.teamId}/overview`,
@@ -23,15 +19,24 @@ function teamPath(item: PlayerTeamHistory) {
   }
 }
 
-function honorIconSrc(honor: PlayerHonor): string {
-  return honor.imageUrl || cupIcon
+function honorTone(honor: PlayerHonor): 'champion' | 'runner' | 'third' | 'award' {
+  const code = (honor.honorCode || '').toUpperCase()
+  if (code === 'CHAMPION') return 'champion'
+  if (code === 'RUNNER_UP') return 'runner'
+  if (code === 'THIRD_PLACE') return 'third'
+  return 'award'
 }
 
-function handleHonorIconError(event: Event) {
-  const img = event.target as HTMLImageElement
-  if (img.dataset.fallback === '1') return
-  img.dataset.fallback = '1'
-  img.src = cupIcon
+function honorMark(honor: PlayerHonor): 'trophy' | 'shield' | 'star' {
+  const code = (honor.honorCode || '').toUpperCase()
+  if (code === 'WEEKLY_BEST') return 'star'
+  if (code === 'ALL_TOURNAMENT' || code === 'ALL_DEFENSIVE' || code === 'MVP') return 'shield'
+  return 'trophy'
+}
+
+function honorDate(honor: PlayerHonor): string {
+  if (honor.honorDate) return honor.honorDate
+  return /^\d{4}/.test(honor.honorValue || '') ? honor.honorValue || '' : ''
 }
 
 function openHonor(tournamentId?: string) {
@@ -72,25 +77,17 @@ function openHonor(tournamentId?: string) {
       <div v-if="detail.honors.length === 0" class="player-detail-empty-inline">{{ t('publicPages.player.noHonors') }}</div>
 
       <div v-else class="player-detail-career__honor-list">
-        <article
+        <HonorPlaque
           v-for="honor in detail.honors"
           :key="honor.id"
-          class="career-honor"
-          :class="{ 'is-clickable': honor.tournamentId }"
-          :role="honor.tournamentId ? 'button' : undefined"
-          :tabindex="honor.tournamentId ? 0 : undefined"
-          @click="openHonor(honor.tournamentId)"
-          @keydown.enter="openHonor(honor.tournamentId)"
-        >
-          <div class="career-honor__icon" aria-hidden="true">
-            <img :src="honorIconSrc(honor)" alt="" @error="handleHonorIconError" />
-          </div>
-          <div class="career-honor__body">
-            <span class="career-honor__season">{{ honor.seasonName }}</span>
-            <strong class="career-honor__name">{{ honor.honorName }}</strong>
-            <span v-if="honorMeta(honor)" class="career-honor__meta">{{ honorMeta(honor) }}</span>
-          </div>
-        </article>
+          :season="honor.seasonName"
+          :title="honor.honorName"
+          :date="honorDate(honor)"
+          :tone="honorTone(honor)"
+          :mark="honorMark(honor)"
+          :clickable="Boolean(honor.tournamentId)"
+          @select="openHonor(honor.tournamentId)"
+        />
       </div>
     </section>
 
@@ -278,61 +275,6 @@ function openHonor(tournamentId?: string) {
   gap: 14px;
 }
 
-.career-honor {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-height: 118px;
-  padding: 18px 20px;
-  border: 1px solid rgba(201, 163, 90, 0.48);
-  background: linear-gradient(180deg, #1c1a16 0%, #0f0e0c 100%);
-  color: #f3e3c2;
-  box-sizing: border-box;
-
-  &.is-clickable {
-    cursor: pointer;
-
-    &:hover {
-      border-color: rgba(225, 6, 19, 0.55);
-    }
-  }
-}
-
-.career-honor__icon {
-  display: grid;
-  flex: 0 0 56px;
-  place-items: center;
-  width: 56px;
-  height: 56px;
-
-  img {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-  }
-}
-
-.career-honor__body {
-  min-width: 0;
-}
-
-.career-honor__season,
-.career-honor__meta {
-  display: block;
-  color: rgba(243, 227, 194, 0.62);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.career-honor__name {
-  display: block;
-  margin: 6px 0;
-  color: #e8c56a;
-  font-size: clamp(20px, 1.8vw, 26px);
-  font-weight: 900;
-  line-height: 1.15;
-}
-
 .career-timeline {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -465,7 +407,6 @@ function openHonor(tournamentId?: string) {
   font-size: 14px;
 }
 
-.career-honor:focus-visible,
 .career-timeline__identity:focus-visible {
   outline: 2px solid rgba(225, 6, 19, 0.4);
   outline-offset: 2px;

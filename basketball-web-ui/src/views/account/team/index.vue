@@ -28,6 +28,7 @@ import { uploadAccountFile } from '@/api/accountFile'
 import type { TeamInvitationItemDto } from '@/api/types/teamInvitation'
 import type { CandidatePlayerItemDto, TeamMemberItemDto } from '@/api/types/teamMember'
 import type { AvailableSeasonItemDto, TeamRegistrationItemDto } from '@/api/types/teamRegistration'
+import type { InheritableTeamSummaryDto } from '@/api/types/teamInherit'
 
 type TeamListScope = 'current' | 'history'
 
@@ -166,6 +167,18 @@ watch(
     if (!createForm.divisionId && grants.length === 1 && grants[0]?.divisionId) {
       createForm.divisionId = grants[0].divisionId
     }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => createForm.divisionId,
+  (divisionId) => {
+    if (!divisionId) {
+      teamStore.inheritableTeams.splice(0, teamStore.inheritableTeams.length)
+      return
+    }
+    teamStore.loadInheritableTeams(divisionId).catch(() => undefined)
   },
   { immediate: true },
 )
@@ -749,6 +762,33 @@ async function handleLogoUpload(event: Event) {
     createForm.logoPreviewUrl = res.data.accessUrl
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : t('accountTeam.create.logoFailed'))
+  }
+}
+
+async function inheritExistingTeam(team: InheritableTeamSummaryDto) {
+  if (!createForm.divisionId || !team.teamId || team.canInherit === false) return
+  try {
+    await ElMessageBox.confirm(
+      t('accountTeam.create.inheritConfirm', { name: team.teamName || team.teamNo || '' }),
+      t('accountTeam.create.inheritConfirmTitle'),
+      { type: 'warning', confirmButtonText: t('accountTeam.create.inheritAction') },
+    )
+  } catch {
+    return
+  }
+  try {
+    await teamStore.inheritTeamAction(team.teamId, createForm.divisionId)
+    ElMessage.success(t('accountTeam.create.inheritSuccess'))
+    createForm.divisionId = ''
+    listScope.value = 'current'
+    await teamStore.loadQualification()
+    await teamStore.loadCurrentTeams()
+    if (teamStore.myTeamSummary?.teamId) {
+      await teamStore.selectTeam(teamStore.myTeamSummary.teamId)
+    }
+    setTab('overview')
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.create.inheritFailed'))
   }
 }
 
@@ -1496,6 +1536,47 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
                 {{ t('accountTeam.list.viewTeam') }}
               </button>
               <AccountStatusBadge v-else :text="t('accountTeam.create.cannotCreate')" type="default" />
+            </article>
+          </div>
+        </AccountPanel>
+
+        <AccountPanel v-if="createForm.divisionId" :title="t('accountTeam.create.inheritTitle')">
+          <p class="team-tip">{{ t('accountTeam.create.inheritHint') }}</p>
+          <p v-if="teamStore.inheritableLoading" class="team-tip">{{ t('accountTeam.common.loading') }}</p>
+          <p v-else-if="!teamStore.inheritableTeams.length" class="team-tip">
+            {{ t('accountTeam.create.inheritEmpty') }}
+          </p>
+          <div v-else class="team-card-list">
+            <article
+              v-for="team in teamStore.inheritableTeams"
+              :key="team.teamId"
+              class="team-card"
+            >
+              <div class="team-inherit-main">
+                <AccountTeamLogo
+                  :logo-url="team.logoUrl"
+                  :short-name="team.shortName"
+                  :team-name="team.teamName"
+                  size="sm"
+                />
+                <div>
+                  <p><strong>{{ team.teamName }}</strong> <span v-if="team.teamNo">{{ team.teamNo }}</span></p>
+                  <p>{{ team.previousEventName || t('accountTeam.common.event') }}</p>
+                  <p>
+                    {{ t('accountTeam.create.inheritMembers', { count: team.currentMemberCount ?? 0 }) }}
+                    · {{ t('accountTeam.create.inheritHonors', { count: team.honorCount ?? 0 }) }}
+                  </p>
+                  <p v-if="team.cannotInheritReason" class="team-inherit-reason">{{ team.cannotInheritReason }}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="account-btn-primary"
+                :disabled="teamStore.actionLoading || team.canInherit === false"
+                @click="inheritExistingTeam(team)"
+              >
+                {{ t('accountTeam.create.inheritAction') }}
+              </button>
             </article>
           </div>
         </AccountPanel>
@@ -2387,6 +2468,17 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
     margin: 0 0 6px;
     font-size: 13px;
   }
+}
+
+.team-inherit-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.team-inherit-reason {
+  color: #a33b32;
 }
 
 .team-card-actions {

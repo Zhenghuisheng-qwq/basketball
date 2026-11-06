@@ -26,10 +26,6 @@ import { pickLatestPublishedSeason, platformTag, seasonBelongsToSeries, seasonsN
 import type { ChampionRosterMember } from '../types'
 import mrtMidBackground from '@/assets/icon/mrt/mrt_mid.png'
 
-const championCardStyle = {
-  backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.72) 42%, rgba(0,0,0,0.18) 68%, rgba(0,0,0,0.08) 100%), url(${mrtMidBackground})`,
-}
-
 const props = defineProps<{
   tournamentId: string
   rosterExpanded: boolean
@@ -44,7 +40,7 @@ const emit = defineEmits<{
 }>()
 
 const router = useRouter()
-const { t, te } = useI18n()
+const { t } = useI18n()
 const LINEUP_POSITIONS = ['PG', 'SG', 'SF', 'PF', 'C']
 const playerPosition = ref<Record<string, string>>({})
 
@@ -147,15 +143,6 @@ function lineupPositionCode(item: PublicHonorItemResp): string {
   return playerPosition.value[playerId] || ''
 }
 
-function positionParts(item: PublicHonorItemResp) {
-  const code = lineupPositionCode(item)
-  if (!code) return null
-  const key = `accountIdentity.position.${code}`
-  const label = te(key) ? t(key) : code
-  const name = label.replace(new RegExp(`\\s*${code}$`, 'i'), '').trim()
-  return { code, name: name || label }
-}
-
 function sortLineup(items: PublicHonorItemResp[]) {
   return [...items].sort((left, right) => {
     const leftIndex = LINEUP_POSITIONS.indexOf(lineupPositionCode(left))
@@ -208,7 +195,7 @@ const mvpStats = computed(() => {
     { key: 'reb', label: t('publicPages.player.avgRebounds'), value: formatAvg(row?.avgRebounds) },
     { key: 'ast', label: t('publicPages.player.avgAssists'), value: formatAvg(row?.avgAssists) },
     { key: 'stl', label: t('publicPages.team.avgSteals'), value: formatAvg(row?.avgSteals) },
-    { key: 'fg', label: t('publicPages.player.fgPct'), value: formatPct(row?.fieldGoalPct) },
+    { key: 'fg', label: t('publicPages.hall.fieldGoalPct'), value: formatPct(row?.fieldGoalPct) },
   ]
 })
 
@@ -401,6 +388,10 @@ function awardDateText(value?: string | null) {
   return dt.date === '--' ? '--' : dt.date
 }
 
+function championDateText(value?: string | null) {
+  return awardDateText(value).replace(/-/g, '.')
+}
+
 function formatAvg(value?: number | string | null) {
   if (value == null || value === '') return '--'
   const num = Number(value)
@@ -486,7 +477,7 @@ watch(mvpHonor, async (item) => {
       <article
         v-if="championHonor"
         class="event-champion-card"
-        :style="championCardStyle"
+        :style="{ '--champion-bg': `url(${mrtMidBackground})` }"
       >
         <button
           type="button"
@@ -494,9 +485,7 @@ watch(mvpHonor, async (item) => {
           :disabled="!championHonor.eventTeamId"
           @click="openTeam(championHonor.eventTeamId)"
         >
-          <p class="event-champion-card__label">
-            {{ displayText(championHonor.honorName, t('publicPages.hall.champion')) }}
-          </p>
+          <p class="event-champion-card__label">{{ t('publicPages.hall.champion') }}</p>
           <span class="event-champion-card__label-en">CHAMPION</span>
           <span class="event-champion-card__logo">
             <TeamLogo v-if="championTeam" :team="championTeam" size="xl" />
@@ -512,8 +501,8 @@ watch(mvpHonor, async (item) => {
             {{ localizedText(championHonor.honorSubtitle || championHonor.honorTitle, championHonor.honorSubtitleEn || championHonor.honorTitleEn, t('publicPages.hall.publishedHonor')) }}
           </p>
           <div class="event-champion-card__date-block">
-            <span>{{ t('publicPages.hall.awardDate') }}</span>
-            <strong>{{ awardDateText(championHonor.awardDate) }}</strong>
+            <span>{{ t('publicPages.hall.crownedDate') }}</span>
+            <strong>{{ championDateText(championHonor.awardDate) }}</strong>
           </div>
           <button
             v-if="rosterMembers.length"
@@ -525,8 +514,6 @@ watch(mvpHonor, async (item) => {
             <span aria-hidden="true">›</span>
           </button>
         </div>
-
-        <div class="event-champion-card__visual" aria-hidden="true" />
       </article>
 
       <ChampionRoster
@@ -536,11 +523,14 @@ watch(mvpHonor, async (item) => {
 
       <template v-for="group in featuredGroups" :key="group.key">
         <section v-if="group.key === 'MVP'" class="event-mvp">
-          <h3 class="event-other-honors__title">{{ group.title }}</h3>
+          <h3 class="event-mvp__title">
+            {{ t('publicPages.hall.mvp').replace(/\s*MVP\s*$/i, '') }}
+            <span>MVP</span>
+          </h3>
           <article
             v-for="item in group.items"
             :key="item.honorId"
-            class="event-mvp__card hall-card-surface"
+            class="event-mvp__card"
           >
             <div class="event-mvp__photo">
               <HallPlayerSilhouette
@@ -549,19 +539,33 @@ watch(mvpHonor, async (item) => {
                 size="mvp"
               />
             </div>
-            <div class="event-mvp__body">
+            <div class="event-mvp__identity">
               <button type="button" class="event-mvp__name" :disabled="!item.playerId" @click="openPlayer(item.playerId)">
                 {{ displayText(item.playerName, t('publicPages.hall.unknownPlayer')) }}
               </button>
-              <p v-if="item.teamName" class="event-mvp__team">{{ displayText(item.teamName) }}</p>
-              <p class="event-mvp__meta">{{ localizedText(item.seasonName, item.seasonNameEn, t('publicPages.hall.season')) }}</p>
-              <dl class="event-mvp__stats">
-                <div v-for="box in mvpStats" :key="box.key">
-                  <dt>{{ box.label }}</dt>
-                  <dd>{{ box.value }}</dd>
-                </div>
-              </dl>
+              <p v-if="item.teamName" class="event-mvp__team">
+                <TeamLogo
+                  :team="{
+                    id: String(item.eventTeamId || item.teamId || item.honorId),
+                    name: displayText(item.teamName, 'CN'),
+                    shortName: displayText(item.teamName, 'CN'),
+                    logoUrl: item.teamLogoUrl || '',
+                  }"
+                  size="xs"
+                />
+                <span>{{ displayText(item.teamName) }}</span>
+              </p>
+              <p class="event-mvp__meta">
+                {{ localizedText(item.seasonName, item.seasonNameEn, t('publicPages.hall.season')) }}
+                <span>{{ t('publicPages.hall.seasonScope') }}</span>
+              </p>
             </div>
+            <dl class="event-mvp__stats">
+              <div v-for="box in mvpStats" :key="box.key">
+                <dt>{{ box.label }}</dt>
+                <dd>{{ box.value }}</dd>
+              </div>
+            </dl>
           </article>
         </section>
         <section v-else class="event-lineup">
@@ -574,7 +578,6 @@ watch(mvpHonor, async (item) => {
               v-for="item in group.items"
               :key="item.honorId"
               class="event-lineup__card"
-              :data-pos="lineupPositionCode(item) || 'NA'"
             >
               <div class="event-lineup__photo">
                 <HallPlayerSilhouette
@@ -583,14 +586,10 @@ watch(mvpHonor, async (item) => {
                   size="lineup"
                 />
               </div>
-              <div class="event-lineup__body">
+              <div class="event-lineup__meta">
                 <button type="button" class="event-lineup__name" :disabled="!item.playerId" @click="openPlayer(item.playerId)">
                   {{ displayText(item.playerName, t('publicPages.hall.unknownPlayer')) }}
                 </button>
-                <p v-if="positionParts(item)" class="event-lineup__position">
-                  <span>{{ positionParts(item)?.name }}</span>
-                  <span class="event-lineup__code">{{ positionParts(item)?.code }}</span>
-                </p>
                 <p class="event-lineup__team">
                   <TeamLogo
                     v-if="item.teamName || item.teamLogoUrl"
@@ -672,26 +671,30 @@ watch(mvpHonor, async (item) => {
 
 .event-champion-card {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 180px;
-  gap: 24px;
-  min-height: 240px;
-  padding: 28px 30px;
-  border-radius: 2px;
-  background-size: cover;
-  background-position: center right;
+  grid-template-columns: 25% minmax(260px, 440px);
+  align-items: center;
+  aspect-ratio: 2048 / 768;
+  overflow: hidden;
+  background-color: #070707;
+  background-image: var(--champion-bg);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
   color: #fff;
 }
 
 .event-champion-card__team {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
-  padding: 0;
+  width: 100%;
+  padding: 24px 16px;
   border: 0;
   background: transparent;
   color: inherit;
-  text-align: left;
+  text-align: center;
   cursor: pointer;
 
   &:disabled {
@@ -699,41 +702,65 @@ watch(mvpHonor, async (item) => {
   }
 
   strong {
-    font-size: 28px;
+    font-size: 48px;
     font-weight: 900;
+    line-height: 1;
   }
 }
 
 .event-champion-card__label {
   margin: 0;
-  font-size: 22px;
+  color: #e10613;
+  font-size: 52px;
   font-weight: 900;
+  line-height: 1;
 }
 
 .event-champion-card__label-en {
-  margin-top: -6px;
-  color: var(--cnpa-red, #e10613);
-  font-size: 16px;
+  margin: 6px 0 8px;
+  color: #fff;
+  font-size: 28px;
   font-style: italic;
   font-weight: 800;
   letter-spacing: 0.08em;
 }
 
 .event-champion-card__logo {
-  width: 132px;
-  height: 132px;
+  width: 210px;
+  height: 210px;
+
+  :deep(.team-logo--xl) {
+    width: 210px;
+    height: 210px;
+  }
 }
 
 .event-champion-card__info {
+  position: relative;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
   gap: 10px;
+  min-height: 240px;
+  padding: 28px 20px;
+  text-align: center;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 8%;
+    bottom: 8%;
+    left: 0;
+    width: 1px;
+    background: rgba(255, 255, 255, 0.55);
+  }
 }
 
 .event-champion-card__tournament {
   margin: 0;
-  font-size: clamp(26px, 2.4vw, 36px);
+  font-size: clamp(36px, 3.2vw, 52px);
+  font-style: italic;
   font-weight: 900;
   line-height: 1.15;
 }
@@ -741,37 +768,42 @@ watch(mvpHonor, async (item) => {
 .event-champion-card__desc {
   margin: 0;
   color: rgba(255, 255, 255, 0.78);
-  font-size: 14px;
-  line-height: 1.6;
+  font-size: 20px;
+  line-height: 1.5;
 }
 
 .event-champion-card__date-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-top: 6px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
 
   span {
     color: rgba(255, 255, 255, 0.6);
-    font-size: 12px;
+    font-size: 16px;
   }
 
   strong {
-    font-size: 18px;
+    font-size: 28px;
   }
 }
 
 .event-champion-card__btn {
-  align-self: flex-start;
-  margin-top: 8px;
-  padding: 10px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  background: rgba(0, 0, 0, 0.28);
+  align-self: center;
+  margin-top: 16px;
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: transparent;
   color: #fff;
   font: inherit;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
   cursor: pointer;
+
+  span {
+    margin-left: 6px;
+  }
 }
 
 .event-other-honors {
@@ -838,35 +870,113 @@ watch(mvpHonor, async (item) => {
 
 .event-mvp {
   margin-top: 28px;
+  container-type: inline-size;
+}
+
+.event-mvp__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+  color: #111;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1;
+
+  span {
+    color: #e10613;
+    font-size: 26px;
+    font-style: italic;
+    font-weight: 800;
+    letter-spacing: 0.01em;
+  }
 }
 
 .event-mvp__card {
+  position: relative;
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  min-height: 220px;
-  margin-top: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  height: calc((100cqw - 64px) / 5 * 3.7 / 3);
+  overflow: hidden;
+  background: #070707;
+  color: #fff;
 }
 
 .event-mvp__photo {
-  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #070707;
+
+  :deep(.hall-player-visual) {
+    position: relative;
+    inset: auto;
+    display: flex;
+    width: max-content;
+    max-width: calc(100% - 16px);
+    height: auto;
+    max-height: calc(100% - 16px);
+    min-height: 0;
+    padding: 7px;
+    border: 3px solid #e6c56b;
+    box-shadow:
+      inset 0 0 0 3px #070707,
+      inset 0 0 0 6px #e6c56b;
+    background: #070707;
+  }
+
+  :deep(.hall-player-visual__photo) {
+    position: relative;
+    inset: auto;
+    display: block;
+    width: auto;
+    height: auto;
+    max-width: calc(100cqw / 3 - 36px);
+    max-height: calc((100cqw - 64px) / 5 * 3.7 / 3 - 48px);
+    object-fit: contain;
+    object-position: center center;
+  }
+
+  :deep(.hall-player-visual:not(:has(img))) {
+    width: calc((100cqw - 64px) / 5 - 16px);
+    height: calc((100cqw - 64px) / 5 * 3.7 / 3 - 16px);
+  }
 }
 
-.event-mvp__body {
+.event-mvp__photo,
+.event-mvp__identity,
+.event-mvp__stats {
+  min-width: 0;
+}
+
+.event-mvp__identity {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
+  align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 24px 16px;
+  text-align: center;
 }
 
 .event-mvp__name {
+  max-width: 100%;
   padding: 0;
   border: 0;
   background: transparent;
   color: #fff;
   font: inherit;
-  font-size: clamp(28px, 3vw, 40px);
+  font-size: clamp(36px, 24cqw, 60px);
   font-weight: 900;
-  text-align: left;
+  letter-spacing: 0;
+  line-height: 1;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
 
   &:disabled {
@@ -874,31 +984,71 @@ watch(mvpHonor, async (item) => {
   }
 }
 
-.event-mvp__team,
-.event-mvp__meta,
-.event-mvp__value {
-  margin: 8px 0 0;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 14px;
-  font-weight: 700;
+.event-mvp__team {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 14px 0 0;
+  color: #fff;
+  font-size: clamp(20px, 9cqw, 28px);
+  font-weight: 800;
+  line-height: 1;
+
+  :deep(.team-logo--xs) {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+.event-mvp__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
 }
 
 .event-mvp__stats {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin: 18px 0 0;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: center;
+  gap: 28px 0;
+  margin: 0;
+  padding: 16px 8px;
+  text-align: center;
+
+  > div {
+    position: relative;
+    padding: 0 10px;
+    text-align: center;
+  }
+
+  > div:not(:nth-child(3n + 1))::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    background: #e6c56b;
+  }
 
   dt {
-    color: rgba(255, 255, 255, 0.62);
-    font-size: 12px;
+    color: rgba(255, 255, 255, 0.88);
+    font-size: 18px;
     font-weight: 700;
   }
 
   dd {
-    margin: 6px 0 0;
-    color: var(--cnpa-red, #e10613);
-    font-size: 28px;
+    margin: 12px 0 0;
+    color: #e10613;
+    font-size: clamp(36px, 3.2vw, 52px);
     font-weight: 900;
     line-height: 1;
   }
@@ -928,46 +1078,60 @@ watch(mvpHonor, async (item) => {
 .event-lineup__grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
 }
 
 .event-lineup__card {
-  display: flex;
-  flex-direction: column;
-  background: #141414;
-  color: #fff;
+  position: relative;
+  aspect-ratio: 3 / 3.7;
   overflow: hidden;
-
-  &[data-pos='PG'] { --lineup-accent: #d2a648; --lineup-panel: #2a2112; }
-  &[data-pos='SG'] { --lineup-accent: #e10613; --lineup-panel: #2a1014; }
-  &[data-pos='SF'] { --lineup-accent: #e07a3d; --lineup-panel: #2a1a12; }
-  &[data-pos='PF'] { --lineup-accent: #3d8bfd; --lineup-panel: #121a2a; }
-  &[data-pos='C'] { --lineup-accent: #2fbf71; --lineup-panel: #10241a; }
-  &[data-pos='NA'] { --lineup-accent: #d2a648; --lineup-panel: #1c1c1c; }
+  background: #070707;
+  color: #fff;
+  border: 3px solid #e6c56b;
+  box-shadow:
+    inset 0 0 0 3px #070707,
+    inset 0 0 0 6px #e6c56b;
 }
 
-.event-lineup__body {
+.event-lineup__photo {
+  position: absolute;
+  inset: 7px;
+}
+
+.event-lineup__photo :deep(.hall-player-visual) {
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+}
+
+.event-lineup__meta {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  left: 7px;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-  padding: 16px 16px 18px;
-  background: var(--lineup-panel, #1c1c1c);
-  border-top: 3px solid var(--lineup-accent, #d2a648);
+  align-items: center;
+  gap: 8px;
+  padding: 56px 12px 18px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.78) 38%, #070707 100%);
+  text-align: center;
 }
 
 .event-lineup__name {
+  width: 100%;
   margin: 0;
   padding: 0;
   border: 0;
   background: transparent;
   color: #fff;
   font-family: inherit;
-  font-size: 22px;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-  text-align: left;
+  font-size: clamp(22px, 1.8vw, 32px);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
   cursor: pointer;
 
   &:disabled {
@@ -975,44 +1139,24 @@ watch(mvpHonor, async (item) => {
   }
 }
 
-.event-lineup__position {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  margin: 2px 0 0;
-  color: var(--lineup-accent, #d2a648);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.2;
-  letter-spacing: 0.04em;
-}
-
-.event-lineup__code {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.16em;
-  opacity: 0.9;
-}
-
 .event-lineup__team {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  margin: 4px 0 0;
-  color: rgba(255, 255, 255, 0.72);
-  font-size: 13px;
-  font-weight: 600;
-  line-height: 1;
-  letter-spacing: 0.02em;
+  width: 100%;
+  margin: 0;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
 
   :deep(.team-logo--xs) {
-    width: 22px;
-    height: 22px;
+    width: 32px;
+    height: 32px;
   }
-}
-
-.event-lineup__photo {
-  height: 168px;
 }
 
 @media (max-width: 1023px) {
@@ -1020,10 +1164,17 @@ watch(mvpHonor, async (item) => {
     grid-template-columns: 1fr;
   }
 
-  .event-other-honors__grid,
-  .event-lineup__grid,
-  .event-mvp__card {
+  .event-champion-card__info::before {
+    display: none;
+  }
+
+  .event-other-honors__grid {
     grid-template-columns: 1fr;
+  }
+
+  .event-lineup__grid {
+    grid-template-columns: repeat(5, minmax(148px, 1fr));
+    overflow-x: auto;
   }
 }
 </style>

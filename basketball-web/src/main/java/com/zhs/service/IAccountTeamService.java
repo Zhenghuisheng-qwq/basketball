@@ -22,9 +22,17 @@ public interface IAccountTeamService {
 
     JoinableTeamPageResp pageJoinable(Integer currentPage, Integer pageSize, String platformCode, String keyword);
 
-    List<InheritableTeamSummaryResp> listInheritableTeams();
+    /**
+     * 当前队长在目标赛事下可以继承的原球队。只包含本人仍是队长的球队。
+     *
+     * @param divisionId 要带去的赛事；为空且仅有一条未绑定授权时自动使用该赛事
+     */
+    List<InheritableTeamSummaryResp> listInheritableTeams(Long divisionId);
 
-    TeamDetailResp bindGrantToTeam(String teamId);
+    /**
+     * 把本届未使用的队长授权绑到原球队。不新建球队，荣誉和历史仍挂在原球队主键上。
+     */
+    TeamDetailResp bindGrantToTeam(String teamId, Long divisionId, String clientIp);
 
     TeamDetailResp create(TeamCreateReq req, String clientIp);
 

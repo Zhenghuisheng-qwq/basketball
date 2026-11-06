@@ -54,17 +54,20 @@ public class AccountTeamController {
 
     @ApiOperation("可继承历史球队列表")
     @GetMapping("/inheritable/list")
-    public R<java.util.List<com.zhs.response.team.InheritableTeamSummaryResp>> listInheritableTeams() {
-        return R.ok(accountTeamService.listInheritableTeams());
+    public R<java.util.List<com.zhs.response.team.InheritableTeamSummaryResp>> listInheritableTeams(
+            @RequestParam(required = false) Long divisionId) {
+        return R.ok(accountTeamService.listInheritableTeams(divisionId));
     }
 
-    @ApiOperation("绑定队长授权到历史球队")
+    @ApiOperation("原队长继承历史球队到本届赛事")
     @PostMapping("/captain/grant/bind-team")
-    public R<TeamDetailResp> bindGrantToTeam(@RequestBody com.zhs.request.team.CaptainGrantBindTeamReq req) {
+    public R<TeamDetailResp> bindGrantToTeam(@RequestBody com.zhs.request.team.CaptainGrantBindTeamReq req,
+                                              HttpServletRequest request) {
         if (req == null || req.getTeamId() == null || req.getTeamId().isBlank()) {
             return R.fail("球队主键不能为空");
         }
-        return R.ok(accountTeamService.bindGrantToTeam(req.getTeamId()), "球队绑定成功");
+        return R.ok(accountTeamService.bindGrantToTeam(
+                req.getTeamId(), req.getDivisionId(), clientIpResolver.resolve(request)), "已继承原球队");
     }
 
     @ApiOperation("创建球队")

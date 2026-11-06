@@ -12,4 +12,7 @@ public class CaptainGrantBindTeamReq implements Serializable {
 
     @ApiModelProperty("球队主键")
     private String teamId;
+
+    @ApiModelProperty("要继承到的赛事 Division ID")
+    private Long divisionId;
 }

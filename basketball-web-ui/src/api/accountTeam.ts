@@ -28,8 +28,10 @@ export function getJoinableTeamPage(params?: {
   return request.get<any, ApiResult<JoinableTeamPageDto>>('/basket/team/joinable/page', { params })
 }
 
-export function getInheritableTeamList() {
-  return request.get<any, ApiResult<InheritableTeamSummaryDto[]>>('/basket/team/inheritable/list')
+export function getInheritableTeamList(divisionId?: string) {
+  return request.get<any, ApiResult<InheritableTeamSummaryDto[]>>('/basket/team/inheritable/list', {
+    params: divisionId ? { divisionId } : undefined,
+  })
 }
 
 export function bindCaptainGrantToTeam(body: CaptainGrantBindTeamReq) {

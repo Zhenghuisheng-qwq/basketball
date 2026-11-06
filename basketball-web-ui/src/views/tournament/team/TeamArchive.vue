@@ -2,7 +2,7 @@
 import { computed, inject, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { getV4PublicTeamArchive } from '@/api/v4Public'
-import championTrophy from '@/assets/icon/team/champion-trophy.png'
+import HonorPlaque from '@/components/honor/HonorPlaque.vue'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
 import {
   PUBLIC_TEAM_PAGE_KEY,
@@ -96,8 +96,9 @@ function formatArchiveDate(value?: string | null): { text: string; iso: string }
   return { text: parts.join('.'), iso }
 }
 
-function metalId(index: number): string {
-  return `team-archive-honor-metal-${index}`
+function plaqueTone(tone: HonorTone): 'champion' | 'runner' | 'third' | 'award' {
+  if (tone === 'champion' || tone === 'runner' || tone === 'third') return tone
+  return 'award'
 }
 
 function honorTone(code?: string | null): HonorTone {
@@ -255,66 +256,14 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
         </div>
 
         <div v-else-if="block.key === 'honors'" class="honor-list">
-          <article
-            v-for="(honor, index) in honors"
+          <HonorPlaque
+            v-for="honor in honors"
             :key="honor.id"
-            class="honor-card"
-            :class="`honor-card--${honor.tone}`"
-          >
-            <img
-              v-if="honor.tone === 'champion'"
-              class="honor-card__trophy honor-card__trophy--champion"
-              :src="championTrophy"
-              alt=""
-            />
-            <svg v-else class="honor-card__trophy" viewBox="0 0 96 96" aria-hidden="true">
-              <defs>
-                <linearGradient :id="metalId(index)" x1="0.2" y1="0" x2="0.8" y2="1">
-                  <stop offset="0%" stop-color="var(--metal-light)" />
-                  <stop offset="46%" stop-color="var(--metal-mid)" />
-                  <stop offset="100%" stop-color="var(--metal-deep)" />
-                </linearGradient>
-              </defs>
-              <path
-                class="honor-card__handle"
-                d="M30 24c-13 2.5-19 15-15 26 3 9 13 12 21 7"
-                :stroke="`url(#${metalId(index)})`"
-              />
-              <path
-                class="honor-card__handle"
-                d="M66 24c13 2.5 19 15 15 26-3 9-13 12-21 7"
-                :stroke="`url(#${metalId(index)})`"
-              />
-              <path
-                d="M32 18h32c1 18-6 32-12 40-2.4 3-4 4-4 4s-1.6-1-4-4C38 50 31 36 32 18z"
-                :fill="`url(#${metalId(index)})`"
-              />
-              <ellipse cx="48" cy="18" rx="17" ry="5" :fill="`url(#${metalId(index)})`" />
-              <ellipse cx="48" cy="18" rx="10" ry="2.2" fill="#1a140e" opacity="0.34" />
-              <path
-                d="M40 28c1.6 10 3.4 18 8 26"
-                fill="none"
-                stroke="#fff8ea"
-                stroke-width="2.2"
-                stroke-linecap="round"
-                opacity="0.55"
-              />
-              <path
-                d="M48 30.5l2.1 4.6 5 .4-3.8 3.2 1.2 4.9L48 41.1l-4.5 2.5 1.2-4.9-3.8-3.2 5-.4z"
-                fill="#1a140e"
-                opacity="0.42"
-              />
-              <path d="M43 62h10l3.5 9h-17z" :fill="`url(#${metalId(index)})`" />
-              <path d="M34 71h28l2.5 4.5H31.5z" fill="#16120c" />
-              <rect x="28" y="75.5" width="40" height="6.5" rx="1" :fill="`url(#${metalId(index)})`" />
-              <rect x="28" y="75.5" width="40" height="1.4" fill="#fff8ea" opacity="0.35" />
-            </svg>
-            <div class="honor-card__copy">
-              <span v-if="honor.competitionName" class="honor-card__season">{{ honor.competitionName }}</span>
-              <strong class="honor-card__name">{{ honor.honorTitle }}</strong>
-              <time v-if="honor.date" class="honor-card__date" :datetime="honor.dateIso">{{ honor.date }}</time>
-            </div>
-          </article>
+            :season="honor.competitionName"
+            :title="honor.honorTitle"
+            :date="honor.date"
+            :tone="plaqueTone(honor.tone)"
+          />
         </div>
 
         <ol v-else-if="block.key === 'names'" class="archive-timeline">
@@ -520,111 +469,6 @@ function hasBlockData(key: ArchiveBlock['key']): boolean {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
-}
-
-.honor-card {
-  --metal-light: #f3ecdf;
-  --metal-mid: #c4b39c;
-  --metal-deep: #6a5a48;
-  --muted: rgba(243, 227, 194, 0.62);
-  --title: #e8c56a;
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-height: 128px;
-  padding: 18px 20px;
-  overflow: hidden;
-  border: 1px solid rgba(196, 179, 156, 0.42);
-  background:
-    radial-gradient(80% 90% at 100% 0%, rgba(196, 179, 156, 0.16), transparent 62%),
-    linear-gradient(180deg, #1c1a16 0%, #0f0e0c 100%);
-  box-sizing: border-box;
-  box-shadow: inset 0 1px 0 rgba(255, 244, 220, 0.08);
-}
-
-.honor-card--champion {
-  --metal-light: #fff6dc;
-  --metal-mid: #e4c36a;
-  --metal-deep: #8a6230;
-  border-color: rgba(201, 163, 90, 0.55);
-  background:
-    radial-gradient(80% 90% at 100% 0%, rgba(228, 195, 106, 0.2), transparent 62%),
-    linear-gradient(180deg, #221c14 0%, #100e0c 100%);
-}
-
-.honor-card--runner {
-  --metal-light: #f7f9fc;
-  --metal-mid: #c5ced8;
-  --metal-deep: #5c6774;
-  --muted: rgba(226, 232, 240, 0.68);
-  --title: #d5dde6;
-  border-color: rgba(170, 180, 194, 0.5);
-  background:
-    radial-gradient(80% 90% at 100% 0%, rgba(206, 214, 224, 0.16), transparent 62%),
-    linear-gradient(180deg, #1a1c20 0%, #0e0f12 100%);
-}
-
-.honor-card--third {
-  --metal-light: #ffe4cc;
-  --metal-mid: #d08a58;
-  --metal-deep: #6b3b24;
-  --muted: rgba(240, 210, 188, 0.68);
-  --title: #e0a06a;
-  border-color: rgba(184, 122, 78, 0.5);
-  background:
-    radial-gradient(80% 90% at 100% 0%, rgba(208, 138, 88, 0.16), transparent 62%),
-    linear-gradient(180deg, #211814 0%, #100e0c 100%);
-}
-
-.honor-card__trophy {
-  width: 72px;
-  height: 72px;
-  flex: 0 0 72px;
-  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, 0.35));
-}
-
-.honor-card__trophy--champion {
-  width: 92px;
-  height: 108px;
-  flex-basis: 92px;
-  object-fit: contain;
-  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.28));
-}
-
-.honor-card__handle {
-  fill: none;
-  stroke-width: 5;
-  stroke-linecap: round;
-}
-
-.honor-card__copy {
-  position: relative;
-  z-index: 1;
-  min-width: 0;
-  flex: 1;
-}
-
-.honor-card__season,
-.honor-card__date {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.honor-card__name {
-  display: -webkit-box;
-  margin: 6px 0;
-  overflow: hidden;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  color: var(--title);
-  font-size: clamp(20px, 1.6vw, 26px);
-  font-weight: 900;
-  line-height: 1.15;
-  overflow-wrap: anywhere;
 }
 
 .archive-timeline {
