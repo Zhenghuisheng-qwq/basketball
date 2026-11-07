@@ -2,6 +2,7 @@ package com.zhs.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.request.team.TeamMemberUpdateReq;
+import com.zhs.response.team.CandidatePlayerItemResp;
 import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberDetailResp;
 import com.zhs.response.team.TeamMemberItemResp;
@@ -72,6 +73,12 @@ public class TeamMemberBusinessController {
     public R<Void> leave(@PathVariable String teamId, HttpServletRequest request) {
         teamMemberBusinessService.leave(teamId, clientIpResolver.resolve(request));
         return R.ok(null, "离队成功");
+    }
+
+    @ApiOperation("历史球员列表：生涯仍在本队，邀请后才进入本届")
+    @GetMapping("/{teamId}/historical-teammate/list")
+    public R<java.util.List<CandidatePlayerItemResp>> listHistoricalTeammates(@PathVariable String teamId) {
+        return R.ok(teamMemberBusinessService.listHistoricalTeammates(teamId));
     }
 
     @ApiOperation("候选球员分页")

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhs.dao.BasketPlayerPlatformAccountDao;
 import com.zhs.dao.BasketPlayerProfileDao;
+import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.dao.v4.BasketDivisionDao;
 import com.zhs.dao.v4.BasketEventPlayerDao;
@@ -18,6 +19,7 @@ import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.dao.v4.BasketV4MatchPlayerStatDao;
 import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketPlayerProfile;
+import com.zhs.model.BasketTeam;
 import com.zhs.model.BasketTeamMember;
 import com.zhs.support.GameTerminalSupport;
 import com.zhs.model.v4.BasketDivision;
@@ -58,6 +60,8 @@ public class EventRosterMembershipSync {
     @Resource
     private BasketRegistrationDao registrationDao;
     @Resource
+    private BasketTeamDao teamDao;
+    @Resource
     private BasketTeamMemberDao teamMemberDao;
     @Resource
     private BasketRegistrationPlayerDao registrationPlayerDao;
@@ -93,6 +97,7 @@ public class EventRosterMembershipSync {
         if (teamId == null || playerId == null) {
             return 0;
         }
+        Long currentDivisionId = currentDivisionId(teamId);
         List<BasketRegistration> registrations = registrationDao.selectList(new LambdaQueryWrapper<BasketRegistration>()
                 .eq(BasketRegistration::getTeamId, teamId)
                 .in(BasketRegistration::getRegistrationStatus, LIVE_REGISTRATION)
@@ -100,6 +105,9 @@ public class EventRosterMembershipSync {
         int released = 0;
         Date now = new Date();
         for (BasketRegistration registration : registrations) {
+            if (!sameCurrentDivision(registration, currentDivisionId)) {
+                continue;
+            }
             if (registration.getDivisionId() != null) {
                 divisionDao.selectOne(new LambdaQueryWrapper<BasketDivision>()
                         .eq(BasketDivision::getId, registration.getDivisionId())
@@ -161,13 +169,14 @@ public class EventRosterMembershipSync {
         if (teamId == null) {
             return 0;
         }
+        Long currentDivisionId = currentDivisionId(teamId);
         List<BasketRegistration> registrations = registrationDao.selectList(new LambdaQueryWrapper<BasketRegistration>()
                 .eq(BasketRegistration::getTeamId, teamId)
                 .eq(BasketRegistration::getRegistrationStatus, "APPROVED")
                 .eq(BasketRegistration::getIsDelete, NOT_DELETED));
         int changed = 0;
         for (BasketRegistration registration : registrations) {
-            if (!autoSyncOpen(registration.getDivisionId())) {
+            if (!sameCurrentDivision(registration, currentDivisionId) || !autoSyncOpen(registration.getDivisionId())) {
                 continue;
             }
             changed += reconcile(registration);
@@ -183,13 +192,14 @@ public class EventRosterMembershipSync {
         if (teamId == null || playerId == null) {
             return "";
         }
+        Long currentDivisionId = currentDivisionId(teamId);
         List<BasketRegistration> registrations = registrationDao.selectList(new LambdaQueryWrapper<BasketRegistration>()
                 .eq(BasketRegistration::getTeamId, teamId)
                 .eq(BasketRegistration::getRegistrationStatus, "APPROVED")
                 .eq(BasketRegistration::getIsDelete, NOT_DELETED));
         StringBuilder notes = new StringBuilder();
         for (BasketRegistration registration : registrations) {
-            if (autoSyncOpen(registration.getDivisionId())) {
+            if (!sameCurrentDivision(registration, currentDivisionId) || autoSyncOpen(registration.getDivisionId())) {
                 continue;
             }
             try {
@@ -655,6 +665,20 @@ public class EventRosterMembershipSync {
                 .eq(BasketEventTeam::getSourceTeamId, teamId)
                 .eq(BasketEventTeam::getIsDelete, NOT_DELETED)
                 .last("limit 1"));
+    }
+
+    private Long currentDivisionId(Long teamId) {
+        if (teamId == null) {
+            return null;
+        }
+        BasketTeam team = teamDao.selectById(teamId);
+        return team == null ? null : team.getDivisionId();
+    }
+
+    private boolean sameCurrentDivision(BasketRegistration registration, Long currentDivisionId) {
+        return registration != null
+                && currentDivisionId != null
+                && currentDivisionId.equals(registration.getDivisionId());
     }
 
     private BasketEventPlayer findEventPlayer(Long eventTeamId, Long playerId) {

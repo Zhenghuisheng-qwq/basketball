@@ -11,6 +11,9 @@ parent_id=2151 账号与认证
       <el-form-item label="球队名称" prop="teamName">
         <el-input v-model="queryParams.teamName" placeholder="球队名称" clearable style="width: 180px" @keyup.enter="handleQuery" />
       </el-form-item>
+      <el-form-item label="赛事" prop="divisionName">
+        <el-input v-model="queryParams.divisionName" placeholder="赛事名称" clearable style="width: 180px" @keyup.enter="handleQuery" />
+      </el-form-item>
       <el-form-item label="球员" prop="playerKeyword">
         <el-input v-model="queryParams.playerKeyword" placeholder="昵称或球员编号" clearable style="width: 180px" @keyup.enter="handleQuery" />
       </el-form-item>
@@ -32,7 +35,7 @@ parent_id=2151 账号与认证
 
     <el-row class="mb8">
       <el-alert
-        title="这里是球队后续成员变更。历史上线前的邀请和离队只作留痕，不能补审。球队认证快照仍在「球队认证审核」。"
+        title="本页汇总各届赛事的成员操作记录。每条操作只影响所标注赛事的阵容，历史赛事记录单独保留。是否需要管理员审核，以该赛事自己的报名和阵容规则为准。绑错赛事的待审记录不能直接通过，需要在当前赛事重新邀请。"
         type="info"
         :closable="false"
         show-icon
@@ -47,7 +50,12 @@ parent_id=2151 账号与认证
           <div class="sub-text">{{ scope.row.teamNo || '-' }}</div>
         </template>
       </el-table-column>
-      <el-table-column label="赛事" prop="divisionName" min-width="160" show-overflow-tooltip />
+      <el-table-column label="赛事" min-width="180" show-overflow-tooltip>
+        <template #default="scope">
+          <div>{{ scope.row.divisionName || '待核实' }}</div>
+          <div v-if="eventMismatch(scope.row)" class="sub-text">球队当前赛事：{{ scope.row.teamDivisionName }}</div>
+        </template>
+      </el-table-column>
       <el-table-column label="类型" prop="changeTypeName" width="110" />
       <el-table-column label="对象" min-width="140">
         <template #default="scope">
@@ -74,8 +82,8 @@ parent_id=2151 账号与认证
       <el-table-column label="操作" align="center" width="220" fixed="right">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-if="scope.row.id" v-hasPermi="['basket:teamMembershipChange:query']">详情</el-button>
-          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-if="canAudit(scope.row)" v-hasPermi="['basket:teamMembershipChange:audit']">通过</el-button>
-          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-if="canAudit(scope.row)" v-hasPermi="['basket:teamMembershipChange:audit']">驳回</el-button>
+          <el-button link type="success" icon="Check" @click="handleApprove(scope.row)" v-if="canApprove(scope.row)" v-hasPermi="['basket:teamMembershipChange:audit']">通过</el-button>
+          <el-button link type="danger" icon="Close" @click="openReject(scope.row)" v-if="canReject(scope.row)" v-hasPermi="['basket:teamMembershipChange:audit']">驳回</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -88,7 +96,8 @@ parent_id=2151 账号与认证
           <el-descriptions-item label="编号">{{ detail.changeNo }}</el-descriptions-item>
           <el-descriptions-item label="状态">{{ detail.changeStatusName }}</el-descriptions-item>
           <el-descriptions-item label="球队">{{ detail.teamName }} / {{ detail.teamNo }}</el-descriptions-item>
-          <el-descriptions-item label="赛事">{{ detail.divisionName || '-' }}</el-descriptions-item>
+          <el-descriptions-item label="赛事">{{ detail.divisionName || '待核实' }}</el-descriptions-item>
+          <el-descriptions-item label="球队当前赛事">{{ detail.teamDivisionName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="报名">{{ detail.registrationId || '-' }}</el-descriptions-item>
           <el-descriptions-item label="阶段">{{ detail.effectStageName || '-' }}</el-descriptions-item>
           <el-descriptions-item label="类型">{{ detail.changeTypeName }}</el-descriptions-item>
@@ -160,6 +169,7 @@ const data = reactive({
     pageSize: 10,
     teamNo: undefined as string | undefined,
     teamName: undefined as string | undefined,
+    divisionName: undefined as string | undefined,
     playerKeyword: undefined as string | undefined,
     changeType: undefined as string | undefined,
     changeStatus: undefined as string | undefined
@@ -174,8 +184,17 @@ function statusTag(status: string) {
   return 'info'
 }
 
-function canAudit(row: any) {
-  return row && row.id && row.changeStatus === 'PENDING_ADMIN' && row.legacyRecord !== 1
+function eventMismatch(row: any) {
+  if (!row?.divisionId || !row?.teamDivisionId) return false
+  return String(row.divisionId) !== String(row.teamDivisionId)
+}
+
+function canReject(row: any) {
+  return Boolean(row && row.id && row.changeStatus === 'PENDING_ADMIN' && row.legacyRecord !== 1)
+}
+
+function canApprove(row: any) {
+  return canReject(row) && Boolean(row.divisionId) && !eventMismatch(row)
 }
 
 function getList() {

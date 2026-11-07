@@ -2,9 +2,12 @@ package com.zhs.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.zhs.request.team.TeamMemberUpdateReq;
+import com.zhs.response.team.CandidatePlayerItemResp;
 import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberDetailResp;
 import com.zhs.response.team.TeamMemberItemResp;
+
+import java.util.List;
 
 public interface ITeamMemberBusinessService {
 
@@ -24,4 +27,9 @@ public interface ITeamMemberBusinessService {
     void leave(String teamId, String clientIp);
 
     CandidatePlayerPageResp pageCandidatePlayers(String teamId, Integer currentPage, Integer pageSize, String keyword);
+
+    /**
+     * 本队历史球员。生涯记录仍在这支球队上；已加入本届其他球队的不能再邀请。
+     */
+    List<CandidatePlayerItemResp> listHistoricalTeammates(String teamId);
 }

@@ -250,8 +250,13 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         }
         application = joinApplicationDao.selectById(applicationPk);
         if (Boolean.TRUE.equals(approve)) {
+            Long boundDivisionId = membershipChangeGate.boundDivisionId(
+                    com.zhs.service.team.TeamMembershipChangeGate.SOURCE_JOIN, applicationPk);
+            if (boundDivisionId == null || !boundDivisionId.equals(team.getDivisionId())) {
+                throw new ServiceException("这条申请绑定的不是球队当前赛事，不能通过。请在当前赛事重新申请");
+            }
             teamMembershipSupport.assertEligibleToJoinTeam(application.getApplicantMemberId(), team.getDivisionId());
-            if (membershipChangeGate.shouldHold(team.getId())) {
+            if (membershipChangeGate.shouldHold(team)) {
                 membershipChangeGate.markJoinPendingAdmin(application, team, memberId);
                 businessMessageService.sendSiteMessage(application.getApplicantMemberId(), "加入申请待审核",
                         "队长已同意您加入球队「" + team.getTeamName() + "」，等待管理员审核后生效",
@@ -363,7 +368,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         resp.setApplicationNo(application.getApplicationNo());
         resp.setTeamId(toStringId(application.getTeamId()));
         resp.setTeamName(team == null ? null : team.getTeamName());
-        fillApplicationEventContext(resp, team);
+        fillApplicationEventContext(resp, application);
         resp.setApplicantMemberId(toStringId(application.getApplicantMemberId()));
         resp.setApplicantUserId(toStringId(application.getApplicantMemberId()));
         BasketMemberProfile profile = profileMap.get(application.getApplicantMemberId());
@@ -380,18 +385,31 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
         resp.setApplicationStatus(application.getApplicationStatus());
         resp.setApplicationStatusText(status.getDescription());
         resp.setCanCancel(status.canCancel());
-        resp.setCanProcess(status.canProcess());
+        resp.setCanProcess(status.canProcess() && applicationMatchesCurrentEvent(application, team));
         resp.setProcessRemark(application.getProcessRemark());
         resp.setCreateTime(application.getCreateTime());
         return resp;
     }
 
-    private void fillApplicationEventContext(TeamJoinApplicationItemResp resp, BasketTeam team) {
-        if (resp == null || team == null || team.getDivisionId() == null) {
+    private boolean applicationMatchesCurrentEvent(BasketTeamJoinApplication application, BasketTeam team) {
+        if (application == null || team == null || team.getDivisionId() == null) {
+            return false;
+        }
+        Long boundDivisionId = membershipChangeGate.boundDivisionId(TeamMembershipChangeGate.SOURCE_JOIN, application.getId());
+        return team.getDivisionId().equals(boundDivisionId);
+    }
+
+    private void fillApplicationEventContext(TeamJoinApplicationItemResp resp, BasketTeamJoinApplication application) {
+        if (resp == null || application == null) {
             return;
         }
-        resp.setDivisionId(toStringId(team.getDivisionId()));
-        BasketDivision division = divisionDao.selectById(team.getDivisionId());
+        Long divisionId = membershipChangeGate.boundDivisionId(TeamMembershipChangeGate.SOURCE_JOIN, application.getId());
+        if (divisionId == null) {
+            resp.setDivisionName("待核实");
+            return;
+        }
+        resp.setDivisionId(toStringId(divisionId));
+        BasketDivision division = divisionDao.selectById(divisionId);
         if (division == null || !Objects.equals(NOT_DELETED, division.getIsDelete())) {
             resp.setDivisionName("赛事信息不可用");
             return;

@@ -3,6 +3,7 @@ package com.zhs.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketPlayerRankDao;
 import com.zhs.dao.BasketTeamDao;
 import com.zhs.dao.BasketTeamMemberDao;
@@ -66,6 +67,8 @@ import java.util.stream.Collectors;
 public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService {
 
     @Resource
+    private BasketPlayerProfileDao playerProfileDao;
+    @Resource
     private BasketV4MatchPlayerStatDao matchPlayerStatDao;
     @Resource
     private BasketV4MatchDao matchDao;
@@ -103,18 +106,37 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
     @Override
     public PublicPlayerDetailVo getPlayer(Long playerId) {
         return publicSupport.cacheGetOrLoad("player:detail:" + playerId,
-                () -> loadPlayerUncached(playerId),
+                () -> loadPlayerUncached(playerId, false),
                 ignored -> publicSupport.slowTtlSeconds());
     }
 
-    private PublicPlayerDetailVo loadPlayerUncached(Long playerId) {
+    @Override
+    public PublicPlayerDetailVo getOwnPlayer(Long memberId) {
+        return loadPlayerUncached(requireOwnPlayer(memberId).getId(), true);
+    }
+
+    private BasketPlayerProfile requireOwnPlayer(Long memberId) {
+        if (memberId == null) {
+            throw new ServiceException("请先登录");
+        }
+        BasketPlayerProfile player = playerProfileDao.selectOne(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .eq(BasketPlayerProfile::getMemberId, memberId)
+                .eq(BasketPlayerProfile::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .last("limit 1"));
+        if (player == null) {
+            throw new ServiceException("当前账号未关联认证球员");
+        }
+        return player;
+    }
+
+    private PublicPlayerDetailVo loadPlayerUncached(Long playerId, boolean ownerView) {
         BasketPlayerProfile player = publicSupport.requirePlayer(playerId);
         PublicPlayerDetailVo vo = new PublicPlayerDetailVo();
         vo.setPlayerId(player.getId());
         vo.setPlayerNo(player.getPlayerNo());
         boolean visible = publicSupport.isPlayerPubliclyVisible(player);
         vo.setProfilePublic(visible);
-        if (!visible) {
+        if (!ownerView && !visible) {
             vo.setDisplayName(publicSupport.resolveDisplayName(player));
             vo.setPrivacyMessage("该球员资料未公开");
             return vo;
@@ -326,13 +348,18 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
     @Override
     public List<PublicPlayerSeasonStatVo> listSeasonStat(Long playerId, Long seasonId) {
         return publicSupport.cacheGetOrLoad("player:season-stat:" + playerId + ":" + (seasonId == null ? "-" : seasonId),
-                () -> loadSeasonStatUncached(playerId, seasonId),
+                () -> loadSeasonStatUncached(playerId, seasonId, false),
                 ignored -> publicSupport.liveTtlSeconds());
     }
 
-    private List<PublicPlayerSeasonStatVo> loadSeasonStatUncached(Long playerId, Long seasonId) {
+    @Override
+    public List<PublicPlayerSeasonStatVo> listOwnSeasonStat(Long memberId, Long seasonId) {
+        return loadSeasonStatUncached(requireOwnPlayer(memberId).getId(), seasonId, true);
+    }
+
+    private List<PublicPlayerSeasonStatVo> loadSeasonStatUncached(Long playerId, Long seasonId, boolean ownerView) {
         BasketPlayerProfile player = publicSupport.requirePlayer(playerId);
-        if (!publicSupport.isPlayerPubliclyVisible(player) || !publicSupport.canShowMatchData(player)) {
+        if (!ownerView && (!publicSupport.isPlayerPubliclyVisible(player) || !publicSupport.canShowMatchData(player))) {
             return Collections.emptyList();
         }
         if (seasonId != null) {
@@ -423,6 +450,8 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             if (division != null) {
                 vo.setDivisionId(division.getId());
                 vo.setDivisionName(division.getDivisionName());
+                vo.setDivisionStatus(division.getDivisionStatus());
+                vo.setMatchEndTime(division.getMatchEndTime());
                 vo.setPlatformCode(division.getPlatformCode());
                 vo.setGameMode(division.getGameMode());
             } else {
@@ -695,6 +724,11 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             return publicSupport.emptyPage(currentPage, pageSize);
         }
         return honorSupport.pageByPlayerCareer(playerId, currentPage, pageSize);
+    }
+
+    @Override
+    public IPage<PublicHonorItemResp> pageOwnHonors(Long memberId, Integer currentPage, Integer pageSize) {
+        return honorSupport.pageByPlayerCareer(requireOwnPlayer(memberId).getId(), currentPage, pageSize);
     }
 
     private Date latestSnapshot(Long seasonId, String rankType) {

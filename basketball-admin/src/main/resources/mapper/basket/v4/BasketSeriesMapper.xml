@@ -11,6 +11,7 @@
         <result property="iconFileId" column="icon_file_id" />
         <result property="coverFileId" column="cover_file_id" />
         <result property="bannerFileId" column="banner_file_id" />
+        <result property="honorIconUrl" column="honor_icon_url" />
         <result property="sortOrder" column="sort_order" />
         <result property="enabled" column="enabled" />
         <result property="createTime" column="create_time" />
@@ -60,6 +61,19 @@
     <update id="updateEnabled">
         update basket_series
         set enabled = #{enabled}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <select id="selectHonorIconList" resultMap="BasketSeriesResult">
+        select id, series_code, series_name, honor_icon_url, enabled, sort_order
+        from basket_series
+        where is_delete = 0
+        order by sort_order asc, id asc
+    </select>
+
+    <update id="updateHonorIconUrl">
+        update basket_series
+        set honor_icon_url = #{honorIconUrl}, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
 

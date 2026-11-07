@@ -56,6 +56,8 @@ public class V4MyMatchResp {
     private Integer homeScore;
     private Integer awayScore;
     private Long winnerEventTeamId;
+    private String divisionStatus;
+    private Integer myCaptain;
 
     /** BO3/BO5 系列赛 ID（与赛事系列 seriesId 区分） */
     private Long matchSeriesId;

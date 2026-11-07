@@ -1,9 +1,9 @@
 import type { Router } from 'vue-router'
 
-export type PlayerDetailTab = 'overview' | 'matches' | 'data' | 'career'
+export type PlayerDetailTab = 'overview' | 'matches' | 'data' | 'honors' | 'career'
 export type PlayerDataMode = 'career' | 'season'
 
-const VALID_TABS: PlayerDetailTab[] = ['overview', 'matches', 'data', 'career']
+const VALID_TABS: PlayerDetailTab[] = ['overview', 'matches', 'data', 'honors', 'career']
 const VALID_DATA_MODES: PlayerDataMode[] = ['career', 'season']
 
 export function normalizePlayerTab(tab: unknown): PlayerDetailTab {

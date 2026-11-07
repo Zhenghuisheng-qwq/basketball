@@ -121,7 +121,9 @@ public class BasketTeamMembershipChangeServiceImpl implements IBasketTeamMembers
         if (change == null) {
             throw new ServiceException("成员变更不存在");
         }
-        lockDivisions(change.getTeamId(), change.getDivisionId());
+        BasketTeam currentTeam = teamMapper.selectById(change.getTeamId());
+        Long currentDivisionId = currentTeam == null ? change.getDivisionId() : currentTeam.getDivisionId();
+        lockDivisions(change.getTeamId(), currentDivisionId);
         teamMapper.lockById(change.getTeamId());
         change = changeMapper.selectByIdForUpdate(id);
         if (change == null || !PENDING_ADMIN.equals(change.getChangeStatus())) {
@@ -134,6 +136,10 @@ public class BasketTeamMembershipChangeServiceImpl implements IBasketTeamMembers
         BasketTeam team = teamMapper.selectById(change.getTeamId());
         if (team == null || !Integer.valueOf(0).equals(team.getIsDelete())) {
             throw new ServiceException("球队不存在");
+        }
+        if (team.getDivisionId() == null || change.getDivisionId() == null
+                || !team.getDivisionId().equals(change.getDivisionId())) {
+            throw new ServiceException("这条变更绑定的不是球队当前赛事，不能直接通过。请在当前赛事重新邀请");
         }
         if (adding) {
             addPermanentMember(team, change);
@@ -239,7 +245,12 @@ public class BasketTeamMembershipChangeServiceImpl implements IBasketTeamMembers
         if (primaryDivisionId != null) {
             divisionIds.add(primaryDivisionId);
         }
+        BasketTeam team = teamMapper.selectById(teamId);
+        Long currentDivisionId = team == null ? null : team.getDivisionId();
         for (BasketRegistration registration : registrationMapper.selectApprovedByTeamId(teamId)) {
+            if (currentDivisionId == null || !currentDivisionId.equals(registration.getDivisionId())) {
+                continue;
+            }
             BasketDivision division = divisionMapper.selectById(registration.getDivisionId());
             if (division == null) {
                 continue;

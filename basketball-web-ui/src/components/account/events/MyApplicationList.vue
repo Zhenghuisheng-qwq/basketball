@@ -1,9 +1,11 @@
 <script setup lang="ts">
+import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import EventStatusBadge from './EventStatusBadge.vue'
 import type { MyApplication } from '@/types/accountEvents'
 
 const { t } = useI18n()
+const router = useRouter()
 
 defineProps<{
   applications: MyApplication[]
@@ -12,6 +14,11 @@ defineProps<{
 const emit = defineEmits<{
   action: [application: MyApplication]
 }>()
+
+function openPublicEvent(item: MyApplication) {
+  if (!item.seasonId) return
+  router.push(`/events/${item.seasonId}`)
+}
 </script>
 
 <template>
@@ -30,6 +37,7 @@ const emit = defineEmits<{
         <div class="my-events-list__meta">
           <span>{{ t('accountEvents.applications.type', { type: item.applicationTypeText }) }}</span>
           <EventStatusBadge :text="item.statusText" :pending="item.pending" />
+          <EventStatusBadge v-if="item.eventStatusText" :text="item.eventStatusText" />
         </div>
         <p v-if="item.statusHint" class="my-events-list__extra">{{ item.statusHint }}</p>
         <p v-else-if="item.invitedTeamCode" class="my-events-list__extra">{{ t('accountEvents.applications.invitedTeam', { code: item.invitedTeamCode }) }}</p>
@@ -45,6 +53,14 @@ const emit = defineEmits<{
           @click="emit('action', item)"
         >
           {{ item.actionText }}
+        </button>
+        <button
+          v-if="item.status === 'APPROVED' && item.seasonId"
+          type="button"
+          class="account-btn-secondary"
+          @click="openPublicEvent(item)"
+        >
+          {{ t('accountEvents.common.viewPublicEvent') }}
         </button>
       </div>
     </article>

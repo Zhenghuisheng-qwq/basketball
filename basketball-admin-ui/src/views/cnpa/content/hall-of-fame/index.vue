@@ -13,6 +13,9 @@
       <el-tab-pane label="球员荣誉" name="player" lazy>
         <PlayerHonorPanel :locked-codes="playerCodes" />
       </el-tab-pane>
+      <el-tab-pane label="荣誉头像" name="icon" lazy>
+        <HonorIconPanel />
+      </el-tab-pane>
       <el-tab-pane label="球队荣誉" name="team" lazy>
         <TeamHonorPanel :locked-codes="teamCodes" />
       </el-tab-pane>
@@ -28,6 +31,7 @@ import { ref } from 'vue'
 import TeamHonorPanel from '../team-honor/index.vue'
 import PlayerHonorPanel from '../player-honor/index.vue'
 import HallOfFameDisplayPanel from './HallOfFameDisplayPanel.vue'
+import HonorIconPanel from './HonorIconPanel.vue'
 
 const activeTab = ref('weekly')
 const weeklyCodes = ['WEEKLY_BEST']

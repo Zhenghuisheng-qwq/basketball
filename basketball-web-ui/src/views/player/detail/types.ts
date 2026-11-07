@@ -72,6 +72,7 @@ export interface PlayerHonor {
   honorDate: string
   honorValue?: string
   honorCode?: string
+  seasonId?: string
   imageUrl: string
   tournamentId?: string
 }

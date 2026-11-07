@@ -11,6 +11,8 @@ public class V4MyRegistrationResp {
     private Long teamId;
     private String seasonTitle;
     private String divisionName;
+    private String divisionStatus;
+    private Date matchEndTime;
     private String platformCode;
     private String teamName;
     private String registrationStatus;

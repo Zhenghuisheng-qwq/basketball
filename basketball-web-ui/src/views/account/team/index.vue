@@ -221,11 +221,17 @@ const canManageCurrentTeam = computed(() =>
 )
 const isCaptainMember = computed(() => teamStore.isCaptainMember)
 const isHistoricalCaptain = computed(() =>
-  Boolean(teamStore.teamDetail?.isCaptain || teamStore.myTeamSummary?.isCaptain)
-  && !canManageCurrentTeam.value,
+  viewingHistory.value
+  && Boolean(teamStore.teamDetail?.isCaptain || teamStore.myTeamSummary?.isCaptain),
+)
+/** 退出球队只给当前赛季里的普通队员。历史队长和已结束赛事不提供退出。 */
+const showLeaveTeam = computed(() =>
+  hasSelectedTeam.value
+  && !viewingHistory.value
+  && !canManageCurrentTeam.value
+  && !isHistoricalCaptain.value,
 )
 const canCreateTeam = computed(() => teamStore.canCreateTeam)
-const canJoinTeam = computed(() => teamStore.canJoinTeam)
 const allGrants = computed(() => teamStore.captainQualifications)
 const captainQual = computed(() => teamStore.captainQualification)
 const teamId = computed(() => selectedTeam.value?.teamId || '')
@@ -332,18 +338,15 @@ const showCaptainGrantPanel = computed(() => {
 })
 
 const availableTabs = computed<TeamTab[]>(() => {
-  const joinableTabs: TeamTab[] = listScope.value === 'current' && canJoinTeam.value ? ['joinableTeams'] : []
   if (listScope.value === 'history') {
-    if (hasSelectedTeam.value) {
-      return ['overview', 'members']
-    }
-    return []
+    return hasSelectedTeam.value ? ['overview', 'members'] : []
   }
   if (hasSelectedTeam.value && !viewingHistory.value) {
+    const accountTabs: TeamTab[] = ['joinableTeams', 'create', 'pendingInvites', 'myApplications']
     if (canManageCurrentTeam.value) {
-      return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration', ...joinableTabs, 'create', 'pendingInvites', 'myApplications']
+      return ['overview', 'profile', 'members', 'invitations', 'applications', 'registration', ...accountTabs]
     }
-    return ['overview', 'members', 'registration', ...joinableTabs, 'create', 'pendingInvites', 'myApplications']
+    return ['overview', 'members', 'registration', ...accountTabs]
   }
   const preTeamTabs: TeamTab[] = ['joinableTeams', 'pendingInvites', 'myApplications', 'create']
   return preTeamTabs
@@ -417,9 +420,8 @@ watch(
 )
 
 watch(availableTabs, (tabs) => {
-  if (!tabs.length) return
   if (!tabs.includes(activeTab.value)) {
-    activeTab.value = tabs[0]
+    activeTab.value = tabs[0] || 'overview'
   }
 }, { immediate: true })
 
@@ -739,7 +741,10 @@ async function refreshTabData(tab: TeamTab) {
     await teamStore.loadMembers(teamId.value, { includeHistory: viewingHistory.value })
   }
   if (tab === 'invitations') {
-    await loadInviteCandidateList()
+    await Promise.all([
+      loadInviteCandidateList(),
+      teamStore.loadHistoricalTeammates(teamId.value),
+    ])
   }
   if (tab === 'applications') await loadJoinAuditList()
   if (tab === 'registration') {
@@ -765,6 +770,10 @@ async function handleLogoUpload(event: Event) {
   }
 }
 
+const showInheritHistory = ref(false)
+const recommendedInheritTeam = computed(() => teamStore.inheritableTeams.find((team) => team.recommended))
+const historicalInheritTeams = computed(() => teamStore.inheritableTeams.filter((team) => !team.recommended))
+
 async function inheritExistingTeam(team: InheritableTeamSummaryDto) {
   if (!createForm.divisionId || !team.teamId || team.canInherit === false) return
   try {
@@ -786,7 +795,7 @@ async function inheritExistingTeam(team: InheritableTeamSummaryDto) {
     if (teamStore.myTeamSummary?.teamId) {
       await teamStore.selectTeam(teamStore.myTeamSummary.teamId)
     }
-    setTab('overview')
+    setTab('invitations')
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : t('accountTeam.create.inheritFailed'))
   }
@@ -883,9 +892,12 @@ function openInvitation(item: TeamInvitationItemDto) {
 async function respondInvitation(accept: boolean) {
   if (!activeInvitation.value) return
   try {
-    await teamStore.respondInvitationAction(activeInvitation.value.invitationId, accept)
+    const result = await teamStore.respondInvitationAction(activeInvitation.value.invitationId, accept)
     showInvitationDialog.value = false
-    ElMessage.success(accept ? t('accountTeam.invite.accepted') : t('accountTeam.invite.declined'))
+    const awaitingAudit = accept && result?.invitationStatus === 5
+    ElMessage.success(accept
+      ? t(awaitingAudit ? 'accountTeam.invite.awaitingAudit' : 'accountTeam.invite.joinedRoster')
+      : t('accountTeam.invite.declined'))
     await bootstrap()
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : t('accountTeam.invite.actionFailed'))
@@ -926,7 +938,10 @@ async function confirmSendInvite() {
     })
     ElMessage.success(t('accountTeam.invite.sent'))
     closeInviteConfirmModal()
-    const refreshTasks = [loadInviteCandidateList(inviteCandidatePage.pageNum)]
+    const refreshTasks = [
+      loadInviteCandidateList(inviteCandidatePage.pageNum),
+      teamStore.loadHistoricalTeammates(teamId.value),
+    ]
     if (showHistoryInviteDialog.value) {
       historyInvitePage.pageNum = 1
       refreshTasks.push(loadHistoryInviteList(1))
@@ -1404,6 +1419,7 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
         </button>
       </nav>
 
+      <template v-if="availableTabs.includes(activeTab)">
       <template v-if="activeTab === 'pendingInvites'">
         <AccountPanel :title="t('accountTeam.tabs.pendingInvites')">
           <template v-if="teamStore.myInvitations.length">
@@ -1546,9 +1562,45 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
           <p v-else-if="!teamStore.inheritableTeams.length" class="team-tip">
             {{ t('accountTeam.create.inheritEmpty') }}
           </p>
-          <div v-else class="team-card-list">
+          <div v-else>
+            <p v-if="recommendedInheritTeam" class="team-tip">{{ t('accountTeam.create.inheritRecommended') }}</p>
+            <div v-if="recommendedInheritTeam" class="team-card-list">
+            <article class="team-card">
+              <div class="team-inherit-main">
+                <AccountTeamLogo
+                  :logo-url="recommendedInheritTeam.logoUrl"
+                  :short-name="recommendedInheritTeam.shortName"
+                  :team-name="recommendedInheritTeam.teamName"
+                  size="sm"
+                />
+                <div>
+                  <p><strong>{{ recommendedInheritTeam.teamName }}</strong> <span v-if="recommendedInheritTeam.teamNo">{{ recommendedInheritTeam.teamNo }}</span></p>
+                  <p>{{ recommendedInheritTeam.previousEventName || t('accountTeam.common.event') }}</p>
+                  <p>
+                    {{ t('accountTeam.create.inheritMembers', { count: recommendedInheritTeam.currentMemberCount ?? 0 }) }}
+                    · {{ t('accountTeam.create.inheritHonors', { count: recommendedInheritTeam.honorCount ?? 0 }) }}
+                  </p>
+                  <p v-if="recommendedInheritTeam.cannotInheritReason" class="team-inherit-reason">{{ recommendedInheritTeam.cannotInheritReason }}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                class="account-btn-primary"
+                :disabled="teamStore.actionLoading || recommendedInheritTeam.canInherit === false"
+                @click="inheritExistingTeam(recommendedInheritTeam)"
+              >
+                {{ t('accountTeam.create.inheritAction') }}
+              </button>
+            </article>
+            </div>
+            <div v-if="historicalInheritTeams.length" class="team-inherit-history">
+              <button type="button" class="account-btn-secondary" @click="showInheritHistory = !showInheritHistory">
+                {{ showInheritHistory ? t('accountTeam.create.inheritHideHistory') : t('accountTeam.create.inheritShowHistory') }}
+              </button>
+              <p v-if="showInheritHistory || !recommendedInheritTeam" class="team-tip">{{ t('accountTeam.create.inheritHistoryHint') }}</p>
+            <div v-if="showInheritHistory || !recommendedInheritTeam" class="team-card-list">
             <article
-              v-for="team in teamStore.inheritableTeams"
+              v-for="team in historicalInheritTeams"
               :key="team.teamId"
               class="team-card"
             >
@@ -1578,6 +1630,8 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
                 {{ t('accountTeam.create.inheritAction') }}
               </button>
             </article>
+            </div>
+            </div>
           </div>
         </AccountPanel>
 
@@ -1696,7 +1750,7 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             <div class="account-field-row"><dt>{{ t('accountTeam.overview.intro') }}</dt><dd>{{ teamDetail.description || t('accountTeam.common.empty') }}</dd></div>
           </dl>
           <AccountEmptyState v-else :message="t('accountTeam.overview.loading')" />
-          <div v-if="!canManageCurrentTeam && !viewingHistory" class="team-manage-actions">
+          <div v-if="showLeaveTeam" class="team-manage-actions">
             <button type="button" class="account-btn-secondary" @click="handleLeaveTeam">{{ t('accountTeam.overview.leave') }}</button>
           </div>
         </AccountPanel>
@@ -1727,6 +1781,63 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
       </template>
 
       <template v-else-if="activeTab === 'invitations'">
+        <AccountPanel :title="t('accountTeam.invite.historicalTitle')">
+          <p class="team-tip">{{ t('accountTeam.invite.historicalHint') }}</p>
+          <p v-if="teamStore.historicalTeammatesLoading" class="team-tip">{{ t('accountTeam.common.loading') }}</p>
+          <div v-else-if="teamStore.historicalTeammates.length" class="team-table-wrap">
+            <table class="team-table team-table--invite">
+              <thead>
+                <tr>
+                  <th>{{ t('accountTeam.invite.nickname') }}</th>
+                  <th>{{ t('accountTeam.invite.playerNo') }}</th>
+                  <th>{{ t('accountTeam.invite.certStatus') }}</th>
+                  <th>{{ t('accountTeam.invite.currentTeam') }}</th>
+                  <th>{{ t('accountTeam.invite.platformGameId') }}</th>
+                  <th class="team-table__actions-col">{{ t('accountTeam.common.actions') }}</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="player in teamStore.historicalTeammates"
+                  :key="player.memberId || player.playerId"
+                  :class="{ 'team-table__row--disabled': player.canInvite === false }"
+                >
+                  <td>
+                    <div class="team-invite-player-cell">
+                      <PlayerAvatar
+                        :name="formatCandidateNickname(player)"
+                        :avatar-url="resolveInvitePlayerAvatarUrl(player.avatar)"
+                        :player-no="player.playerNo"
+                        :player-id="player.playerId"
+                        size="sm"
+                      />
+                      <span>{{ formatCandidateNickname(player) }}</span>
+                    </div>
+                  </td>
+                  <td>{{ player.playerNo || '-' }}</td>
+                  <td>{{ player.certificationStatusText || formatPlayerCertStatus(player.certificationStatus) }}</td>
+                  <td>{{ player.currentTeamStatusText || t('accountTeam.invite.notJoinedThisEvent') }}</td>
+                  <td>{{ formatCandidatePlatformId(player) }}</td>
+                  <td class="team-table__actions-col">
+                    <button
+                      type="button"
+                      class="account-btn-primary team-table__btn team-table__btn--invite"
+                      :disabled="player.canInvite === false"
+                      :title="player.cannotInviteReason || undefined"
+                      @click="openInviteConfirmModal(player)"
+                    >
+                      {{ t('accountTeam.invite.invite') }}
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <AccountEmptyState
+            v-else-if="!teamStore.historicalTeammatesLoading"
+            :message="t('accountTeam.invite.historicalEmpty')"
+          />
+        </AccountPanel>
         <AccountPanel :title="t('accountTeam.invite.candidatesTitle')">
           <template #extra>
             <button type="button" class="account-btn-secondary team-invite-history-btn" @click="openHistoryInviteModal">
@@ -1945,6 +2056,7 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
           />
           <AccountEmptyState v-if="!teamStore.registrations.length" :message="t('accountTeam.registration.recordsEmpty')" />
         </AccountPanel>
+      </template>
       </template>
     </template>
 

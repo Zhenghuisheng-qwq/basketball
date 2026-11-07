@@ -49,6 +49,12 @@
             m.home_score as homeScore,
             m.away_score as awayScore,
             m.winner_event_team_id as winnerEventTeamId,
+            d.division_status as divisionStatus,
+            case
+                when ep_home.is_captain = 1 or et_cap_home.id is not null then 1
+                when ep_away.is_captain = 1 or et_cap_away.id is not null then 1
+                else 0
+            end as myCaptain,
             ms.id as matchSeriesId,
             ms.series_code as matchSeriesCode,
             m.series_game_no as seriesGameNo,

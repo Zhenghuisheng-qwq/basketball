@@ -324,6 +324,18 @@ const router = createRouter({
 
         {
 
+          path: 'performance',
+
+          name: 'AccountPerformance',
+
+          component: () => import('@/views/account/performance/index.vue'),
+
+          meta: { title: '我的表现' },
+
+        },
+
+        {
+
           path: 'profile',
 
           name: 'AccountProfile',

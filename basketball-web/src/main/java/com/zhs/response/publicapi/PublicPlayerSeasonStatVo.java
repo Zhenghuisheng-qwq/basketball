@@ -23,6 +23,8 @@ public class PublicPlayerSeasonStatVo implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long divisionId;
     private String divisionName;
+    private String divisionStatus;
+    private java.util.Date matchEndTime;
     private String platformCode;
     private String gameMode;
 

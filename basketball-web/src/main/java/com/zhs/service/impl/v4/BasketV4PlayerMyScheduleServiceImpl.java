@@ -46,6 +46,9 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
 
         V4MyScheduleSummaryResp summary = buildSummary(allRows);
         List<V4MyScheduleResp> items = filterAndSortItems(allRows, includeFinished);
+        if (Boolean.TRUE.equals(onlyPendingSubmit)) {
+            items.removeIf(row -> !Boolean.TRUE.equals(row.getCanSubmit()));
+        }
         V4MySchedulePageResp page = new V4MySchedulePageResp();
         page.setSummary(summary);
         page.setItems(items);
@@ -102,18 +105,24 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
         int reviewing = 0;
         int finished = 0;
         for (V4MyScheduleResp row : rows) {
-            if (MatchStatusEnum.FINISHED.getCode().equals(row.getMatchStatus())) {
+            if (isNotRequired(row)) {
+                continue;
+            }
+            if (MatchStatusEnum.FINISHED.getCode().equals(row.getMatchStatus())
+                    || MatchStatusEnum.FORFEITED.getCode().equals(row.getMatchStatus())) {
                 finished++;
             }
             if (isUpcoming(row)) {
                 upcoming++;
             }
-            String myStatus = row.getMySubmissionStatus();
-            if (MatchStatusEnum.FINISHED.getCode().equals(row.getMatchStatus())
-                    && (myStatus == null || SubmissionStatusEnum.DRAFT.getCode().equals(myStatus))) {
+            if (Boolean.TRUE.equals(row.getCanSubmit())) {
                 pendingSubmit++;
             }
-            if (SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(myStatus)) {
+            String myStatus = row.getMySubmissionStatus();
+            String opponentStatus = row.getOpponentSubmissionStatus();
+            if (!approved(myStatus) && !approved(opponentStatus)
+                    && (SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(myStatus)
+                    || SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(opponentStatus))) {
                 reviewing++;
             }
         }
@@ -121,7 +130,7 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
         summary.setPendingSubmitCount(pendingSubmit);
         summary.setReviewingCount(reviewing);
         summary.setFinishedCount(finished);
-        summary.setTotalCount(rows.size());
+        summary.setTotalCount(upcoming + finished);
         return summary;
     }
 
@@ -215,68 +224,83 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
         }
 
         String myStatus = row.getMySubmissionStatus();
-        boolean hasSubmission = myStatus != null;
+        String opponentStatus = row.getOpponentSubmissionStatus();
         boolean matchEnded = MatchStatusEnum.FINISHED.getCode().equals(row.getMatchStatus())
                 || MatchStatusEnum.FORFEITED.getCode().equals(row.getMatchStatus());
         boolean matchPlaying = MatchStatusEnum.PLAYING.getCode().equals(row.getMatchStatus());
+        boolean sharedApproved = approved(myStatus) || approved(opponentStatus);
+        boolean sharedReviewing = !sharedApproved && (SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(myStatus)
+                || SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(opponentStatus));
+        boolean winnerCaptain = Integer.valueOf(1).equals(row.getMyCaptain())
+                && row.getWinnerEventTeamId() != null
+                && row.getWinnerEventTeamId().equals(row.getMyEventTeamId());
+        boolean eventEnded = "FINISHED".equals(row.getDivisionStatus()) || "ARCHIVED".equals(row.getDivisionStatus());
 
-        if (SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(myStatus)) {
+        if (sharedApproved) {
             row.setCanViewSubmission(true);
             row.setUserActionType("VIEW_SUBMISSION");
-            row.setUserActionText("查看提交");
-            row.setCannotSubmitReason("本方审核中");
+            row.setUserActionText("数据已发布");
+            row.setCannotSubmitReason("比赛数据已发布");
             return;
         }
-        if (SubmissionStatusEnum.APPROVED.getCode().equals(myStatus)) {
+        if (sharedReviewing) {
             row.setCanViewSubmission(true);
             row.setUserActionType("VIEW_SUBMISSION");
-            row.setUserActionText("查看比赛数据");
-            row.setCannotSubmitReason("本方已通过");
+            row.setUserActionText("审核中");
+            row.setCannotSubmitReason("数据审核中，不需要重复提交");
             return;
         }
-        if (SubmissionStatusEnum.REJECTED.getCode().equals(myStatus)) {
-            row.setCanSubmit(true);
-            row.setCanSubmitData(true);
-            row.setCanEditSubmission(true);
-            row.setCanViewSubmission(true);
-            row.setUserActionType("RESUBMIT");
-            row.setUserActionText("修改并重新提交");
-            return;
-        }
-
         if (matchPlaying) {
             row.setUserActionType("VIEW_DETAIL");
             row.setUserActionText("查看比赛详情");
             row.setCannotSubmitReason("比赛进行中，结束后提交数据");
             return;
         }
-
         if (!matchEnded) {
             row.setUserActionType("VIEW_DETAIL");
             row.setUserActionText("查看比赛详情");
             row.setCannotSubmitReason("比赛尚未结束");
             return;
         }
-
-        if (!hasSubmission || SubmissionStatusEnum.DRAFT.getCode().equals(myStatus)) {
+        if (winnerCaptain && (myStatus == null
+                || SubmissionStatusEnum.DRAFT.getCode().equals(myStatus)
+                || SubmissionStatusEnum.REJECTED.getCode().equals(myStatus))) {
             row.setCanSubmit(true);
             row.setCanSubmitData(true);
-            row.setUserActionType("SUBMIT");
-            row.setUserActionText(SubmissionStatusEnum.DRAFT.getCode().equals(myStatus) ? "继续填写" : "提交比赛数据");
+            row.setCanEditSubmission(SubmissionStatusEnum.REJECTED.getCode().equals(myStatus)
+                    || SubmissionStatusEnum.DRAFT.getCode().equals(myStatus));
+            row.setCanViewSubmission(myStatus != null);
+            row.setUserActionType(SubmissionStatusEnum.REJECTED.getCode().equals(myStatus) ? "RESUBMIT" : "SUBMIT");
+            row.setUserActionText(SubmissionStatusEnum.REJECTED.getCode().equals(myStatus)
+                    ? "修改并重新提交"
+                    : (SubmissionStatusEnum.DRAFT.getCode().equals(myStatus) ? "继续填写" : "提交比赛数据"));
             return;
         }
+        row.setUserActionType("VIEW_DETAIL");
+        row.setUserActionText(eventEnded ? "待管理员处理" : "待胜方提交");
+        row.setCannotSubmitReason(eventEnded ? "当前没有补交权限" : "由胜方队长提交这一份正式数据");
+    }
 
-        row.setCanViewSubmission(hasSubmission);
-        row.setUserActionType("VIEW_SUBMISSION");
-        row.setUserActionText("查看提交详情");
+    private boolean approved(String status) {
+        return SubmissionStatusEnum.APPROVED.getCode().equals(status);
+    }
+
+    private boolean isNotRequired(V4MyScheduleResp row) {
+        return row != null
+                && row.getMatchSeriesId() != null
+                && "COMPLETED".equals(row.getMatchSeriesStatus())
+                && !MatchStatusEnum.FINISHED.getCode().equals(row.getMatchStatus())
+                && !MatchStatusEnum.FORFEITED.getCode().equals(row.getMatchStatus())
+                && !MatchStatusEnum.CANCELLED.getCode().equals(row.getMatchStatus());
     }
 
     private boolean isUpcoming(V4MyScheduleResp row) {
-        if (row == null) {
+        if (row == null || isNotRequired(row)) {
             return false;
         }
         String status = row.getMatchStatus();
         return !MatchStatusEnum.FINISHED.getCode().equals(status)
+                && !MatchStatusEnum.FORFEITED.getCode().equals(status)
                 && !MatchStatusEnum.CANCELLED.getCode().equals(status);
     }
 

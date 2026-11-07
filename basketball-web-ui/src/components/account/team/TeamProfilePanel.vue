@@ -283,9 +283,21 @@ async function handleLogoUpload(event: Event) {
   }
 }
 
+function publicStatusChanged() {
+  return profileForm.publicStatus !== (officialProfile.value?.publicStatus ?? 1)
+}
+
+function auditedProfileChanged() {
+  const official = officialProfile.value
+  if (!official) return false
+  if (profileForm.teamName.trim() !== (official.teamName || '').trim()) return true
+  if (profileForm.shortName.trim() !== (official.shortName || '').trim()) return true
+  if ((profileForm.description || '').trim() !== (official.description || '').trim()) return true
+  return Boolean(profileLogoFileId.value)
+}
+
 async function savePublicStatusIfNeeded() {
-  if (!props.teamId || !officialProfile.value) return
-  if (profileForm.publicStatus === officialProfile.value.publicStatus) return
+  if (!props.teamId || !officialProfile.value || !publicStatusChanged()) return
   await updateTeam(props.teamId, { publicStatus: profileForm.publicStatus })
 }
 
@@ -309,6 +321,16 @@ async function submitAuditProfile() {
   actionLoading.value = true
   try {
     await savePublicStatusIfNeeded()
+    if (!auditedProfileChanged()) {
+      if (publicStatusChanged()) {
+        ElMessage.success(t('accountTeam.profile.publicSaved'))
+        showEditDialog.value = false
+        emit('refreshed')
+      } else {
+        ElMessage.warning(t('accountTeam.profile.unchanged'))
+      }
+      return
+    }
     await submitTeamProfileChange(props.teamId, {
       teamName: profileForm.teamName.trim(),
       teamShortName: profileForm.shortName.trim(),

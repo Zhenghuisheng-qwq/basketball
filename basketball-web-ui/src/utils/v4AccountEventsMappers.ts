@@ -234,7 +234,10 @@ export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): Availa
   const canView = Boolean(item.canViewRegistration) || Boolean(item.myRegistrationId || item.myRegistrationStatus)
   const status = (item.myRegistrationStatus || '').toUpperCase()
   const windowCode = (item.registrationWindowStatus || '').toUpperCase()
-  const windowLabel = windowCode === 'NOT_STARTED'
+  const divisionEnded = ['FINISHED', 'ARCHIVED'].includes((item.divisionStatus || '').toUpperCase())
+  const windowLabel = divisionEnded
+    ? translate('accountEvents.common.finished')
+    : windowCode === 'NOT_STARTED'
     ? translate('accountEvents.common.registrationNotStarted')
     : windowCode === 'CLOSED'
       ? translate('accountEvents.common.registrationClosed')
@@ -268,7 +271,7 @@ export function mapV4DivisionToAvailableEvent(item: V4AvailableDivision): Availa
   const reasonFromCode = item.cannotRegisterReasonCode
     ? teamRegistrationEntryActionText(item.cannotRegisterReasonCode, item.cannotRegisterReason)
     : undefined
-  const disabledReason = canRegister
+  const disabledReason = canRegister || status === 'APPROVED' || divisionEnded
     ? undefined
     : (reasonFromCode
       || item.cannotRegisterReason
@@ -350,15 +353,32 @@ export function mapV4RegistrationToApplication(item: V4MyRegistration): MyApplic
     applicationTypeText: translate('accountEvents.common.teamRegistration'),
     status,
     statusText: v4RegistrationStatusLabel(status, item.participationRole),
+    eventStatusText: registrationEventStatus(item),
     statusHint,
     submitTime: formatDateTimeShort(item.submitTime),
     actionText,
     actionType,
     pending,
     showAction,
+    seasonId: item.seasonId != null ? String(item.seasonId) : undefined,
     platformGroupLabel: item.divisionName,
     confirmedCount: item.currentEligibleCount ?? item.lineupCount,
   }
+}
+
+function registrationEventStatus(item: V4MyRegistration): string | undefined {
+  const status = (item.divisionStatus || '').toUpperCase()
+  const endAt = item.matchEndTime ? Date.parse(item.matchEndTime) : Number.NaN
+  const ended = status === 'FINISHED' || status === 'ARCHIVED' || (Number.isFinite(endAt) && endAt < Date.now())
+  if (!status && !ended) return undefined
+  return eventLifecycleText(item.divisionStatus, ended)
+}
+
+function eventLifecycleText(status: string | null | undefined, ended: boolean): string {
+  if (ended) return translate('accountEvents.common.finished')
+  const code = (status || '').toUpperCase()
+  if (code === 'REGISTRATION_CLOSED') return translate('accountEvents.common.inProgress')
+  return divisionStatusText(status)
 }
 
 function divisionStatusText(status?: string | null): string {
@@ -375,20 +395,17 @@ function wallClockText(value?: string | null): string {
 export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
   const isCaptain = item.roleInTeam === 'CAPTAIN'
   const divisionStatus = (item.divisionStatus || '').toUpperCase()
-  const showRosterChange = isCaptain
-    && !item.legacyEvent
-    && divisionStatus !== 'FINISHED'
-    && divisionStatus !== 'ARCHIVED'
+  const ended = Boolean(item.eventEnded) || divisionStatus === 'FINISHED' || divisionStatus === 'ARCHIVED'
+  const showRosterChange = isCaptain && !item.legacyEvent && !ended
   const pendingCount = item.pendingSubmissionCount ?? 0
-  const stageLabel = item.legacyEvent
-    ? translate('accountEvents.common.historical')
+  const stageLabel = ended
+    ? undefined
     : [item.currentStageName, item.currentGroupName].filter(Boolean).join(' · ') || undefined
-  const rankLabel = item.standingRank != null
-    ? (item.standingPoints != null
-      ? translate('accountEvents.common.rankPoints', { rank: item.standingRank, points: item.standingPoints })
-      : translate('accountEvents.common.rank', { rank: item.standingRank }))
-    : undefined
-  const qualLabel = item.qualificationStatusName && item.qualificationStatusName !== item.qualificationStatus
+  const formatLabel = formatCodeLabel(item.formatCode)
+  const rankLabel = ended ? finalResultLabel(item) : liveRankLabel(item)
+  const qualLabel = ended
+    ? undefined
+    : item.qualificationStatusName && item.qualificationStatusName !== item.qualificationStatus
     ? item.qualificationStatusName
     : item.qualificationStatus === 'CONFIRMED'
       ? translate('accountEvents.common.qualified')
@@ -405,16 +422,17 @@ export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
     participationTypeText: translate('accountEvents.common.teamEntry'),
     identityType: item.roleInTeam || 'PLAYER',
     identityText: isCaptain ? translate('accountEvents.common.captainRole') : translate('accountEvents.common.memberRole'),
-    status: item.eventTeamStatus || '',
+    status: ended ? 'FINISHED' : (item.eventTeamStatus || ''),
     statusText: item.legacyEvent
       ? translate('accountEvents.common.historical')
-      : divisionStatusText(item.divisionStatus),
+      : eventLifecycleText(item.divisionStatus, ended),
     pendingTaskCount: pendingCount,
     pendingTaskText: pendingCount > 0 ? translate('accountEvents.common.pendingMatchData', { count: pendingCount }) : undefined,
     stageSummary: stageLabel,
+    formatSummary: formatLabel,
     rankSummary: rankLabel,
     qualificationSummary: qualLabel,
-    nextMatchSummary: item.nextMatchTime ? translate('accountEvents.common.nextMatch', { time: wallClockText(item.nextMatchTime) }) : undefined,
+    nextMatchSummary: !ended && item.nextMatchTime ? translate('accountEvents.common.nextMatch', { time: wallClockText(item.nextMatchTime) }) : undefined,
     latestMatchSummary: item.latestMatchResult ? translate('accountEvents.common.latestMatch', { result: item.latestMatchResult }) : undefined,
     actionText: translate('accountEvents.common.viewSchedule'),
     actionType: 'VIEW_EVENT_RELATION',
@@ -423,10 +441,34 @@ export function mapV4EventToParticipating(item: V4MyEvent): ParticipatingEvent {
     rosterLocked: true,
     showRosterChange,
     rosterChangeText: translate('accountEvents.registration.changeRoster'),
-    showMatchDataEntry: pendingCount > 0 || (item.matchCount ?? 0) > 0,
-    matchDataActionText: pendingCount > 0 ? translate('accountEvents.common.submitMatchData') : translate('accountEvents.common.viewMatchData'),
-    matchDataActionRoute: `/account/my-events?tab=schedule&divisionId=${item.divisionId}${pendingCount > 0 ? '&onlyPendingSubmit=1' : ''}`,
-    matchDataActionType: pendingCount > 0 ? 'SUBMIT_MATCH_DATA' : 'VIEW_MATCH_DATA_LIST',
+    showMatchDataEntry: pendingCount > 0,
+    matchDataActionText: translate('accountEvents.common.submitMatchData'),
+    matchDataActionRoute: `/account/my-events?tab=schedule&divisionId=${item.divisionId}&onlyPendingSubmit=1`,
+    matchDataActionType: 'SUBMIT_MATCH_DATA',
     matchDataPrimary: pendingCount > 0,
   }
+}
+
+function formatCodeLabel(code?: string | null): string | undefined {
+  if (code === 'ELIMINATION') return translate('accountEvents.common.elimination')
+  if (code === 'ROUND_ROBIN') return translate('accountEvents.common.roundRobin')
+  if (code === 'GROUP') return translate('accountEvents.common.groupStage')
+  return undefined
+}
+
+function finalResultLabel(item: V4MyEvent): string | undefined {
+  let result = ''
+  if (item.finalResultCode === 'HONOR' && item.finalResultLabel) result = item.finalResultLabel
+  else if (item.finalResultCode === 'CHAMPION') result = translate('accountEvents.common.champion')
+  else if (item.finalResultCode === 'RANK' && item.finalResultRank != null) {
+    result = translate('accountEvents.common.rank', { rank: item.finalResultRank })
+  } else if (item.finalResultCode === 'PENDING') result = translate('accountEvents.common.resultPending')
+  return result ? translate('accountEvents.joined.finalResult', { result }) : undefined
+}
+
+function liveRankLabel(item: V4MyEvent): string | undefined {
+  if (item.standingRank == null || item.pointsApplicable === false) return undefined
+  return item.standingPoints != null
+    ? translate('accountEvents.common.rankPoints', { rank: item.standingRank, points: item.standingPoints })
+    : translate('accountEvents.common.rank', { rank: item.standingRank })
 }

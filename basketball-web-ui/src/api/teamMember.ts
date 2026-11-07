@@ -1,6 +1,7 @@
 import request from '@/api/request'
 import type { ApiResult, PageResult } from '@/api/types/common'
 import type {
+  CandidatePlayerItemDto,
   TeamMemberDetailDto,
   TeamMemberItemDto,
   TeamMemberUpdateReq,
@@ -41,6 +42,12 @@ export function removeTeamMember(teamId: string, teamMemberId: string) {
 
 export function leaveTeam(teamId: string) {
   return request.post<any, ApiResult<null>>(`/basket/team/${teamId}/leave`)
+}
+
+export function getHistoricalTeammateList(teamId: string) {
+  return request.get<any, ApiResult<CandidatePlayerItemDto[]>>(
+    `/basket/team/${teamId}/historical-teammate/list`,
+  )
 }
 
 export function getCandidatePlayerPage(

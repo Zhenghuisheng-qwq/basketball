@@ -140,6 +140,9 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
             resp.setSubmissionStatus(SubmissionStatusEnum.DRAFT.getCode());
             resp.setSubmissionMode(FullMatchSubmissionRules.MODE_WINNER_FULL_MATCH);
         }
+        String blockReason = writeBlockReason(match, submitEventTeamId, player.getId(), memberId);
+        resp.setCanSubmit(blockReason == null);
+        resp.setCannotSubmitReason(blockReason);
         return resp;
     }
 
@@ -164,6 +167,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         BasketV4Match match = requirePublishedMatch(req.getMatchId());
         divisionDao.lockById(match.getDivisionId());
         SubmitContext ctx = requireSubmitContext(match, req.getSubmitEventTeamId(), player.getId(), memberId);
+        assertWritable(match, req.getSubmitEventTeamId(), player.getId(), memberId);
 
         BasketMatchSubmission submission = findEditableSubmission(req.getMatchId(), req.getSubmitEventTeamId());
         Date now = new Date();
@@ -218,6 +222,9 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         if (!memberId.equals(submission.getSubmitMemberId())) {
             throw new ServiceException("无权提交该记录");
         }
+        BasketPlayerProfile player = requirePlayerByMemberId(memberId);
+        BasketV4Match match = requirePublishedMatch(submission.getMatchId());
+        assertWritable(match, submission.getSubmitEventTeamId(), player.getId(), memberId);
         divisionDao.lockById(submission.getDivisionId());
         if (!SubmissionStatusEnum.DRAFT.getCode().equals(submission.getSubmissionStatus())
                 && !SubmissionStatusEnum.REJECTED.getCode().equals(submission.getSubmissionStatus())) {
@@ -230,7 +237,6 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
             throw new ServiceException("系列赛对局请通过系列赛工作台提交整个系列赛审核");
         }
         if (fullMatchSubmissionSupport.isFullMatch(submission)) {
-            BasketV4Match match = requirePublishedMatch(submission.getMatchId());
             fullMatchSubmissionSupport.validatePersistedComplete(submission, match, "本场");
         }
         Date now = new Date();
@@ -261,6 +267,7 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         divisionDao.lockById(old.getDivisionId());
         BasketV4Match match = requirePublishedMatch(old.getMatchId());
         SubmitContext ctx = requireSubmitContext(match, old.getSubmitEventTeamId(), player.getId(), memberId);
+        assertWritable(match, old.getSubmitEventTeamId(), player.getId(), memberId);
         Date now = new Date();
         int newVersion = (old.getVersionNo() != null ? old.getVersionNo() : 0) + 1;
 
@@ -337,6 +344,75 @@ public class BasketV4PlayerMatchSubmissionServiceImpl implements IBasketV4Player
         row.setCanSubmit(true);
         row.setCanSubmitData(true);
         row.setCannotSubmitReason(null);
+    }
+
+    private void assertWritable(BasketV4Match match, Long submitEventTeamId, Long playerId, Long memberId) {
+        String reason = writeBlockReason(match, submitEventTeamId, playerId, memberId);
+        if (reason != null) {
+            throw new ServiceException(reason);
+        }
+    }
+
+    private String writeBlockReason(BasketV4Match match, Long submitEventTeamId, Long playerId, Long memberId) {
+        if (match == null || submitEventTeamId == null) {
+            return "比赛不存在";
+        }
+        if (!MatchPublishStatusEnum.PUBLISHED.getCode().equals(match.getPublishStatus())) {
+            return "比赛未发布";
+        }
+        if (MatchStatusEnum.CANCELLED.getCode().equals(match.getMatchStatus())) {
+            return "比赛已取消";
+        }
+        if (isSeriesGameSkipped(match)) {
+            return "该系列赛已决出胜负，本局无需进行";
+        }
+        boolean played = MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())
+                || MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus());
+        if (!played) {
+            return "比赛尚未结束";
+        }
+        Long opponentId = submitEventTeamId.equals(match.getHomeEventTeamId())
+                ? match.getAwayEventTeamId() : match.getHomeEventTeamId();
+        BasketMatchSubmission mine = findLatestSubmission(match.getId(), submitEventTeamId);
+        BasketMatchSubmission opponent = opponentId == null ? null : findLatestSubmission(match.getId(), opponentId);
+        if (isStatus(mine, SubmissionStatusEnum.APPROVED) || isStatus(opponent, SubmissionStatusEnum.APPROVED)) {
+            return "比赛数据已发布";
+        }
+        if (isStatus(mine, SubmissionStatusEnum.PENDING_REVIEW) || isStatus(opponent, SubmissionStatusEnum.PENDING_REVIEW)) {
+            return "数据审核中，不能重复提交";
+        }
+        if (match.getWinnerEventTeamId() == null
+                || !match.getWinnerEventTeamId().equals(submitEventTeamId)
+                || !isScheduleCaptain(submitEventTeamId, playerId, memberId)) {
+            return "由胜方队长提交这一份正式数据";
+        }
+        return null;
+    }
+
+    private boolean isSeriesGameSkipped(BasketV4Match match) {
+        if (match.getSeriesId() == null) {
+            return false;
+        }
+        BasketMatchSeries series = matchSeriesDao.selectById(match.getSeriesId());
+        if (series == null || !"COMPLETED".equals(series.getSeriesStatus())) {
+            return false;
+        }
+        String status = match.getMatchStatus();
+        return !MatchStatusEnum.FINISHED.getCode().equals(status)
+                && !MatchStatusEnum.FORFEITED.getCode().equals(status)
+                && !MatchStatusEnum.CANCELLED.getCode().equals(status);
+    }
+
+    private boolean isScheduleCaptain(Long eventTeamId, Long playerId, Long memberId) {
+        if (isEventTeamCaptain(eventTeamId, playerId)) {
+            return true;
+        }
+        BasketEventPlayer eventPlayer = findEventPlayer(eventTeamId, playerId, memberId);
+        return eventPlayer != null && Integer.valueOf(1).equals(eventPlayer.getIsCaptain());
+    }
+
+    private boolean isStatus(BasketMatchSubmission submission, SubmissionStatusEnum status) {
+        return submission != null && status.getCode().equals(submission.getSubmissionStatus());
     }
 
     private BasketMatchSubmission findLatestSubmission(Long matchId, Long submitEventTeamId) {

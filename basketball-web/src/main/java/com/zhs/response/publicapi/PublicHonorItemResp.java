@@ -98,6 +98,9 @@ public class PublicHonorItemResp implements Serializable {
     @ApiModelProperty("封面 URL")
     private String coverUrl;
 
+    @ApiModelProperty("赛事荣誉头像 URL")
+    private String seriesHonorIconUrl;
+
     @ApiModelProperty("展示顺序")
     private Integer displayOrder;
 }

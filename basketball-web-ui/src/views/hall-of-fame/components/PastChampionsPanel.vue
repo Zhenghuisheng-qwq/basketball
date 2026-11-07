@@ -11,6 +11,7 @@ import { getV4PublicSeasonList, getV4PublicSeriesList } from '@/api/v4Public'
 import type { PublicHonorItemResp } from '@/api/types/public'
 import type { V4PublicSeasonItem, V4PublicSeriesItem } from '@/api/types/v4Public'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
+import { teamDetailLocation } from '@/utils/eventContext'
 import cnpaShield from '@/assets/icon/cnpa-shield.png'
 import { pickLatestPublishedSeason, platformTag, seasonBelongsToSeries, seasonsNewestFirst } from '../hallFilters'
 
@@ -250,7 +251,10 @@ function updatePage(page: number) {
 function openTeam(record: PublicHonorItemResp) {
   const teamId = record.eventTeamId
   if (!teamId) return
-  router.push(`/tournament/team/${teamId}/overview`)
+  router.push(teamDetailLocation(teamId, {
+    seasonId: record.seasonId,
+    tab: 'overview',
+  }))
 }
 
 function openEventHonor(tournamentId?: string | null, showRoster = false, seasonId?: string | number | null) {
@@ -374,7 +378,7 @@ function seriesIcon(record: PublicHonorItemResp) {
               <strong>{{ teamNameText(record) }}</strong>
             </button>
             <div class="past-champion-card__actions">
-              <button type="button" @click="openEventHonor(record.tournamentId, true, record.seasonId)">
+              <button type="button" :disabled="!record.eventTeamId" @click="openTeam(record)">
                 {{ t('publicPages.hall.viewChampionRoster') }}
                 <span aria-hidden="true">›</span>
               </button>
@@ -559,8 +563,13 @@ function seriesIcon(record: PublicHonorItemResp) {
       margin-left: 4px;
     }
 
-    &:hover {
+    &:hover:not(:disabled) {
       color: #e10613;
+    }
+
+    &:disabled {
+      color: rgba(255, 255, 255, 0.35);
+      cursor: default;
     }
   }
 }

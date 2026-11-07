@@ -8,6 +8,7 @@ import com.zhs.dao.BasketHonorLineupDao;
 import com.zhs.dao.BasketHonorRecordDao;
 import com.zhs.dao.v4.BasketEventPlayerDao;
 import com.zhs.dao.v4.BasketEventTeamDao;
+import com.zhs.dao.v4.BasketSeriesDao;
 import com.zhs.enums.PublicHonorSortEnum;
 import com.zhs.model.BasketHonorCategory;
 import com.zhs.model.BasketHonorLineup;
@@ -18,11 +19,15 @@ import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketEventTeam;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketSeries;
+import com.zhs.model.v4.SeriesHonorIconRow;
 import com.zhs.response.publicapi.PublicHonorDetailResp;
 import com.zhs.response.publicapi.PublicHonorItemResp;
 import com.zhs.response.publicapi.PublicHonorLineupItemResp;
 import com.zhs.support.MemberAvatarSupport;
 import jakarta.annotation.Resource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
@@ -44,6 +49,8 @@ import java.util.stream.Collectors;
 @Component
 public class BasketPublicHonorSupport {
 
+    private static final Logger log = LoggerFactory.getLogger(BasketPublicHonorSupport.class);
+
     @Resource
     private BasketHonorRecordDao honorRecordDao;
     @Resource
@@ -56,6 +63,8 @@ public class BasketPublicHonorSupport {
     private BasketEventTeamDao eventTeamDao;
     @Resource
     private BasketEventPlayerDao eventPlayerDao;
+    @Resource
+    private BasketSeriesDao seriesDao;
 
     private static final String EVENT_PLAYER_ACTIVE = "ACTIVE";
 
@@ -453,6 +462,7 @@ public class BasketPublicHonorSupport {
         }
         Map<Long, BasketHonorCategory> categoryMap = loadCategoryMap(categoryIds);
         Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seriesIds);
+        Map<Long, String> seriesIconMap = loadSeriesHonorIcons(seriesIds);
         Map<Long, BasketSeason> seasonMap = publicSupport.loadSeasonMap(seasonIds);
         Map<Long, BasketTeam> teamMap = publicSupport.loadTeamMap(teamIds);
         List<BasketEventTeam> eventTeams = loadEventTeams(teamIds);
@@ -508,6 +518,7 @@ public class BasketPublicHonorSupport {
             BasketSeries series = seriesMap.get(record.getSeriesId());
             if (series != null) {
                 vo.setTournamentName(series.getSeriesName());
+                vo.setSeriesHonorIconUrl(seriesHonorIcon(series.getId(), seriesIconMap));
             }
             BasketSeason season = seasonMap.get(record.getSeasonId());
             if (season != null) {
@@ -538,6 +549,36 @@ public class BasketPublicHonorSupport {
             result.add(vo);
         }
         return result;
+    }
+
+    private Map<Long, String> loadSeriesHonorIcons(Set<Long> seriesIds) {
+        if (CollectionUtils.isEmpty(seriesIds)) {
+            return Collections.emptyMap();
+        }
+        try {
+            List<SeriesHonorIconRow> rows = seriesDao.selectHonorIcons(seriesIds);
+            Map<Long, String> map = new HashMap<>();
+            if (rows == null) {
+                return map;
+            }
+            for (SeriesHonorIconRow row : rows) {
+                if (row != null && row.getId() != null && StringUtils.hasText(row.getHonorIconUrl())) {
+                    map.put(row.getId(), row.getHonorIconUrl().trim());
+                }
+            }
+            return map;
+        } catch (DataAccessException ex) {
+            Throwable cause = ex.getMostSpecificCause();
+            log.warn("series honor icon unavailable: {}", cause == null ? ex.getMessage() : cause.getMessage());
+            return Collections.emptyMap();
+        }
+    }
+
+    private String seriesHonorIcon(Long seriesId, Map<Long, String> seriesIconMap) {
+        if (seriesId == null || seriesIconMap == null) {
+            return null;
+        }
+        return seriesIconMap.get(seriesId);
     }
 
     private List<BasketEventTeam> loadEventTeams(Set<Long> teamIds) {
@@ -602,6 +643,7 @@ public class BasketPublicHonorSupport {
         dest.setHonorValue(src.getHonorValue());
         dest.setAwardDate(src.getAwardDate());
         dest.setCoverUrl(src.getCoverUrl());
+        dest.setSeriesHonorIconUrl(src.getSeriesHonorIconUrl());
         dest.setDisplayOrder(src.getDisplayOrder());
     }
 }

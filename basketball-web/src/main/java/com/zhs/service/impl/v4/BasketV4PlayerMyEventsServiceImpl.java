@@ -17,10 +17,13 @@ import com.zhs.service.v4.IBasketV4PlayerMyEventsService;
 import com.zhs.service.v4.IBasketV4PlayerRegistrationService;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class BasketV4PlayerMyEventsServiceImpl implements IBasketV4PlayerMyEventsService {
@@ -40,7 +43,13 @@ public class BasketV4PlayerMyEventsServiceImpl implements IBasketV4PlayerMyEvent
     public List<V4MyEventResp> listMyEvents() {
         Long memberId = UserContext.getRequiredMemberId();
         BasketPlayerProfile player = requirePlayerByMemberId(memberId);
-        return myEventsMapper.selectMyEvents(memberId, player.getId());
+        List<V4MyEventResp> rows = myEventsMapper.selectMyEvents(memberId, player.getId());
+        if (rows != null) {
+            for (V4MyEventResp row : rows) {
+                applyEventDisplay(row);
+            }
+        }
+        return rows;
     }
 
     @Override
@@ -102,5 +111,67 @@ public class BasketV4PlayerMyEventsServiceImpl implements IBasketV4PlayerMyEvent
             throw new ServiceException("当前账号未关联认证球员");
         }
         return profile;
+    }
+
+    private void applyEventDisplay(V4MyEventResp row) {
+        if (row == null) {
+            return;
+        }
+        boolean elimination = eliminationFormat(
+                row.getLatestCompetitionFormat() != null ? row.getLatestCompetitionFormat() : row.getCompetitionFormat(),
+                row.getLatestStageType() != null ? row.getLatestStageType() : row.getStageType());
+        String format = row.getLatestCompetitionFormat() != null ? row.getLatestCompetitionFormat() : row.getCompetitionFormat();
+        String stageType = row.getLatestStageType() != null ? row.getLatestStageType() : row.getStageType();
+        boolean ended = "FINISHED".equals(row.getDivisionStatus())
+                || "ARCHIVED".equals(row.getDivisionStatus())
+                || (row.getMatchEndTime() != null && row.getMatchEndTime().before(new Date()));
+        row.setEventEnded(ended);
+        row.setPointsApplicable(!elimination);
+        row.setFormatCode(elimination ? "ELIMINATION" : pointsFormat(format, stageType));
+        if (elimination) {
+            row.setStandingRank(null);
+            row.setStandingPoints(null);
+        }
+        if (ended) {
+            row.setCurrentStageName(null);
+            row.setCurrentGroupName(null);
+            row.setNextMatchId(null);
+            row.setNextMatchTime(null);
+            if (StringUtils.hasText(row.getPublishedResultLabel())) {
+                row.setFinalResultCode("HONOR");
+                row.setFinalResultLabel(row.getPublishedResultLabel().trim());
+            } else if (elimination && row.getFinalSeriesWinnerTeamId() != null
+                    && Objects.equals(row.getFinalSeriesWinnerTeamId(), row.getEventTeamId())) {
+                row.setFinalResultCode("CHAMPION");
+            } else if (elimination) {
+                row.setFinalResultCode("PENDING");
+            } else if (row.getStandingRank() != null) {
+                row.setFinalResultCode("RANK");
+                row.setFinalResultRank(row.getStandingRank());
+            } else {
+                row.setFinalResultCode("PENDING");
+            }
+            return;
+        }
+        row.setCurrentStageName(StringUtils.hasText(row.getOpenStageName()) ? row.getOpenStageName() : null);
+        if (!StringUtils.hasText(row.getOpenStageName())) {
+            row.setCurrentGroupName(null);
+        }
+    }
+
+    private boolean eliminationFormat(String format, String stageType) {
+        String value = ((format == null ? "" : format) + " " + (stageType == null ? "" : stageType)).toUpperCase();
+        return value.contains("ELIM") || value.contains("KNOCK") || value.contains("FINAL");
+    }
+
+    private String pointsFormat(String format, String stageType) {
+        String value = ((format == null ? "" : format) + " " + (stageType == null ? "" : stageType)).toUpperCase();
+        if (value.contains("GROUP")) {
+            return "GROUP";
+        }
+        if (value.contains("ROUND") || value.contains("REGULAR")) {
+            return "ROUND_ROBIN";
+        }
+        return null;
     }
 }

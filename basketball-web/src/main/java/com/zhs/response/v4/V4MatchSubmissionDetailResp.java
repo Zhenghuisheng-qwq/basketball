@@ -53,4 +53,6 @@ public class V4MatchSubmissionDetailResp {
     private String submissionMode;
     private Integer draftComplete;
     private Long seriesSubmissionId;
+    private Boolean canSubmit;
+    private String cannotSubmitReason;
 }

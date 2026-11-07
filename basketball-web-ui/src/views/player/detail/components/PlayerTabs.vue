@@ -17,6 +17,7 @@ const tabs = computed<Array<{ value: PlayerDetailTab; label: string }>>(() => [
   { value: 'overview', label: t('publicPages.player.tabOverview') },
   { value: 'matches', label: t('publicPages.player.tabMatches') },
   { value: 'data', label: t('publicPages.player.tabData') },
+  { value: 'honors', label: t('publicPages.player.tabHonors') },
   { value: 'career', label: t('publicPages.player.tabCareer') },
 ])
 </script>

@@ -32,7 +32,7 @@ import com.zhs.response.account.MessageTeamInviteInfoResp;
 import com.zhs.service.IAccountMessageService;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.support.GameTerminalSupport;
-import com.zhs.support.PlatformTeamMembershipSupport;
+import com.zhs.support.TeamMembershipSupport;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,7 +76,9 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
     @Resource
     private ICaptainPermissionService captainPermissionService;
     @Resource
-    private PlatformTeamMembershipSupport platformTeamMembershipSupport;
+    private TeamMembershipSupport teamMembershipSupport;
+    @Resource
+    private com.zhs.service.team.TeamMembershipChangeGate membershipChangeGate;
 
     @Override
     public MessagePageResp pageMessages(Integer currentPage, Integer pageSize, Integer readStatus) {
@@ -315,7 +317,20 @@ public class AccountMessageServiceImpl implements IAccountMessageService {
         boolean canRespond = Objects.equals(TeamInvitationStatusEnum.PENDING.getCode(), displayStatus)
                 && (invitation.getExpireTime() == null || invitation.getExpireTime().after(now));
         info.setCanRespond(canRespond);
-        String joinIneligibilityReason = captainPermissionService.resolveJoinIneligibilityReason(memberId);
+        String joinIneligibilityReason = null;
+        if (canRespond) {
+            Long boundDivisionId = membershipChangeGate.boundDivisionId(
+                    com.zhs.service.team.TeamMembershipChangeGate.SOURCE_INVITATION, invitation.getId());
+            if (boundDivisionId == null) {
+                joinIneligibilityReason = "这条邀请没有可靠的赛事归属，不能直接接受";
+            } else if (team == null || !boundDivisionId.equals(team.getDivisionId())) {
+                joinIneligibilityReason = "这条邀请属于以往赛事，请让队长在当前赛事重新邀请";
+            } else {
+                com.zhs.exception.BusinessReason block = teamMembershipSupport.resolveEventJoinBlock(
+                        memberId, boundDivisionId, team.getId());
+                joinIneligibilityReason = block == null ? null : block.message();
+            }
+        }
         info.setCanAccept(canRespond && joinIneligibilityReason == null);
         info.setCannotAcceptReason(canRespond ? joinIneligibilityReason : null);
         return info;

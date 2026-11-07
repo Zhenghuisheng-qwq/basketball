@@ -35,6 +35,7 @@ export default {
     loginAccount: '账号登录',
     forgotPassword: '找回密码',
     account: '个人中心',
+    myPerformance: '我的表现',
     profile: '个人资料',
     playerIdentity: '球员身份',
     playerIdentityApply: '球员认证申请',

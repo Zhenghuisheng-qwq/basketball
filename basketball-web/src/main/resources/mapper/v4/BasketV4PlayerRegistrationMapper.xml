@@ -50,6 +50,8 @@
             r.team_id as teamId,
             se.display_title as seasonTitle,
             d.division_name as divisionName,
+            d.division_status as divisionStatus,
+            d.match_end_time as matchEndTime,
             d.platform_code as platformCode,
             t.team_name as teamName,
             r.registration_status as registrationStatus,

@@ -35,6 +35,7 @@ export default {
     loginAccount: 'Log in',
     forgotPassword: 'Reset password',
     account: 'Account',
+    myPerformance: 'My performance',
     profile: 'Profile',
     playerIdentity: 'Player identity',
     playerIdentityApply: 'Player verification',

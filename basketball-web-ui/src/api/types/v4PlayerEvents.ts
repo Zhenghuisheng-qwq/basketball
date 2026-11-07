@@ -73,6 +73,8 @@ export interface V4MyRegistration {
   teamId?: string
   seasonTitle?: string
   divisionName?: string
+  divisionStatus?: string
+  matchEndTime?: string
   platformCode?: string
   teamName?: string
   registrationStatus?: string
@@ -113,6 +115,16 @@ export interface V4MyEvent {
   standingPoints?: number
   qualificationStatus?: string
   qualificationStatusName?: string
+  matchEndTime?: string
+  openStageName?: string
+  competitionFormat?: string
+  eventEnded?: boolean
+  pointsApplicable?: boolean
+  formatCode?: string
+  finalResultCode?: string
+  finalResultLabel?: string
+  finalResultRank?: number
+  publishedResultLabel?: string
   nextMatchId?: string
   nextMatchTime?: string
   latestMatchId?: string

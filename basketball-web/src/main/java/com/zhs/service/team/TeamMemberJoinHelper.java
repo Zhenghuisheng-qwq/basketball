@@ -58,14 +58,23 @@ public class TeamMemberJoinHelper {
     private ICaptainPermissionService captainPermissionService;
     @Resource
     private EventRosterMembershipSync eventRosterMembershipSync;
+    @Resource
+    private TeamMembershipChangeGate membershipChangeGate;
 
     @Transactional(rollbackFor = Exception.class)
     public BasketTeamMember addMember(BasketTeam team, Long memberId, Long playerId, TeamJoinSourceEnum joinSource) {
         if (team == null || team.getDivisionId() == null) {
             throw new ServiceException("历史球队不能加入新成员，请在当前赛事重新创建球队", 403);
         }
-        // 先锁 Division，再改球队行，避免和锁定名单/离队的 Division→球队顺序死锁。
+        // 先锁 Division，再锁球队，避免和锁定名单/离队的 Division→球队顺序死锁。
         eventRosterMembershipSync.lockDivision(team.getDivisionId());
+        if (teamDao.lockById(team.getId()) == null) {
+            throw new ServiceException("球队不存在", 403);
+        }
+        team = teamDao.selectById(team.getId());
+        if (team == null || team.getDivisionId() == null) {
+            throw new ServiceException("球队不存在", 403);
+        }
         if (!Objects.equals(TeamStatusEnum.ACTIVE.getCode(), team.getTeamStatus())) {
             throw new ServiceException("当前球队不可加入", 403);
         }
@@ -134,20 +143,27 @@ public class TeamMemberJoinHelper {
         List<com.zhs.model.BasketTeamInvitation> pendingInvites = invitationDao.selectList(
                 new LambdaQueryWrapper<com.zhs.model.BasketTeamInvitation>()
                         .eq(com.zhs.model.BasketTeamInvitation::getInviteeMemberId, memberId)
-                        .eq(com.zhs.model.BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.PENDING.getCode())
+                        .in(com.zhs.model.BasketTeamInvitation::getInvitationStatus, List.of(
+                                TeamInvitationStatusEnum.PENDING.getCode(),
+                                TeamInvitationStatusEnum.AWAITING_AUDIT.getCode()))
                         .eq(com.zhs.model.BasketTeamInvitation::getIsDelete, NOT_DELETED));
         for (com.zhs.model.BasketTeamInvitation invitation : pendingInvites) {
             if (teamId.equals(invitation.getTeamId())) {
                 continue;
             }
-            // 仅关闭同 Division 的待处理邀请，跨 Division 邀请保留
+            // 只失效同一届的待处理邀请。其他赛事的邀请保留。
             if (!isSameDivisionTeam(invitation.getTeamId(), divisionId)) {
                 continue;
             }
             invitationDao.update(null, new LambdaUpdateWrapper<com.zhs.model.BasketTeamInvitation>()
                     .eq(com.zhs.model.BasketTeamInvitation::getId, invitation.getId())
+                    .in(com.zhs.model.BasketTeamInvitation::getInvitationStatus, List.of(
+                            TeamInvitationStatusEnum.PENDING.getCode(),
+                            TeamInvitationStatusEnum.AWAITING_AUDIT.getCode()))
                     .set(com.zhs.model.BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.CANCELLED.getCode())
-                    .set(com.zhs.model.BasketTeamInvitation::getRespondedTime, now));
+                    .set(com.zhs.model.BasketTeamInvitation::getRespondedTime, now)
+                    .set(com.zhs.model.BasketTeamInvitation::getResponseRemark, "已加入本届其他球队，邀请失效"));
+            membershipChangeGate.invalidateOpenInvitation(invitation.getId(), "已加入本届其他球队，邀请失效");
         }
 
         List<com.zhs.model.BasketTeamJoinApplication> pendingApplications = joinApplicationDao.selectList(

@@ -52,15 +52,14 @@ const detail = ref<V4MatchSubmissionDetail | null>(null)
 const matchId = computed(() => String(route.params.matchId || ''))
 const submitEventTeamId = computed(() => String(route.query.submitEventTeamId || detail.value?.submitEventTeamId || ''))
 
-const isReadonly = computed(() => {
-  const status = (detail.value?.submissionStatus || '').toUpperCase()
-  return status === 'PENDING_REVIEW' || status === 'APPROVED'
+const canEdit = computed(() => {
+  if (!detail.value?.canSubmit) return false
+  if (detail.value.seriesContext?.skipped) return false
+  const status = (detail.value.submissionStatus || 'DRAFT').toUpperCase()
+  return status === 'DRAFT' || status === 'REJECTED' || !detail.value.submissionId
 })
 
-const canEdit = computed(() => {
-  const status = (detail.value?.submissionStatus || 'DRAFT').toUpperCase()
-  return status === 'DRAFT' || status === 'REJECTED' || !detail.value?.submissionId
-})
+const isReadonly = computed(() => Boolean(detail.value) && !canEdit.value)
 
 const skipped = computed(() => Boolean(detail.value?.seriesContext?.skipped))
 const isFullMatch = computed(() => (detail.value?.submissionMode || 'WINNER_FULL_MATCH') !== 'LEGACY_TEAM_SIDE')
@@ -405,7 +404,7 @@ onMounted(() => {
         </p>
         <p v-if="detail.rejectReason" class="v4-sub-reject">{{ t('accountEvents.common.rejectReason', { reason: detail.rejectReason }) }}</p>
         <p v-if="skipped" class="v4-sub-readonly">{{ detail.seriesContext?.skippedReason || t('accountEvents.submission.skippedFallback') }}</p>
-        <p v-else-if="isReadonly" class="v4-sub-readonly">{{ t('accountEvents.submission.readonly') }}</p>
+        <p v-else-if="isReadonly" class="v4-sub-readonly">{{ detail.cannotSubmitReason || t('accountEvents.submission.readonly') }}</p>
         <input ref="fileInput" type="file" accept="image/*" multiple class="v4-sub-file" @change="handleUpload" />
       </AccountPanel>
 

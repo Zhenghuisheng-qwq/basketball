@@ -13,6 +13,8 @@ public class TeamMembershipChangeListVo {
     private String teamName;
     private Long divisionId;
     private String divisionName;
+    private Long teamDivisionId;
+    private String teamDivisionName;
     private Long registrationId;
     private String changeType;
     private String changeTypeName;

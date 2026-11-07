@@ -260,6 +260,7 @@ export interface PublicHonorItemResp {
   honorValue?: string | null
   awardDate?: string | null
   coverUrl?: string | null
+  seriesHonorIconUrl?: string | null
   displayOrder?: number | null
 }
 
@@ -468,6 +469,8 @@ export interface PublicPlayerSeasonStatVo {
   seasonName?: string | null
   divisionId?: string | null
   divisionName?: string | null
+  divisionStatus?: string | null
+  matchEndTime?: string | null
   platformCode?: string | null
   gameMode?: string | null
   stageId?: string | null

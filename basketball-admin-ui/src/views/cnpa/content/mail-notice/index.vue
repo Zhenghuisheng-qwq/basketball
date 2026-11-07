@@ -66,7 +66,7 @@
           <editor v-model="form.contentHtml" :min-height="260" />
         </el-form-item>
       </el-form>
-      <p class="form-tip">这里只保存草稿，不会发邮件。发送请到列表里点「发送」，按每秒 5 封发出。同一个邮箱只发一次，开始发送后不能再修改。</p>
+      <p class="form-tip">这里只保存草稿，不会发邮件。发送请到列表里点「发送」，按每分钟 1 封发出。同一个邮箱只发一次，开始发送后不能再修改。</p>
       <template #footer>
         <el-button @click="dialogOpen = false">取消</el-button>
         <el-button type="primary" :loading="submitLoading" @click="submitForm">保存</el-button>
@@ -343,7 +343,7 @@ function submitForm() {
 }
 
 function handleSend(row: MailNoticeItem) {
-  proxy.$modal.confirm(`确认向全部已注册邮箱发送「${row.title}」？将按每秒 5 封发出，发送后不能再修改。`).then(() =>
+  proxy.$modal.confirm(`确认向全部已注册邮箱发送「${row.title}」？将按每分钟 1 封发出，发送后不能再修改。`).then(() =>
     sendMailNotice(row.id)
   ).then(() => {
     getList()

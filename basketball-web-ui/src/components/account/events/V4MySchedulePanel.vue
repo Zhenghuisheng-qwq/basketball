@@ -51,16 +51,22 @@ function isFinishedMatch(row: V4MyScheduleItem): boolean {
 const displayedRows = computed(() => {
   let list = rows.value
   if (initialOnlyPending.value) {
-    list = list.filter((row) => {
-      const status = (row.mySubmissionStatus || '').toUpperCase()
-      return !status || status === 'DRAFT' || status === 'REJECTED'
-    })
+    list = list.filter((row) => row.canSubmit === true && !isSeriesSkipped(row))
   }
   if (scheduleFilter.value === 'upcoming') {
-    return list.filter((row) => !isFinishedMatch(row))
+    return list.filter((row) => !isFinishedMatch(row) && !isSeriesSkipped(row) && (row.matchStatus || '').toUpperCase() !== 'FORFEITED')
   }
   if (scheduleFilter.value === 'finished') {
-    return list.filter((row) => isFinishedMatch(row))
+    const finishedSeries = new Set(
+      list
+        .filter((row) => isFinishedMatch(row) || (row.matchStatus || '').toUpperCase() === 'FORFEITED')
+        .map((row) => String(row.matchSeriesId || ''))
+        .filter(Boolean),
+    )
+    return list.filter((row) => {
+      if (isFinishedMatch(row) || (row.matchStatus || '').toUpperCase() === 'FORFEITED') return true
+      return isSeriesSkipped(row) && finishedSeries.has(String(row.matchSeriesId || ''))
+    })
   }
   return list
 })
@@ -298,6 +304,14 @@ function canPrimaryAction(row: V4MyScheduleItem): boolean {
   return Boolean(row.canSubmitData ?? row.canSubmit)
 }
 
+function canOpenSubmission(row: V4MyScheduleItem): boolean {
+  if (isSeriesSkipped(row)) return false
+  const action = (row.userActionType || '').toUpperCase()
+  if (action === 'SUBMIT' || action === 'RESUBMIT') return canPrimaryAction(row)
+  if (action === 'VIEW_SUBMISSION') return Boolean(row.myLatestSubmissionId)
+  return false
+}
+
 function goSubmit(row: V4MyScheduleItem) {
   if (!row.matchId || !row.myEventTeamId) return
   router.push({
@@ -442,6 +456,7 @@ watch(
                   <span>{{ formatMatchDate(row.matchTime) }} {{ formatMatchClock(row.matchTime) }}</span>
                   <span>{{ row.homeTeamName }} vs {{ row.awayTeamName }}</span>
                   <span v-if="showScore(row)">{{ formatCenterScore(row) }}</span>
+                  <span v-else-if="isSeriesSkipped(row)">{{ t('accountEvents.common.notNeeded') }}</span>
                   <span v-else>{{ t('accountEvents.common.notStarted') }}</span>
                   <span>{{ v4MatchStatusLabel(row.matchStatus) }}</span>
                   <span>{{ v4SubmissionStatusLabel(row.mySubmissionStatus) }}</span>
@@ -456,9 +471,10 @@ watch(
                   >
                     {{ gameActionText(row) }}
                   </button>
-                  <button v-else type="button" class="account-btn-secondary" @click="goSubmit(row)">
+                  <button v-else-if="canOpenSubmission(row)" type="button" class="account-btn-secondary" @click="goSubmit(row)">
                     {{ gameActionText(row) }}
                   </button>
+                  <span v-else class="v4-series-game__skip">{{ gameActionText(row) }}</span>
                 </div>
               </article>
             </div>
@@ -558,13 +574,14 @@ watch(
                 {{ gameActionText(block.row) }}
               </button>
               <button
-                v-else
+                v-else-if="canOpenSubmission(block.row)"
                 type="button"
                 class="account-btn-secondary"
                 @click="goSubmit(block.row)"
               >
                 {{ gameActionText(block.row) }}
               </button>
+              <span v-else class="v4-match-card__hint">{{ gameActionText(block.row) }}</span>
             </div>
           </div>
         </article>

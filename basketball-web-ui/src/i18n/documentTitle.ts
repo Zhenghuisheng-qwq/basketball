@@ -20,6 +20,7 @@ const routeTitleKeys: Record<string, string> = {
   Login: 'nav.titles.loginAccount',
   ForgotPassword: 'nav.titles.forgotPassword',
   AccountOverview: 'nav.titles.account',
+  AccountPerformance: 'nav.titles.myPerformance',
   AccountProfile: 'nav.titles.profile',
   AccountPlayerIdentity: 'nav.titles.playerIdentity',
   AccountPlayerIdentityApply: 'nav.titles.playerIdentityApply',

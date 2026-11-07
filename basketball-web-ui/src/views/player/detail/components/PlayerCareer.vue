@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import HonorPlaque from '@/components/honor/HonorPlaque.vue'
 import TeamLogo from '@/components/team/TeamLogo.vue'
@@ -9,8 +9,20 @@ defineProps<{
   detail: PlayerDetailData
 }>()
 
+const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+
+function openEvent(item: PlayerTeamHistory, tab: 'overview' | 'matches') {
+  if (!item.divisionId) return
+  router.replace({
+    query: {
+      ...route.query,
+      divisionId: item.divisionId,
+      tab,
+    },
+  })
+}
 
 function teamPath(item: PlayerTeamHistory) {
   return {
@@ -85,6 +97,7 @@ function openHonor(tournamentId?: string) {
           :date="honorDate(honor)"
           :tone="honorTone(honor)"
           :mark="honorMark(honor)"
+          :icon-url="honor.imageUrl"
           :clickable="Boolean(honor.tournamentId)"
           @select="openHonor(honor.tournamentId)"
         />
@@ -142,6 +155,14 @@ function openHonor(tournamentId?: string) {
               <strong>{{ item.teamName }}</strong>
             </div>
             <span class="career-timeline__desc">{{ item.description }}</span>
+            <div v-if="item.divisionId" class="career-timeline__actions">
+              <button type="button" class="career-timeline__action" @click="openEvent(item, 'overview')">
+                {{ t('publicPages.player.viewEventPerformance') }}
+              </button>
+              <button type="button" class="career-timeline__action" @click="openEvent(item, 'matches')">
+                {{ t('publicPages.player.viewEventMatches') }}
+              </button>
+            </div>
           </article>
         </li>
       </ol>
@@ -277,7 +298,7 @@ function openHonor(tournamentId?: string) {
 
 .career-timeline {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0 16px;
   margin: 0;
   padding: 0;
@@ -321,6 +342,30 @@ function openHonor(tournamentId?: string) {
 
 .career-timeline__item:only-child .career-timeline__rail {
   background: transparent;
+}
+
+.career-timeline__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.career-timeline__action {
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid rgba(17, 17, 17, 0.16);
+  background: #fff;
+  color: var(--cnpa-paper-text);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--cnpa-red);
+    color: var(--cnpa-red);
+  }
 }
 
 .career-timeline__card {
@@ -413,7 +458,8 @@ function openHonor(tournamentId?: string) {
 }
 
 @media (max-width: 991px) {
-  .player-detail-career__honor-list {
+  .player-detail-career__honor-list,
+  .career-timeline {
     grid-template-columns: 1fr;
   }
 }

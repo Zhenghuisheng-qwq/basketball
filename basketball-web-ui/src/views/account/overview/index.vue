@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRouter } from 'vue-router'
 import AccountPageHeader from '@/components/account/AccountPageHeader.vue'
@@ -12,12 +12,16 @@ import { useTeamStore } from '@/stores/team'
 import { useNotificationCenterStore } from '@/stores/notificationCenter'
 import { formatDateTime } from '@/utils/formatDate'
 import { resolvePlayerIdentityRoute } from '@/utils/playerIdentityNavigate'
+import { getOwnPerformanceSeasonStat } from '@/api/accountPerformance'
+import type { PublicPlayerSeasonStatVo } from '@/api/types/public'
 
 const router = useRouter()
 const { t, te } = useI18n()
 const accountStore = useAccountStore()
 const teamStore = useTeamStore()
 const notificationStore = useNotificationCenterStore()
+
+const latestPerformance = ref<PublicPlayerSeasonStatVo | null>(null)
 
 onMounted(async () => {
   const tasks: Promise<unknown>[] = []
@@ -27,6 +31,13 @@ onMounted(async () => {
   tasks.push(teamStore.loadQualification().catch(() => undefined))
   tasks.push(teamStore.loadMyTeam().catch(() => undefined))
   await Promise.all(tasks)
+  if (!accountStore.isVerifiedPlayer) return
+  try {
+    const res = await getOwnPerformanceSeasonStat()
+    latestPerformance.value = res.data?.[0] ?? null
+  } catch {
+    latestPerformance.value = null
+  }
 })
 
 const account = computed(() => accountStore.currentAccount)
@@ -155,6 +166,59 @@ function go(path: string) {
   router.push(path)
 }
 
+const performanceEventName = computed(() => {
+  const row = latestPerformance.value
+  if (!row) return ''
+  return [row.seasonName, row.divisionName].filter(Boolean).join(' · ')
+})
+
+const performanceEnded = computed(() => {
+  const row = latestPerformance.value
+  if (!row) return false
+  const status = (row.divisionStatus || '').toUpperCase()
+  const endAt = row.matchEndTime ? Date.parse(row.matchEndTime) : Number.NaN
+  return status === 'FINISHED' || status === 'ARCHIVED' || (Number.isFinite(endAt) && endAt < Date.now())
+})
+
+const performanceStatusText = computed(() =>
+  performanceEnded.value
+    ? t('accountEvents.common.finished')
+    : t('accountEvents.common.inProgress'),
+)
+
+function formatStat(value?: number | string | null) {
+  if (value === null || value === undefined || value === '') return ''
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric.toFixed(1) : String(value)
+}
+
+const performanceStats = computed(() => {
+  const row = latestPerformance.value
+  const games = Number(row?.games)
+  if (!row || !Number.isFinite(games) || games <= 0) return []
+  const items = [
+    { label: t('accountShell.overview.performanceGames'), value: String(games) },
+  ]
+  const points = formatStat(row.avgPoints)
+  const rebounds = formatStat(row.avgRebounds)
+  const assists = formatStat(row.avgAssists)
+  if (points) items.push({ label: t('accountShell.overview.performancePoints'), value: points })
+  if (rebounds) items.push({ label: t('accountShell.overview.performanceRebounds'), value: rebounds })
+  if (assists) items.push({ label: t('accountShell.overview.performanceAssists'), value: assists })
+  return items
+})
+
+function goPerformance(tab?: 'honors' | 'career') {
+  const divisionId = latestPerformance.value?.divisionId
+  const query: Record<string, string> = {}
+  if (divisionId) query.divisionId = String(divisionId)
+  if (tab) query.tab = tab
+  router.push({
+    name: 'AccountPerformance',
+    query,
+  })
+}
+
 function goPlayerIdentity() {
   router.push(resolvePlayerIdentityRoute(accountStore))
 }
@@ -189,6 +253,44 @@ async function retryLoad() {
         :status-text="`${bannerStatusText} · ${bannerStatusExtra}`"
         :status-type="isVerified ? 'success' : 'warning'"
       />
+
+      <AccountPanel v-if="isVerified" :title="t('accountShell.overview.performanceTitle')">
+        <p class="account-view__desc">{{ t('accountShell.overview.performanceDesc') }}</p>
+        <p v-if="!latestPerformance" class="account-view__hint">{{ t('accountShell.overview.performanceEmpty') }}</p>
+        <div v-else class="account-info-list">
+          <div class="account-info-row">
+            <span class="account-info-row__label">{{ t('accountShell.overview.currentTeam') }}</span>
+            <span class="account-info-row__value">{{ latestPerformance.teamName || '--' }}</span>
+          </div>
+          <div class="account-info-row">
+            <span class="account-info-row__label">{{ t('accountShell.overview.performanceEvent') }}</span>
+            <span class="account-info-row__value">{{ performanceEventName || '--' }}</span>
+          </div>
+          <div class="account-info-row">
+            <span class="account-info-row__label">{{ t('accountShell.overview.performanceStatus') }}</span>
+            <span class="account-info-row__value">{{ performanceStatusText }}</span>
+          </div>
+          <div
+            v-for="item in performanceStats"
+            :key="item.label"
+            class="account-info-row"
+          >
+            <span class="account-info-row__label">{{ item.label }}</span>
+            <span class="account-info-row__value">{{ item.value }}</span>
+          </div>
+        </div>
+        <div class="account-panel__action account-overview-performance__actions">
+          <button type="button" class="account-btn-primary" @click="goPerformance()">
+            {{ t('accountShell.overview.viewPerformance') }}
+          </button>
+          <button type="button" class="account-btn-secondary" @click="goPerformance('honors')">
+            {{ t('accountShell.overview.viewHonors') }}
+          </button>
+          <button type="button" class="account-btn-secondary" @click="goPerformance('career')">
+            {{ t('accountShell.overview.viewCareer') }}
+          </button>
+        </div>
+      </AccountPanel>
 
       <div class="account-overview-grid account-grid-2">
         <CaptainGrantPanel
@@ -338,7 +440,8 @@ async function retryLoad() {
   border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
-.account-panel__action--split {
+.account-panel__action--split,
+.account-overview-performance__actions {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;

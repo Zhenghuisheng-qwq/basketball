@@ -6,6 +6,7 @@ import lombok.Data;
 public class TeamMembershipChangeQuery {
     private String teamNo;
     private String teamName;
+    private String divisionName;
     private String changeStatus;
     private String changeType;
     private String playerKeyword;

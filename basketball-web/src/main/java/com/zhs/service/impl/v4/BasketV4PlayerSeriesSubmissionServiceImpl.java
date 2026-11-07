@@ -135,6 +135,11 @@ public class BasketV4PlayerSeriesSubmissionServiceImpl implements IBasketV4Playe
         if (!series.getId().equals(match.getSeriesId())) {
             throw new ServiceException("比赛不属于该系列赛");
         }
+        if ("COMPLETED".equals(series.getSeriesStatus())
+                && !MatchStatusEnum.FINISHED.getCode().equals(match.getMatchStatus())
+                && !MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus())) {
+            throw new ServiceException("该系列赛已决出胜负，本局无需进行");
+        }
         Date now = new Date();
         BasketMatchSeriesSubmission header = requireEditableHeader(series, side, memberId, now);
         if (req.getDeclaredHomeWinCount() != null && req.getDeclaredAwayWinCount() != null) {

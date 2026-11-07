@@ -11,6 +11,8 @@ export interface InheritableTeamSummaryDto {
   honorCount?: number
   canInherit?: boolean
   cannotInheritReason?: string
+  recommended?: boolean
+  lastApprovedTime?: string
 }
 
 export interface CaptainGrantBindTeamReq {

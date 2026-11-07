@@ -391,9 +391,6 @@ function mapTeamInvitePresentation(invite: AccountNotificationTeamInvite): {
   if (invite.inviteStatus === 4) {
     return { resultText: translate('accountShell.notifications.inviteCancelled'), resultStatus: 'WARNING' }
   }
-  if (invite.canRespond && invite.canAccept === false && invite.cannotAcceptReason) {
-    return { resultText: invite.cannotAcceptReason, resultStatus: 'WARNING' }
-  }
   if (invite.canRespond) {
     return { resultText: translate('accountShell.notifications.invitePending'), resultStatus: 'PENDING' }
   }

@@ -2,11 +2,13 @@ package com.zhs.basket.support.v4;
 
 import com.zhs.basket.domain.BasketPlayerPlatformAccount;
 import com.zhs.basket.domain.BasketPlayerProfile;
+import com.zhs.basket.domain.BasketTeam;
 import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketRegistration;
 import com.zhs.basket.domain.v4.BasketRegistrationAudit;
 import com.zhs.basket.domain.v4.BasketRegistrationPlayer;
 import com.zhs.basket.enums.v4.DivisionStatusEnum;
+import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationAuditMapper;
 import com.zhs.basket.mapper.v4.BasketRegistrationMapper;
@@ -34,6 +36,8 @@ public class MembershipRosterApplier {
     public static final String LOCKED_ROSTER = "LOCKED_ROSTER";
     public static final String IN_SEASON = "IN_SEASON";
 
+    @Autowired
+    private BasketTeamMapper teamMapper;
     @Autowired
     private BasketRegistrationMapper registrationMapper;
     @Autowired
@@ -64,8 +68,13 @@ public class MembershipRosterApplier {
         boolean any = false;
         boolean inSeason = false;
         boolean locked = false;
+        BasketTeam team = teamMapper.selectById(teamId);
+        Long currentDivisionId = team == null ? null : team.getDivisionId();
         List<BasketRegistration> registrations = registrationMapper.selectApprovedByTeamId(teamId);
         for (BasketRegistration registration : registrations) {
+            if (currentDivisionId == null || !currentDivisionId.equals(registration.getDivisionId())) {
+                continue;
+            }
             BasketDivision division = divisionMapper.selectById(registration.getDivisionId());
             if (division == null || finished(division)) {
                 continue;

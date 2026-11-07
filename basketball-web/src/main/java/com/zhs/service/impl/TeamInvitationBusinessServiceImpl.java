@@ -254,54 +254,103 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         BasketTeamInvitation invitation = requireOwnedInvitation(invitationPk, memberId);
         expireIfNeeded(invitation);
 
-        TeamInvitationStatusEnum statusEnum = TeamInvitationStatusEnum.fromCode(invitation.getInvitationStatus());
-        if (!statusEnum.canRespond()) {
-            throw new ServiceException("邀请状态不可响应");
-        }
-
         Date now = new Date();
-        int targetStatus = Boolean.TRUE.equals(accept)
-                ? TeamInvitationStatusEnum.ACCEPTED.getCode()
-                : TeamInvitationStatusEnum.REJECTED.getCode();
-        int updated = invitationDao.update(null, new LambdaUpdateWrapper<BasketTeamInvitation>()
-                .eq(BasketTeamInvitation::getId, invitationPk)
-                .eq(BasketTeamInvitation::getInviteeMemberId, memberId)
-                .eq(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.PENDING.getCode())
-                .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED)
-                .set(BasketTeamInvitation::getInvitationStatus, targetStatus)
-                .set(BasketTeamInvitation::getRespondedTime, now)
-                .set(BasketTeamInvitation::getResponseRemark, trimToNull(req.getResponseRemark())));
-        if (updated == 0) {
-            throw new ServiceException("邀请状态已变更，请刷新后重试");
-        }
-
         invitation = invitationDao.selectById(invitationPk);
-        BasketTeam team = teamDao.selectById(invitation.getTeamId());
+        BasketTeam team = invitation.getTeamId() == null ? null : teamDao.selectById(invitation.getTeamId());
+        TeamInvitationStatusEnum statusEnum = TeamInvitationStatusEnum.fromCode(invitation.getInvitationStatus());
         if (Boolean.TRUE.equals(accept)) {
+            if (statusEnum == TeamInvitationStatusEnum.ACCEPTED) {
+                return alreadyAccepted(invitation, team, memberId);
+            }
+            if (statusEnum == TeamInvitationStatusEnum.AWAITING_AUDIT) {
+                return toItemResp(invitation, team, loadMemberProfileMap(Collections.singleton(memberId)), memberId);
+            }
+            if (!statusEnum.canRespond()) {
+                throw BusinessReason.INVITATION_INVALID.exception(403);
+            }
             validateTeamJoinable(team);
-            teamMembershipSupport.assertEligibleToJoinTeam(memberId, team.getDivisionId());
+            Long boundDivisionId = membershipChangeGate.boundDivisionId(
+                    TeamMembershipChangeGate.SOURCE_INVITATION, invitationPk);
+            if (boundDivisionId == null || !boundDivisionId.equals(team.getDivisionId())) {
+                throw new ServiceException("这条邀请绑定的不是球队当前赛事，不能接受。请让队长在当前赛事重新邀请",
+                        403, BusinessReason.INVITATION_INVALID.code());
+            }
+            BusinessReason block = teamMembershipSupport.resolveEventJoinBlock(memberId, boundDivisionId, team.getId());
+            if (block != null) {
+                throw block.exception(403);
+            }
+            String platformReason = resolveInviteePlatformIdentityReason(team, memberId);
+            if (platformReason != null) {
+                throw new ServiceException(platformReason, 403, BusinessReason.JOIN_NOT_ALLOWED.code());
+            }
             BasketPlayerProfile profile = captainPermissionService.requireCertifiedPlayer(memberId);
-            if (membershipChangeGate.shouldHold(team.getId())) {
-                invitationDao.update(null, new LambdaUpdateWrapper<BasketTeamInvitation>()
+            assertTerminalMatchForAccept(profile, team);
+            if (membershipChangeGate.shouldHold(team)) {
+                int updated = invitationDao.update(null, new LambdaUpdateWrapper<BasketTeamInvitation>()
                         .eq(BasketTeamInvitation::getId, invitationPk)
-                        .eq(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.ACCEPTED.getCode())
-                        .set(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.AWAITING_AUDIT.getCode()));
+                        .eq(BasketTeamInvitation::getInviteeMemberId, memberId)
+                        .eq(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.PENDING.getCode())
+                        .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED)
+                        .set(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.AWAITING_AUDIT.getCode())
+                        .set(BasketTeamInvitation::getRespondedTime, now)
+                        .set(BasketTeamInvitation::getResponseRemark, trimToNull(req.getResponseRemark())));
+                if (updated == 0) {
+                    throw new ServiceException("邀请状态已变更，请刷新后重试");
+                }
                 invitation.setInvitationStatus(TeamInvitationStatusEnum.AWAITING_AUDIT.getCode());
                 membershipChangeGate.markInvitationPendingAdmin(invitation, team);
-                businessMessageService.sendSiteMessage(memberId, "邀请已接受",
-                        "您已接受球队「" + team.getTeamName() + "」的邀请，等待管理员审核后生效",
+                businessMessageService.sendSiteMessage(memberId, "邀请待审核",
+                        "你已提交加入球队「" + team.getTeamName() + "」的申请，管理员审核通过后才会进入本届阵容",
                         BIZ_TYPE_TEAM_INVITE, invitation.getId(), "TEAM_INVITATION", String.valueOf(invitation.getId()),
                         "TEAM_INVITATION_RECEIVED", NoticeParams.json("teamName", team.getTeamName()));
             } else {
                 teamMemberJoinHelper.addMember(team, memberId, profile.getId(), com.zhs.enums.TeamJoinSourceEnum.INVITE);
+                int updated = invitationDao.update(null, new LambdaUpdateWrapper<BasketTeamInvitation>()
+                        .eq(BasketTeamInvitation::getId, invitationPk)
+                        .eq(BasketTeamInvitation::getInviteeMemberId, memberId)
+                        .eq(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.PENDING.getCode())
+                        .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED)
+                        .set(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.ACCEPTED.getCode())
+                        .set(BasketTeamInvitation::getRespondedTime, now)
+                        .set(BasketTeamInvitation::getResponseRemark, trimToNull(req.getResponseRemark())));
+                if (updated == 0) {
+                    throw new ServiceException("邀请状态已变更，请刷新后重试");
+                }
+                invitation.setInvitationStatus(TeamInvitationStatusEnum.ACCEPTED.getCode());
                 membershipChangeGate.markInvitationEffective(invitation, team);
             }
         } else {
+            if (!statusEnum.canRespond()) {
+                throw BusinessReason.INVITATION_INVALID.exception(403);
+            }
+            int updated = invitationDao.update(null, new LambdaUpdateWrapper<BasketTeamInvitation>()
+                    .eq(BasketTeamInvitation::getId, invitationPk)
+                    .eq(BasketTeamInvitation::getInviteeMemberId, memberId)
+                    .eq(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.PENDING.getCode())
+                    .eq(BasketTeamInvitation::getIsDelete, NOT_DELETED)
+                    .set(BasketTeamInvitation::getInvitationStatus, TeamInvitationStatusEnum.REJECTED.getCode())
+                    .set(BasketTeamInvitation::getRespondedTime, now)
+                    .set(BasketTeamInvitation::getResponseRemark, trimToNull(req.getResponseRemark())));
+            if (updated == 0) {
+                throw new ServiceException("邀请状态已变更，请刷新后重试");
+            }
+            invitation.setInvitationStatus(TeamInvitationStatusEnum.REJECTED.getCode());
             membershipChangeGate.markInvitationRejected(invitationPk);
         }
 
         Map<Long, BasketMemberProfile> profileMap = loadMemberProfileMap(Collections.singleton(memberId));
         return toItemResp(invitation, team, profileMap, memberId);
+    }
+
+    private TeamInvitationItemResp alreadyAccepted(BasketTeamInvitation invitation, BasketTeam team, Long memberId) {
+        if (team != null && team.getDivisionId() != null) {
+            com.zhs.model.BasketTeamMember membership = teamMembershipSupport.findActiveMembership(memberId, team.getDivisionId());
+            if (membership != null && Objects.equals(membership.getTeamId(), team.getId())) {
+                return toItemResp(invitation, team, loadMemberProfileMap(Collections.singleton(memberId)), memberId);
+            }
+        }
+        throw new ServiceException("该邀请已标记为已接受，但你还不在这支球队的本届阵容里。请让队长重新邀请",
+                409, BusinessReason.INVITATION_INVALID.code());
     }
 
     private Boolean resolveAccept(TeamInvitationRespondReq req) {
@@ -439,7 +488,9 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         resp.setInvitationNo(invitation.getInvitationNo());
         resp.setTeamId(toStringId(invitation.getTeamId()));
         resp.setTeamName(team == null ? null : team.getTeamName());
-        fillInvitationEventContext(resp, team);
+        Long boundDivisionId = membershipChangeGate.boundDivisionId(
+                TeamMembershipChangeGate.SOURCE_INVITATION, invitation.getId());
+        fillInvitationEventContext(resp, boundDivisionId);
         resp.setInviterMemberId(toStringId(invitation.getInviterMemberId()));
         resp.setInviteeMemberId(toStringId(invitation.getInviteeMemberId()));
         resp.setInviterUserId(toStringId(invitation.getInviterMemberId()));
@@ -455,17 +506,29 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         boolean canRespond = status.canRespond()
                 && (invitation.getExpireTime() == null || invitation.getExpireTime().after(new Date()));
         resp.setCanRespond(canRespond);
-        String joinIneligibilityReason = inviteeMemberId == null || team == null
-                ? null
-                : captainPermissionService.resolveJoinIneligibilityReason(inviteeMemberId,
-                platformTeamMembershipSupport.resolveTeamPlatformCode(team));
-        String platformIdentityReason = resolveInviteePlatformIdentityReason(team, inviteeMemberId);
-        if (platformIdentityReason != null) {
-            joinIneligibilityReason = platformIdentityReason;
+        String joinIneligibilityReason = null;
+        if (boundDivisionId == null) {
+            joinIneligibilityReason = "这条邀请没有可靠的赛事归属，不能直接接受";
+        } else if (team == null || !boundDivisionId.equals(team.getDivisionId())) {
+            joinIneligibilityReason = "这条邀请属于以往赛事，请让队长在当前赛事重新邀请";
+        } else if (inviteeMemberId != null) {
+            BusinessReason block = teamMembershipSupport.resolveEventJoinBlock(
+                    inviteeMemberId, boundDivisionId, team.getId());
+            if (block != null) {
+                joinIneligibilityReason = block.message();
+            }
         }
-        String terminalMismatchReason = resolveInviteeTerminalMismatchReason(team, inviteeMemberId);
-        if (terminalMismatchReason != null) {
-            joinIneligibilityReason = terminalMismatchReason;
+        if (joinIneligibilityReason == null) {
+            String platformIdentityReason = resolveInviteePlatformIdentityReason(team, inviteeMemberId);
+            if (platformIdentityReason != null) {
+                joinIneligibilityReason = platformIdentityReason;
+            }
+        }
+        if (joinIneligibilityReason == null) {
+            String terminalMismatchReason = resolveInviteeTerminalMismatchReason(team, inviteeMemberId);
+            if (terminalMismatchReason != null) {
+                joinIneligibilityReason = terminalMismatchReason;
+            }
         }
         resp.setCanAccept(canRespond && joinIneligibilityReason == null);
         resp.setCannotAcceptReason(canRespond ? joinIneligibilityReason : null);
@@ -474,12 +537,16 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
         return resp;
     }
 
-    private void fillInvitationEventContext(TeamInvitationItemResp resp, BasketTeam team) {
-        if (resp == null || team == null || team.getDivisionId() == null) {
+    private void fillInvitationEventContext(TeamInvitationItemResp resp, Long divisionId) {
+        if (resp == null) {
             return;
         }
-        resp.setDivisionId(toStringId(team.getDivisionId()));
-        BasketDivision division = divisionDao.selectById(team.getDivisionId());
+        if (divisionId == null) {
+            resp.setDivisionName("待核实");
+            return;
+        }
+        resp.setDivisionId(toStringId(divisionId));
+        BasketDivision division = divisionDao.selectById(divisionId);
         if (division == null || !Objects.equals(NOT_DELETED, division.getIsDelete())) {
             resp.setDivisionName("赛事信息不可用");
             return;

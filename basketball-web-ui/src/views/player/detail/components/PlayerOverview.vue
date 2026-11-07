@@ -32,7 +32,11 @@ const seasonBoxes = computed(() => {
   ]
 })
 
-const honorItems = computed(() => props.detail.honors)
+const honorItems = computed(() => {
+  const seasonId = props.detail.profile.seasonId
+  if (!seasonId) return props.detail.honors
+  return props.detail.honors.filter((item) => !item.seasonId || item.seasonId === seasonId)
+})
 
 const countBoxes = computed(() => {
   const count = (code: string) =>
@@ -62,8 +66,8 @@ function formatStat(value: number | null | undefined, average: boolean): string 
   return num.toFixed(1)
 }
 
-function goAllMatches() {
-  router.replace({ query: { ...router.currentRoute.value.query, tab: 'matches' } })
+function goTab(tab: 'matches' | 'honors') {
+  router.replace({ query: { ...router.currentRoute.value.query, tab } })
 }
 </script>
 
@@ -106,6 +110,9 @@ function goAllMatches() {
           <span>Player Honors</span>
         </div>
         <p>{{ t('publicPages.player.honorsDesc') }}</p>
+        <button type="button" class="player-detail-section-head__action" @click="goTab('honors')">
+          {{ t('publicPages.player.viewAllHonors') }}
+        </button>
       </div>
 
       <div class="player-honor-board">
@@ -175,7 +182,7 @@ function goAllMatches() {
         <button
           type="button"
           class="player-detail-section-head__action player-detail-overview__all-matches"
-          @click="goAllMatches"
+          @click="goTab('matches')"
         >
           {{ t('publicPages.player.viewAllMatches') }}
         </button>

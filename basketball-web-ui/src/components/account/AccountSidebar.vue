@@ -53,6 +53,7 @@ interface MenuItem {
 const mainMenus = computed<MenuItem[]>(() => [
   { key: 'overview', label: t('accountShell.sidebar.overview'), routeName: 'AccountOverview' },
   { key: 'identity', label: t('accountShell.sidebar.identity'), to: identityRoute.value },
+  { key: 'performance', label: t('accountShell.sidebar.performance'), routeName: 'AccountPerformance' },
   { key: 'team', label: t('accountShell.sidebar.team'), routeName: 'AccountMyTeam' },
   { key: 'tournaments', label: t('accountShell.sidebar.events'), routeName: 'AccountMyEvents' },
   { key: 'notifications', label: t('accountShell.sidebar.notifications'), routeName: 'AccountNotifications', badge: true },
@@ -62,6 +63,9 @@ const mainMenus = computed<MenuItem[]>(() => [
 function isActive(item: MenuItem) {
   if (item.key === 'identity') {
     return route.path.startsWith('/account/player-identity')
+  }
+  if (item.key === 'performance') {
+    return route.path.startsWith('/account/performance')
   }
   if (item.key === 'tournaments') {
     return (
@@ -193,6 +197,14 @@ function handleAvatarError() {
             aria-hidden="true"
           >
             <path fill="currentColor" d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-2 16l-4-4 1.41-1.41L10 14.17l6.59-6.59L18 9l-8 8z" />
+          </svg>
+          <svg
+            v-else-if="item.key === 'performance'"
+            class="account-sidebar__link-icon"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path fill="currentColor" d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 16.99z" />
           </svg>
           <svg
             v-else-if="item.key === 'team'"

@@ -3,6 +3,11 @@ import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import {
+  getOwnPerformanceHonorPage,
+  getOwnPerformancePlayer,
+  getOwnPerformanceSeasonStat,
+} from '@/api/accountPerformance'
+import {
   getPublicPlayerDetail,
   getPublicPlayerHonorPage,
   getPublicPlayerSeasonStat,
@@ -14,6 +19,7 @@ import PlayerTabs from './components/PlayerTabs.vue'
 import PlayerOverview from './components/PlayerOverview.vue'
 import PlayerMatches from './components/PlayerMatches.vue'
 import PlayerData from './components/PlayerData.vue'
+import PlayerHonors from './components/PlayerHonors.vue'
 import PlayerCareer from './components/PlayerCareer.vue'
 import {
   applyPlayerBoxScore,
@@ -29,11 +35,16 @@ import {
 import type { PlayerDetailData, PlayerMatchRecord, PlayerProfile } from './types'
 import { normalizePlayerTab, resolvePlayerId, type PlayerDetailTab } from '@/utils/playerNavigate'
 
+const props = defineProps<{
+  sourcePlayerId?: string
+  selfView?: boolean
+}>()
+
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-const playerId = computed(() => resolvePlayerId(route.params.playerId as string))
+const playerId = computed(() => props.sourcePlayerId || resolvePlayerId(route.params.playerId as string))
 const queryDivisionId = computed(() => String(route.query.divisionId || '').trim())
 const playerDetail = ref<PlayerDetailData | null>(null)
 const loadState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
@@ -48,6 +59,8 @@ const tabComponent = computed(() => {
       return PlayerMatches
     case 'data':
       return PlayerData
+    case 'honors':
+      return PlayerHonors
     case 'career':
       return PlayerCareer
     default:
@@ -66,11 +79,17 @@ async function loadPlayer() {
   loadState.value = 'loading'
   loadError.value = ''
   try {
-    const [detailRes, statRes, honorRes] = await Promise.all([
-      getPublicPlayerDetail(id),
-      getPublicPlayerSeasonStat(id),
-      getPublicPlayerHonorPage(id, { currentPage: 1, pageSize: 200 }),
-    ])
+    const [detailRes, statRes, honorRes] = props.selfView
+      ? await Promise.all([
+          getOwnPerformancePlayer(),
+          getOwnPerformanceSeasonStat(),
+          getOwnPerformanceHonorPage({ currentPage: 1, pageSize: 200 }),
+        ])
+      : await Promise.all([
+          getPublicPlayerDetail(id),
+          getPublicPlayerSeasonStat(id),
+          getPublicPlayerHonorPage(id, { currentPage: 1, pageSize: 200 }),
+        ])
     if (current !== reqId) return
     const rawDetail = detailRes.data
     if (!rawDetail) {
@@ -78,25 +97,43 @@ async function loadPlayer() {
       loadState.value = 'empty'
       return
     }
-    const profile = mapPublicPlayerProfile(rawDetail, { divisionId: queryDivisionId.value })
-    const seasonStats = (statRes.data ?? []).filter((row) =>
-      queryDivisionId.value ? String(row.divisionId || '') === queryDivisionId.value : true,
+    const seasonRows = statRes.data ?? []
+    const preferredDivision = queryDivisionId.value || String(seasonRows[0]?.divisionId || '')
+    const profile = mapPublicPlayerProfile(rawDetail, { divisionId: preferredDivision })
+    const scopedStats = seasonRows.filter((row) =>
+      preferredDivision ? String(row.divisionId || '') === preferredDivision : true,
     )
-    const scopedStats = seasonStats.length ? seasonStats : (statRes.data ?? [])
-    const eventPlayerId = String(scopedStats[0]?.eventPlayerId || '').trim()
+    const selectedStat = scopedStats[0] || seasonRows[0]
+    const eventPlayerId = String(selectedStat?.eventPlayerId || '').trim()
     if (eventPlayerId) {
       profile.eventPlayerId = eventPlayerId
     }
+    if (selectedStat) {
+      profile.divisionId = String(selectedStat.divisionId || preferredDivision)
+      profile.seasonId = selectedStat.seasonId ? String(selectedStat.seasonId) : profile.seasonId
+      profile.seasonName = selectedStat.seasonName || profile.seasonName
+      profile.divisionName = selectedStat.divisionName || profile.divisionName
+      profile.seriesName = selectedStat.seriesName || profile.seriesName
+      if (selectedStat.teamName) {
+        profile.currentTeamName = selectedStat.teamName
+      }
+      if (selectedStat.eventTeamId) {
+        profile.eventTeamId = String(selectedStat.eventTeamId)
+        profile.currentTeamId = String(selectedStat.eventTeamId)
+      }
+    }
     const detail = buildEmptyPlayerDetail(profile)
     detail.profile = profile
-    detail.careerStats = mapPublicPlayerSeasonStats(scopedStats)
-    detail.seasonStageOptions = mapSeasonStageOptions(scopedStats)
-    detail.teamHistory = buildPlayerTeamHistory(profile, scopedStats)
-    detail.nameHistory = buildPlayerNameHistory(profile, scopedStats)
+    detail.careerStats = mapPublicPlayerSeasonStats(seasonRows)
+    detail.seasonStageOptions = mapSeasonStageOptions(seasonRows)
+    detail.teamHistory = buildPlayerTeamHistory(profile, seasonRows)
+    detail.nameHistory = buildPlayerNameHistory(profile, seasonRows)
     detail.honors = mapPublicPlayerHonors(honorRes.data?.records ?? [])
     playerDetail.value = detail
     loadState.value = 'success'
-    document.title = t('common.documentTitle', { page: profile.displayName })
+    if (!props.sourcePlayerId) {
+      document.title = t('common.documentTitle', { page: profile.displayName })
+    }
     void loadPlayerMatches(current, profile)
   } catch (err) {
     if (current !== reqId) return
@@ -117,14 +154,19 @@ async function loadPlayerMatches(current: number, profile: PlayerProfile) {
     if (current !== reqId) return
     const finishedMatchIds = new Set<string>()
     let inPlayoffs = false
-    const matches = (v4Res.data ?? []).map((item) => {
+    let hasLiveMatch = false
+    const sourceMatches = v4Res.data ?? []
+    const matches = sourceMatches.flatMap((item) => {
       const status = String(item.matchStatus || '').toUpperCase()
-      if (status === 'FINISHED' || status === 'FORFEITED' || status === 'FORFEIT') {
-        finishedMatchIds.add(String(item.matchId))
-      }
+      const seriesStatus = String(item.seriesStatus || '').toUpperCase()
+      const played = status === 'FINISHED' || status === 'FORFEITED' || status === 'FORFEIT'
+      const seriesSkipped = Boolean(item.matchSeriesId) && seriesStatus === 'COMPLETED' && !played
       const mapped = mapV4MatchToTeamRecord(item, profile.eventTeamId || profile.currentTeamId)
       if (mapped.stage === 'playoffs') inPlayoffs = true
-      return {
+      if (!played && !seriesSkipped) hasLiveMatch = true
+      if (!played || seriesSkipped) return []
+      finishedMatchIds.add(String(item.matchId))
+      return [{
         id: mapped.id,
         matchId: mapped.id,
         date: mapped.date,
@@ -168,10 +210,14 @@ async function loadPlayerMatches(current: number, profile: PlayerProfile) {
         threePointsAttempted: null,
         freeThrowsMade: null,
         freeThrowsAttempted: null,
-      } satisfies PlayerMatchRecord
+      } satisfies PlayerMatchRecord]
     })
     matches.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    if (inPlayoffs) profile.currentStage = t('publicPages.player.playoffs')
+    if (sourceMatches.length > 0 && !hasLiveMatch) {
+      profile.currentStage = ''
+    } else if (inPlayoffs) {
+      profile.currentStage = t('publicPages.player.playoffs')
+    }
     applyPlayerMatches(matches, profile)
     void hydrateMatchStatsInBackground(current, matches, profile, finishedMatchIds)
   } catch {
@@ -230,13 +276,23 @@ async function hydrateMatchStatsInBackground(
   }))
 }
 
+const selectedDivisionId = computed(() => queryDivisionId.value || playerDetail.value?.profile.divisionId || '')
+
 function setTab(tab: PlayerDetailTab) {
   router.replace({
-    name: 'PlayerDetail',
-    params: { playerId: String(playerId.value) },
     query: {
       ...route.query,
       tab,
+    },
+  })
+}
+
+function selectDivision(event: Event) {
+  const divisionId = (event.target as HTMLSelectElement).value
+  router.replace({
+    query: {
+      ...route.query,
+      divisionId: divisionId || undefined,
     },
   })
 }
@@ -265,6 +321,18 @@ watch(
         <div class="player-detail-page__paper">
           <div class="player-detail-page__paper-body">
             <div class="site-shell-inner player-detail-page__paper-inner">
+              <label v-if="playerDetail.seasonStageOptions.length" class="player-event-scope">
+                <span>{{ t('publicPages.player.eventScope') }}</span>
+                <select :value="selectedDivisionId" @change="selectDivision">
+                  <option
+                    v-for="option in playerDetail.seasonStageOptions"
+                    :key="option.id"
+                    :value="option.id"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+              </label>
               <PlayerTabs :model-value="activeTab" @update:model-value="setTab" />
               <component :is="tabComponent" :detail="playerDetail" :player-id="playerId!" />
             </div>
@@ -280,5 +348,24 @@ watch(
 
 .player-detail-empty.is-error {
   color: #e10613;
+}
+
+.player-event-scope {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 16px;
+  color: #777;
+  font-size: 12px;
+
+  select {
+    min-width: 220px;
+    max-width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    background: #fff;
+    color: #191919;
+    font: inherit;
+  }
 }
 </style>

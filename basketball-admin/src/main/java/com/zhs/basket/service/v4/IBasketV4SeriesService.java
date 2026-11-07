@@ -11,7 +11,11 @@ public interface IBasketV4SeriesService {
 
     List<BasketSeriesVo> selectList(Integer enabled);
 
+    List<BasketSeriesVo> selectHonorIconList();
+
     BasketSeriesVo selectById(Long id);
 
     void updateEnabled(Long id, Integer enabled);
+
+    void updateHonorIconUrl(Long id, String honorIconUrl);
 }

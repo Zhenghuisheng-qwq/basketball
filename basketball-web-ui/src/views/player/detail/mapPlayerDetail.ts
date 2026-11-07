@@ -328,19 +328,24 @@ export function buildPlayerNameHistory(
 ): PlayerNameHistory[] {
   const currentName = displayText(profile.displayName, '')
   const byName = new Map<string, string[]>()
+  const currentLabels: string[] = []
   const sorted = [...rows].sort((a, b) =>
     String(a.seasonName || a.seasonId || '').localeCompare(String(b.seasonName || b.seasonId || '')),
   )
   for (const row of sorted) {
     const playerName = displayText(row.playerName, '')
-    if (!playerName || playerName === '--' || (currentName && playerName === currentName)) continue
     const label = seasonPeriodLabel(row)
+    if (currentName && currentName !== '--' && (!playerName || playerName === '--' || playerName === currentName)) {
+      if (label && !currentLabels.includes(label)) currentLabels.push(label)
+      continue
+    }
+    if (!playerName || playerName === '--') continue
     const labels = byName.get(playerName) || []
     if (label && !labels.includes(label)) labels.push(label)
     byName.set(playerName, labels)
   }
-  return [...byName.entries()].map(([playerName, labels], index) => ({
-    id: index + 1,
+  const former = [...byName.entries()].map(([playerName, labels], index) => ({
+    id: index + 2,
     startDate: labels[0] || '--',
     endDate: labels[labels.length - 1] || '--',
     period: labels.filter(Boolean).join(' · ') || '--',
@@ -348,6 +353,20 @@ export function buildPlayerNameHistory(
     description: translate('publicPages.player.seasonSnapshotName'),
     current: false,
   }))
+  if (!currentName || currentName === '--') return former
+  const periodLabels = currentLabels.length ? currentLabels : (profile.seasonName ? [profile.seasonName] : [])
+  return [
+    {
+      id: 1,
+      startDate: periodLabels[0] || '--',
+      endDate: periodLabels[periodLabels.length - 1] || '--',
+      period: periodLabels.filter(Boolean).join(' · ') || '--',
+      playerName: currentName,
+      description: translate('publicPages.player.currentName'),
+      current: true,
+    },
+    ...former,
+  ]
 }
 
 export function mapPublicPlayerHonors(rows: PublicHonorItemResp[]): PlayerHonor[] {
@@ -355,12 +374,13 @@ export function mapPublicPlayerHonors(rows: PublicHonorItemResp[]): PlayerHonor[
     const honorDate = formatDateTime(item.awardDate).date
     return {
       id: String(item.honorId),
-      seasonName: displayText(item.seasonName || item.tournamentName, translate('publicPages.player.publicSeason')),
+      seasonName: displayText(item.tournamentName || item.seasonName, translate('publicPages.player.publicSeason')),
       honorName: displayText(item.honorName || item.honorTitle, translate('publicPages.player.playerHonor')),
       honorDate: honorDate === '--' ? '' : honorDate,
       honorValue: displayText(item.honorValue || item.honorSubtitle, ''),
       honorCode: item.honorCode || '',
-      imageUrl: item.coverUrl?.trim() || '',
+      seasonId: item.seasonId ? String(item.seasonId) : '',
+      imageUrl: item.seriesHonorIconUrl?.trim() || item.coverUrl?.trim() || '',
       tournamentId: item.tournamentId ? String(item.tournamentId) : undefined,
     }
   })

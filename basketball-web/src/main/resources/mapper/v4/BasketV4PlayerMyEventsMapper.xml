@@ -22,10 +22,15 @@
             case when ep.is_captain = 1 then 'CAPTAIN' else 'PLAYER' end as roleInTeam,
             et.event_team_status as eventTeamStatus,
             d.division_status as divisionStatus,
+            d.match_end_time as matchEndTime,
             cs.id as currentStageId,
+            os.stage_name as openStageName,
             cs.stage_name as currentStageName,
             cs.stage_type as stageType,
+            cs.competition_format as competitionFormat,
             cs.execution_status as stageExecutionStatus,
+            fs.competition_format as latestCompetitionFormat,
+            fs.stage_type as latestStageType,
             st.group_scope_key as currentGroupId,
             dg.group_name as currentGroupName,
             st.rank_no as standingRank,
@@ -36,6 +41,11 @@
               left join basket_match_series ms on ms.id = m.series_id and ms.is_delete = 0
               where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
                 and m.match_status not in ('FINISHED', 'CANCELLED', 'FORFEITED')
+                and not (
+                    ms.id is not null
+                    and ms.series_status = 'COMPLETED'
+                    and m.match_status not in ('FINISHED', 'CANCELLED', 'FORFEITED')
+                )
                 and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)
               order by coalesce(m.match_time, case
                 when ms.scheduled_date is not null and ms.scheduled_start_time is not null
@@ -47,6 +57,11 @@
               left join basket_match_series ms on ms.id = m.series_id and ms.is_delete = 0
               where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
                 and m.match_status not in ('FINISHED', 'CANCELLED', 'FORFEITED')
+                and not (
+                    ms.id is not null
+                    and ms.series_status = 'COMPLETED'
+                    and m.match_status not in ('FINISHED', 'CANCELLED', 'FORFEITED')
+                )
                 and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)
               order by coalesce(m.match_time, case
                 when ms.scheduled_date is not null and ms.scheduled_start_time is not null
@@ -70,25 +85,84 @@
                 and m.match_status = 'FINISHED'
                 and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)) as finishedMatchCount,
             (select count(1) from basket_match m
-              left join (
-                select s1.match_id, s1.submit_event_team_id, s1.submission_status
-                from basket_match_submission s1
-                join (
-                    select match_id, submit_event_team_id, max(version_no) as max_ver
-                    from basket_match_submission where is_delete = 0 group by match_id, submit_event_team_id
-                ) lv on lv.match_id = s1.match_id and lv.submit_event_team_id = s1.submit_event_team_id and lv.max_ver = s1.version_no
-                where s1.is_delete = 0
-              ) ps on ps.match_id = m.id and ps.submit_event_team_id = et.id
               where m.is_delete = 0 and m.publish_status = 'PUBLISHED'
                 and m.match_status in ('FINISHED', 'FORFEITED')
+                and m.winner_event_team_id = et.id
+                and ep.is_captain = 1
                 and (m.home_event_team_id = et.id or m.away_event_team_id = et.id)
-                and (ps.submission_status is null or ps.submission_status in ('DRAFT', 'REJECTED'))
-            ) as pendingSubmissionCount
+                and not exists (
+                    select 1
+                    from basket_match_submission s
+                    where s.is_delete = 0
+                      and s.match_id = m.id
+                      and s.submission_status in ('APPROVED', 'PENDING_REVIEW')
+                      and s.version_no = (
+                          select max(s2.version_no)
+                          from basket_match_submission s2
+                          where s2.is_delete = 0
+                            and s2.match_id = s.match_id
+                            and s2.submit_event_team_id = s.submit_event_team_id
+                      )
+                )
+            ) as pendingSubmissionCount,
+            (select coalesce(nullif(hr.honor_title, ''), hc.honor_name)
+              from basket_honor_record hr
+              join basket_honor_category hc on hc.id = hr.honor_category_id and hc.is_delete = 0
+              where hr.is_delete = 0
+                and hr.display_status = 1
+                and hr.season_id = se.id
+                and hr.team_id = et.source_team_id
+                and hc.recipient_type = 'TEAM'
+              order by case hc.honor_code
+                  when 'CHAMPION' then 0
+                  when 'RUNNER_UP' then 1
+                  when 'THIRD_PLACE' then 2
+                  else 9 end, hr.id desc
+              limit 1) as publishedResultLabel,
+            (select ms.winner_event_team_id
+              from basket_match_series ms
+              join basket_division_stage stg on stg.id = ms.stage_id and stg.is_delete = 0
+              where ms.is_delete = 0
+                and ms.division_id = d.id
+                and ms.series_status = 'COMPLETED'
+                and ms.winner_event_team_id is not null
+                and (ms.home_event_team_id = et.id or ms.away_event_team_id = et.id)
+                and stg.stage_order = (
+                    select max(sx.stage_order) from basket_division_stage sx
+                    where sx.division_id = d.id and sx.is_delete = 0
+                )
+                and ms.round_no = (
+                    select max(mx.round_no) from basket_match_series mx
+                    where mx.stage_id = ms.stage_id and mx.is_delete = 0
+                )
+                and (
+                    select count(1) from basket_match_series cx
+                    where cx.stage_id = ms.stage_id and cx.is_delete = 0 and cx.round_no = ms.round_no
+                ) = 1
+              order by ms.id desc
+              limit 1) as finalSeriesWinnerTeamId
         from basket_event_player ep
         inner join basket_event_team et on et.id = ep.event_team_id and et.is_delete = 0
         inner join basket_division d on d.id = et.division_id and d.is_delete = 0
         inner join basket_season se on se.id = et.season_id and se.is_delete = 0
         inner join basket_series s on s.id = se.series_id and s.is_delete = 0
+        left join basket_division_stage fs on fs.id = (
+            select ds.id
+            from basket_division_stage ds
+            where ds.division_id = d.id
+              and ds.is_delete = 0
+            order by ds.stage_order desc, ds.id desc
+            limit 1
+        )
+        left join basket_division_stage os on os.id = (
+            select ds.id
+            from basket_division_stage ds
+            where ds.division_id = d.id
+              and ds.is_delete = 0
+              and ds.execution_status in ('RUNNING', 'RESULT_PENDING_CONFIRM')
+            order by ds.stage_order desc, ds.id desc
+            limit 1
+        )
         left join basket_division_stage cs on cs.id = (
             select ds.id
             from basket_division_stage ds

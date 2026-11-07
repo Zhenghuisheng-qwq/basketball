@@ -13,6 +13,8 @@ public interface BasketSeriesMapper {
 
     List<BasketSeries> selectList(@Param("enabled") Integer enabled);
 
+    List<BasketSeries> selectHonorIconList();
+
     int insert(BasketSeries entity);
 
     int updateById(BasketSeries entity);
@@ -20,4 +22,6 @@ public interface BasketSeriesMapper {
     int softDelete(@Param("id") Long id);
 
     int updateEnabled(@Param("id") Long id, @Param("enabled") Integer enabled);
+
+    int updateHonorIconUrl(@Param("id") Long id, @Param("honorIconUrl") String honorIconUrl);
 }

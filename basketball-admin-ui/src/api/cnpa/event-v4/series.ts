@@ -10,6 +10,7 @@ export interface BasketSeriesVo {
   iconFileId?: number
   coverFileId?: number
   bannerFileId?: number
+  honorIconUrl?: string
   sortOrder?: number
   enabled?: number
 }
@@ -24,4 +25,16 @@ export function getV4Series(id: number): Promise<AjaxResult<BasketSeriesVo>> {
 
 export function updateV4SeriesEnabled(id: number, enabled: number): Promise<AjaxResult> {
   return request({ url: `/basket/v4/series/${id}/enabled`, method: 'put', data: { enabled } })
+}
+
+export function listSeriesHonorIcons(): Promise<AjaxResult<BasketSeriesVo[]>> {
+  return request({ url: '/basket/hall-of-fame/series-icon/list', method: 'get' })
+}
+
+export function updateSeriesHonorIcon(id: number, honorIconUrl: string): Promise<AjaxResult> {
+  return request({
+    url: `/basket/hall-of-fame/series-icon/${id}`,
+    method: 'put',
+    data: { honorIconUrl },
+  })
 }

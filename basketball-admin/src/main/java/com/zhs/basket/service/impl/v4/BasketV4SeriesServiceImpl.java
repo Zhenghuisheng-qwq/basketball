@@ -25,6 +25,11 @@ public class BasketV4SeriesServiceImpl implements IBasketV4SeriesService {
     }
 
     @Override
+    public List<BasketSeriesVo> selectHonorIconList() {
+        return seriesMapper.selectHonorIconList().stream().map(this::toVo).collect(Collectors.toList());
+    }
+
+    @Override
     public BasketSeriesVo selectById(Long id) {
         return toVo(requireSeries(id));
     }
@@ -38,6 +43,22 @@ public class BasketV4SeriesServiceImpl implements IBasketV4SeriesService {
         requireSeries(id);
         if (seriesMapper.updateEnabled(id, enabled) != 1) {
             throw new ServiceException("更新 Series 启停状态失败");
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void updateHonorIconUrl(Long id, String honorIconUrl) {
+        requireSeries(id);
+        String url = honorIconUrl == null ? "" : honorIconUrl.trim();
+        if (!url.isEmpty() && !url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("/")) {
+            throw new ServiceException("荣誉头像地址不合法");
+        }
+        if (url.length() > 512) {
+            throw new ServiceException("荣誉头像地址过长");
+        }
+        if (seriesMapper.updateHonorIconUrl(id, url.isEmpty() ? null : url) != 1) {
+            throw new ServiceException("更新荣誉头像失败");
         }
     }
 

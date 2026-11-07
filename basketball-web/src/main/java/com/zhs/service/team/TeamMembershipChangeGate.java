@@ -62,8 +62,8 @@ public class TeamMembershipChangeGate {
     @Resource
     private EventRosterMembershipSync eventRosterMembershipSync;
 
-    public boolean shouldHold(Long teamId) {
-        return !liveRegistrations(teamId).isEmpty();
+    public boolean shouldHold(BasketTeam team) {
+        return !liveRegistrations(team).isEmpty();
     }
 
     public void trackInvitation(BasketTeamInvitation invitation, BasketTeam team) {
@@ -76,7 +76,7 @@ public class TeamMembershipChangeGate {
                 .before("不在队")
                 .after("待球员接受邀请")
                 .impact("邀请尚未接受，不改变永久球队和报名名单")
-                .stage(shouldHold(team.getId()) ? null : STAGE_UNCONTROLLED));
+                .stage(shouldHold(team) ? null : STAGE_UNCONTROLLED));
     }
 
     public void markInvitationRejected(Long invitationId) {
@@ -84,9 +84,57 @@ public class TeamMembershipChangeGate {
                 "球员已拒绝邀请", "未入队，报名名单不变");
     }
 
+    public Long boundDivisionId(String sourceType, Long sourceId) {
+        BasketTeamMembershipChange row = findBySource(sourceType, sourceId);
+        return row == null ? null : row.getDivisionId();
+    }
+
+    /**
+     * 球队沿用到新赛事时，旧赛事上还没生效的邀请和申请失效。
+     * 不改它们原来的赛事归属，也不把它们补进新赛事。
+     */
+    public void closeOpenActionsForPreviousEvent(Long teamId, Long previousDivisionId) {
+        if (teamId == null) {
+            return;
+        }
+        LambdaUpdateWrapper<BasketTeamMembershipChange> update = new LambdaUpdateWrapper<BasketTeamMembershipChange>()
+                .eq(BasketTeamMembershipChange::getTeamId, teamId)
+                .in(BasketTeamMembershipChange::getChangeStatus, PENDING_USER, PENDING_CAPTAIN, PENDING_ADMIN)
+                .eq(BasketTeamMembershipChange::getIsDelete, NOT_DELETED)
+                .set(BasketTeamMembershipChange::getChangeStatus, CANCELLED)
+                .set(BasketTeamMembershipChange::getAfterSummary, "球队已沿用到新赛事，原操作失效")
+                .set(BasketTeamMembershipChange::getImpactSummary, "不影响新赛事阵容，也不改写历史赛事记录")
+                .set(BasketTeamMembershipChange::getUpdateTime, new Date());
+        if (previousDivisionId != null) {
+            update.and(wrapper -> wrapper.eq(BasketTeamMembershipChange::getDivisionId, previousDivisionId)
+                    .or().isNull(BasketTeamMembershipChange::getDivisionId));
+        }
+        changeDao.update(null, update);
+    }
+
+    /** 球员已加入本届其他球队。待确认和待管理员审核的邀请都失效，不能再补审进队。 */
+    public void invalidateOpenInvitation(Long invitationId, String reason) {
+        BasketTeamMembershipChange row = findBySource(SOURCE_INVITATION, invitationId);
+        if (row == null) {
+            return;
+        }
+        String status = row.getChangeStatus();
+        if (!PENDING_USER.equals(status) && !PENDING_ADMIN.equals(status)) {
+            return;
+        }
+        changeDao.update(null, new LambdaUpdateWrapper<BasketTeamMembershipChange>()
+                .eq(BasketTeamMembershipChange::getId, row.getId())
+                .eq(BasketTeamMembershipChange::getChangeStatus, status)
+                .eq(BasketTeamMembershipChange::getIsDelete, NOT_DELETED)
+                .set(BasketTeamMembershipChange::getChangeStatus, CANCELLED)
+                .set(BasketTeamMembershipChange::getAfterSummary, trim(reason))
+                .set(BasketTeamMembershipChange::getImpactSummary, "已加入本届其他球队，这条邀请不再入队")
+                .set(BasketTeamMembershipChange::getUpdateTime, new Date()));
+    }
+
     public void markInvitationPendingAdmin(BasketTeamInvitation invitation, BasketTeam team) {
         assertNoPendingForPlayer(team.getId(), invitation.getInviteePlayerId());
-        assertNoBlockingRosterChange(team.getId());
+        assertNoBlockingRosterChange(team);
         BasketTeamMembershipChange row = findBySource(SOURCE_INVITATION, invitation.getId());
         if (row == null) {
             insert(base(team, invitation.getInviteePlayerId(), invitation.getInviteeMemberId(),
@@ -127,7 +175,7 @@ public class TeamMembershipChangeGate {
                 .before("不在队")
                 .after("待队长处理加入申请")
                 .impact("队长未同意前不改变球队和报名名单")
-                .stage(shouldHold(team.getId()) ? null : STAGE_UNCONTROLLED));
+                .stage(shouldHold(team) ? null : STAGE_UNCONTROLLED));
     }
 
     public void markJoinClosed(Long applicationId, boolean rejected) {
@@ -137,7 +185,7 @@ public class TeamMembershipChangeGate {
 
     public void markJoinPendingAdmin(BasketTeamJoinApplication application, BasketTeam team, Long captainMemberId) {
         assertNoPendingForPlayer(team.getId(), application.getApplicantPlayerId());
-        assertNoBlockingRosterChange(team.getId());
+        assertNoBlockingRosterChange(team);
         BasketTeamMembershipChange row = findBySource(SOURCE_JOIN, application.getId());
         if (row == null) {
             insert(base(team, application.getApplicantPlayerId(), application.getApplicantMemberId(),
@@ -175,11 +223,11 @@ public class TeamMembershipChangeGate {
     }
 
     public boolean deferCaptainRemove(BasketTeam team, BasketTeamMember target, Long captainMemberId) {
-        if (team == null || target == null || !shouldHold(team.getId())) {
+        if (team == null || target == null || !shouldHold(team)) {
             return false;
         }
         assertNoPendingForPlayer(team.getId(), target.getPlayerId());
-        assertNoBlockingRosterChange(team.getId());
+        assertNoBlockingRosterChange(team);
         insert(base(team, target.getPlayerId(), target.getMemberId(), captainMemberId, ROLE_CAPTAIN,
                 CAPTAIN_REMOVE, SOURCE_MEMBER, target.getId())
                 .status(PENDING_ADMIN)
@@ -211,7 +259,7 @@ public class TeamMembershipChangeGate {
                 .before("当前在队")
                 .after("已主动离队")
                 .impact(trim(impact))
-                .stage(shouldHold(team == null ? null : team.getId()) ? null : STAGE_UNCONTROLLED)
+                .stage(shouldHold(team) ? null : STAGE_UNCONTROLLED)
                 .effectiveNow());
     }
 
@@ -254,8 +302,8 @@ public class TeamMembershipChangeGate {
         }
     }
 
-    private void assertNoBlockingRosterChange(Long teamId) {
-        for (BasketRegistration registration : liveRegistrations(teamId)) {
+    private void assertNoBlockingRosterChange(BasketTeam team) {
+        for (BasketRegistration registration : liveRegistrations(team)) {
             if (eventRosterMembershipSync.autoSyncOpen(registration.getDivisionId())) {
                 continue;
             }
@@ -269,12 +317,17 @@ public class TeamMembershipChangeGate {
         }
     }
 
-    private List<BasketRegistration> liveRegistrations(Long teamId) {
-        if (teamId == null) {
+    /**
+     * 只认球队当前赛区上还没结束的已通过报名。
+     * 继承到新赛事后，旧赛季报名不再挡住入队，也不再把新成员写回旧赛事。
+     */
+    private List<BasketRegistration> liveRegistrations(BasketTeam team) {
+        if (team == null || team.getId() == null || team.getDivisionId() == null) {
             return List.of();
         }
         List<BasketRegistration> registrations = registrationDao.selectList(new LambdaQueryWrapper<BasketRegistration>()
-                .eq(BasketRegistration::getTeamId, teamId)
+                .eq(BasketRegistration::getTeamId, team.getId())
+                .eq(BasketRegistration::getDivisionId, team.getDivisionId())
                 .eq(BasketRegistration::getRegistrationStatus, "APPROVED")
                 .eq(BasketRegistration::getIsDelete, NOT_DELETED));
         return registrations.stream().filter(registration -> {
@@ -337,16 +390,9 @@ public class TeamMembershipChangeGate {
         draft.changeType = changeType;
         draft.sourceType = sourceType;
         draft.sourceId = sourceId;
-        List<BasketRegistration> live = liveRegistrations(team.getId());
-        for (BasketRegistration registration : live) {
-            if (team.getDivisionId() != null && team.getDivisionId().equals(registration.getDivisionId())) {
-                draft.registrationId = registration.getId();
-                break;
-            }
-        }
-        if (draft.registrationId == null && !live.isEmpty()) {
-            draft.registrationId = live.get(0).getId();
-            draft.divisionId = live.get(0).getDivisionId();
+        for (BasketRegistration registration : liveRegistrations(team)) {
+            draft.registrationId = registration.getId();
+            break;
         }
         return draft;
     }

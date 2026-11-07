@@ -16,6 +16,7 @@ import {
 } from '@/api/accountTeam'
 import {
   getCandidatePlayerPage,
+  getHistoricalTeammateList,
   getTeamMemberPage,
   leaveTeam,
   removeTeamMember,
@@ -133,6 +134,8 @@ export const useTeamStore = defineStore('team', () => {
   const candidatePlayers = ref<CandidatePlayerItemDto[]>([])
   const candidateEmptyReason = ref('')
   const candidatesLoading = ref(false)
+  const historicalTeammates = ref<CandidatePlayerItemDto[]>([])
+  const historicalTeammatesLoading = ref(false)
 
   const availableSeasons = ref<AvailableSeasonItemDto[]>([])
   const availableSeasonEmptyReason = ref('')
@@ -520,7 +523,7 @@ export const useTeamStore = defineStore('team', () => {
     actionLoading.value = true
     lastError.value = ''
     try {
-      await respondTeamInvitation(invitationId, {
+      const res = await respondTeamInvitation(invitationId, {
         action: accept ? 'ACCEPT' : 'REJECT',
         accept,
         responseRemark,
@@ -533,6 +536,7 @@ export const useTeamStore = defineStore('team', () => {
         }),
         loadMyTeam(),
       ])
+      return res.data
     } catch (error) {
       setError(error)
       throw error
@@ -783,6 +787,22 @@ export const useTeamStore = defineStore('team', () => {
     }
   }
 
+  async function loadHistoricalTeammates(teamId: string) {
+    historicalTeammatesLoading.value = true
+    lastError.value = ''
+    try {
+      const res = await getHistoricalTeammateList(teamId)
+      historicalTeammates.value = res.data ?? []
+      return historicalTeammates.value
+    } catch (error) {
+      historicalTeammates.value = []
+      setError(error)
+      throw error
+    } finally {
+      historicalTeammatesLoading.value = false
+    }
+  }
+
   async function loadCandidatePlayers(
     teamId: string,
     params?: { currentPage?: number; pageSize?: number; keyword?: string },
@@ -1006,6 +1026,7 @@ export const useTeamStore = defineStore('team', () => {
     joinableTeams.value = []
     joinableContext.value = null
     candidatePlayers.value = []
+    historicalTeammates.value = []
     availableSeasons.value = []
     availableSeasonEmptyReason.value = ''
     registrations.value = []
@@ -1072,6 +1093,8 @@ export const useTeamStore = defineStore('team', () => {
     candidatePlayers,
     candidateEmptyReason,
     candidatesLoading,
+    historicalTeammates,
+    historicalTeammatesLoading,
     availableSeasons,
     availableSeasonEmptyReason,
     registrations,
@@ -1116,6 +1139,7 @@ export const useTeamStore = defineStore('team', () => {
     loadSeasonPlatforms,
     loadRosterCandidates,
     remindMemberPlatformGameIdAction,
+    loadHistoricalTeammates,
     loadCandidatePlayers,
     loadAvailableSeasons,
     loadRegistrations,

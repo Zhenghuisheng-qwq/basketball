@@ -48,9 +48,11 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.List;
 import java.util.Map;
@@ -127,6 +129,11 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         if (!historyView) {
             wrapper.eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
                     .eq(BasketTeamMember::getMembershipStatus, TeamMembershipStatusEnum.ACTIVE.getCode());
+        } else {
+            Long pastDivisionId = resolveViewerPastDivisionId(memberId, team);
+            if (pastDivisionId != null) {
+                wrapper.eq(BasketTeamMember::getDivisionId, pastDivisionId);
+            }
         }
         IPage<BasketTeamMember> memberPage = teamMemberDao.selectPage(page, wrapper);
 
@@ -300,6 +307,10 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Long memberId = UserContext.getRequiredUserId();
         captainPermissionService.requireTeamCaptain(memberId, teamPk);
 
+        BasketTeam team = teamDao.selectById(teamPk);
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            throw new ServiceException("球队不存在", 404);
+        }
         Set<Long> existingMemberIds = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
                         .eq(BasketTeamMember::getTeamId, teamPk)
                         .eq(BasketTeamMember::getIsCurrent, IS_CURRENT)
@@ -333,13 +344,244 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
 
         List<CandidatePlayerItemResp> items = new ArrayList<>();
         for (BasketPlayerProfile profile : allProfiles) {
-            items.add(toInviteCandidateItem(profile, memberProfileMap.get(profile.getMemberId()), platformAccountsMap.get(profile.getId())));
+            items.add(toInviteCandidateItem(profile, memberProfileMap.get(profile.getMemberId()),
+                    platformAccountsMap.get(profile.getId()), team.getDivisionId()));
         }
         CandidatePlayerPageResp respPage = toCandidatePage(items, currentPage, pageSize);
         if (items.isEmpty()) {
             respPage.setEmptyReason("当前暂无可邀请的已认证球员");
         }
         return respPage;
+    }
+
+    @Override
+    public List<CandidatePlayerItemResp> listHistoricalTeammates(String teamId) {
+        Long teamPk = parseLongId(teamId, "球队主键");
+        Long memberId = UserContext.getRequiredUserId();
+        captainPermissionService.requireTeamCaptain(memberId, teamPk);
+        BasketTeam team = teamDao.selectById(teamPk);
+        if (team == null || !NOT_DELETED.equals(team.getIsDelete())) {
+            throw new ServiceException("球队不存在", 404);
+        }
+        if (team.getDivisionId() == null) {
+            return Collections.emptyList();
+        }
+
+        List<BasketTeamMember> rows = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getTeamId, teamPk)
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED));
+        if (CollectionUtils.isEmpty(rows)) {
+            return Collections.emptyList();
+        }
+        Map<Long, List<BasketTeamMember>> byMember = new LinkedHashMap<>();
+        for (BasketTeamMember row : rows) {
+            if (row.getMemberId() == null || Objects.equals(row.getMemberId(), team.getCaptainMemberId())) {
+                continue;
+            }
+            byMember.computeIfAbsent(row.getMemberId(), key -> new ArrayList<>()).add(row);
+        }
+
+        List<BasketTeamMember> invitees = new ArrayList<>();
+        Map<Long, String> joinedThisDivision = new HashMap<>();
+        for (List<BasketTeamMember> memberships : byMember.values()) {
+            boolean stillOnTeam = memberships.stream().anyMatch(this::isActiveCurrentMember);
+            boolean hadPastMembership = memberships.stream().anyMatch(row -> !isActiveCurrentMember(row));
+            if (!hadPastMembership) {
+                continue;
+            }
+            Long teammateId = memberships.get(0).getMemberId();
+            if (stillOnTeam) {
+                joinedThisDivision.put(teammateId, "已在本届球队");
+            } else {
+                BasketTeamMember occupied = teamMembershipSupport.findActiveMembership(teammateId, team.getDivisionId());
+                if (occupied != null) {
+                    joinedThisDivision.put(teammateId, "已加入本届其他球队");
+                }
+            }
+            invitees.add(latestMembership(memberships));
+        }
+        invitees.sort(Comparator
+                .comparing(this::membershipActivityTime, Comparator.nullsFirst(Date::compareTo))
+                .thenComparing(BasketTeamMember::getId, Comparator.nullsFirst(Long::compareTo))
+                .reversed());
+        if (invitees.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        Set<Long> memberIds = invitees.stream().map(BasketTeamMember::getMemberId).collect(Collectors.toSet());
+        Map<Long, BasketPlayerProfile> profileByMember = loadProfilesByMemberIds(memberIds);
+        Map<Long, BasketMemberProfile> memberProfileMap = loadMemberProfiles(memberIds);
+        Map<Long, List<BasketPlayerPlatformAccount>> platformAccountsMap = loadAllPlatformAccounts(new ArrayList<>(profileByMember.values()));
+        Set<Long> pendingInviteeIds = loadPendingInviteeIds(teamPk);
+
+        List<CandidatePlayerItemResp> result = new ArrayList<>();
+        for (BasketTeamMember membership : invitees) {
+            BasketPlayerProfile profile = profileByMember.get(membership.getMemberId());
+            result.add(toHistoricalTeammateItem(
+                    membership,
+                    profile,
+                    memberProfileMap.get(membership.getMemberId()),
+                    profile == null ? null : platformAccountsMap.get(profile.getId()),
+                    pendingInviteeIds.contains(membership.getMemberId()),
+                    joinedThisDivision.get(membership.getMemberId())));
+        }
+        return result;
+    }
+
+    /**
+     * 球队被继承到新赛季后，历史成员查看成员列表时只看自己那一届，不带出新赛季名单。
+     */
+    private Long resolveViewerPastDivisionId(Long memberId, BasketTeam team) {
+        if (memberId == null || team == null || team.getId() == null) {
+            return null;
+        }
+        List<BasketTeamMember> mine = teamMemberDao.selectList(new LambdaQueryWrapper<BasketTeamMember>()
+                .eq(BasketTeamMember::getTeamId, team.getId())
+                .eq(BasketTeamMember::getMemberId, memberId)
+                .eq(BasketTeamMember::getIsDelete, NOT_DELETED));
+        BasketTeamMember past = null;
+        for (BasketTeamMember row : mine) {
+            if (row.getDivisionId() == null || Objects.equals(row.getDivisionId(), team.getDivisionId())) {
+                continue;
+            }
+            if (past == null || membershipNewer(row, past)) {
+                past = row;
+            }
+        }
+        return past == null ? null : past.getDivisionId();
+    }
+
+    private boolean membershipNewer(BasketTeamMember candidate, BasketTeamMember current) {
+        Date candidateTime = candidate.getJoinTime();
+        Date currentTime = current.getJoinTime();
+        if (candidateTime == null) {
+            return false;
+        }
+        if (currentTime == null || candidateTime.after(currentTime)) {
+            return true;
+        }
+        if (candidateTime.before(currentTime)) {
+            return false;
+        }
+        Long candidateId = candidate.getId();
+        Long currentId = current.getId();
+        return candidateId != null && (currentId == null || candidateId > currentId);
+    }
+
+    private boolean isActiveCurrentMember(BasketTeamMember member) {
+        return member != null
+                && Integer.valueOf(IS_CURRENT).equals(member.getIsCurrent())
+                && Objects.equals(TeamMembershipStatusEnum.ACTIVE.getCode(), member.getMembershipStatus());
+    }
+
+    private BasketTeamMember latestMembership(List<BasketTeamMember> memberships) {
+        return memberships.stream()
+                .max(Comparator
+                        .comparing(this::membershipActivityTime, Comparator.nullsFirst(Date::compareTo))
+                        .thenComparing(BasketTeamMember::getId, Comparator.nullsFirst(Long::compareTo)))
+                .orElse(memberships.get(0));
+    }
+
+    private Date membershipActivityTime(BasketTeamMember member) {
+        if (member.getLeaveTime() != null) {
+            return member.getLeaveTime();
+        }
+        if (member.getUpdateTime() != null) {
+            return member.getUpdateTime();
+        }
+        return member.getJoinTime();
+    }
+
+    private Map<Long, BasketPlayerProfile> loadProfilesByMemberIds(Set<Long> memberIds) {
+        if (CollectionUtils.isEmpty(memberIds)) {
+            return Collections.emptyMap();
+        }
+        Map<Long, BasketPlayerProfile> map = new HashMap<>();
+        List<BasketPlayerProfile> profiles = playerProfileDao.selectList(new LambdaQueryWrapper<BasketPlayerProfile>()
+                .in(BasketPlayerProfile::getMemberId, memberIds)
+                .eq(BasketPlayerProfile::getIsDelete, NOT_DELETED)
+                .orderByDesc(BasketPlayerProfile::getId));
+        for (BasketPlayerProfile profile : profiles) {
+            if (profile.getMemberId() == null) {
+                continue;
+            }
+            BasketPlayerProfile existing = map.get(profile.getMemberId());
+            if (existing == null || preferPlayerProfile(profile, existing)) {
+                map.put(profile.getMemberId(), profile);
+            }
+        }
+        return map;
+    }
+
+    private boolean preferPlayerProfile(BasketPlayerProfile candidate, BasketPlayerProfile current) {
+        boolean candidateApproved = Objects.equals(PlayerCertStatusEnum.APPROVED.getCode(), candidate.getCertificationStatus());
+        boolean currentApproved = Objects.equals(PlayerCertStatusEnum.APPROVED.getCode(), current.getCertificationStatus());
+        if (candidateApproved != currentApproved) {
+            return candidateApproved;
+        }
+        return false;
+    }
+
+    private CandidatePlayerItemResp toHistoricalTeammateItem(BasketTeamMember membership,
+                                                             BasketPlayerProfile profile,
+                                                             BasketMemberProfile memberProfile,
+                                                             List<BasketPlayerPlatformAccount> platformAccounts,
+                                                             boolean pendingInvite,
+                                                             String joinedThisDivisionReason) {
+        CandidatePlayerItemResp resp = new CandidatePlayerItemResp();
+        resp.setMemberId(toStringId(membership.getMemberId()));
+        resp.setUserId(toStringId(membership.getMemberId()));
+        resp.setCurrentTeamStatusText(joinedThisDivisionReason == null ? "未加入本届球队" : joinedThisDivisionReason);
+        if (profile != null) {
+            resp.setPlayerId(toStringId(profile.getId()));
+            resp.setPlayerNo(profile.getPlayerNo());
+            resp.setGameNickname(profile.getGameNickname());
+            resp.setGameAccount(profile.getGameAccount());
+            resp.setPositionCode(profile.getPositionCode());
+            resp.setPositionName(PlayerPositionSupport.resolveName(profile.getPositionCode()));
+            resp.setCertificationStatus(profile.getCertificationStatus());
+            resp.setCertificationStatusText(certificationText(profile.getCertificationStatus()));
+            resp.setPlatformAccountSummary(buildPlatformAccountSummary(platformAccounts));
+        } else if (membership.getPlayerId() != null) {
+            resp.setPlayerId(toStringId(membership.getPlayerId()));
+        }
+        if (memberProfile != null) {
+            resp.setNickname(memberProfile.getNickname());
+            resp.setAvatar(resolveAvatarUrl(memberProfile.getAvatarFileId()));
+        }
+        String reason = resolveHistoricalInviteReason(profile, pendingInvite, joinedThisDivisionReason);
+        resp.setCanInvite(reason == null);
+        resp.setCannotInviteReason(reason);
+        return resp;
+    }
+
+    private String resolveHistoricalInviteReason(BasketPlayerProfile profile,
+                                                  boolean pendingInvite,
+                                                  String joinedThisDivisionReason) {
+        if (joinedThisDivisionReason != null) {
+            return joinedThisDivisionReason;
+        }
+        if (profile == null) {
+            return "球员档案不存在";
+        }
+        if (!Objects.equals(PlayerCertStatusEnum.APPROVED.getCode(), profile.getCertificationStatus())) {
+            return "球员未认证";
+        }
+        if (PlayerStatusEnum.fromCode(profile.getPlayerStatus()).isRestricted()) {
+            return "球员当前受限，不能邀请";
+        }
+        if (pendingInvite) {
+            return "已发送邀请，等待对方确认";
+        }
+        return null;
+    }
+
+    private String certificationText(Integer status) {
+        try {
+            return PlayerCertStatusEnum.fromCode(status).getDescription();
+        } catch (ServiceException ex) {
+            return null;
+        }
     }
 
     private Map<Long, List<BasketPlayerPlatformAccount>> loadAllPlatformAccounts(List<BasketPlayerProfile> profiles) {
@@ -358,7 +600,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
 
     private CandidatePlayerItemResp toInviteCandidateItem(BasketPlayerProfile profile,
                                                           BasketMemberProfile memberProfile,
-                                                          List<BasketPlayerPlatformAccount> platformAccounts) {
+                                                          List<BasketPlayerPlatformAccount> platformAccounts,
+                                                          Long divisionId) {
         CandidatePlayerItemResp resp = new CandidatePlayerItemResp();
         resp.setMemberId(toStringId(profile.getMemberId()));
         resp.setUserId(toStringId(profile.getMemberId()));
@@ -375,13 +618,15 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             resp.setAvatar(resolveAvatarUrl(memberProfile.getAvatarFileId()));
         }
         resp.setPlatformAccountSummary(buildPlatformAccountSummary(platformAccounts));
-        BasketTeamMember activeMembership = teamMembershipSupport.findActiveMembership(profile.getMemberId());
+        BasketTeamMember activeMembership = divisionId == null
+                ? null
+                : teamMembershipSupport.findActiveMembership(profile.getMemberId(), divisionId);
         if (activeMembership != null) {
             BasketTeam memberTeam = teamDao.selectById(activeMembership.getTeamId());
             resp.setCurrentTeamId(toStringId(activeMembership.getTeamId()));
-            resp.setCurrentTeamStatusText(memberTeam == null ? "已加入球队" : "已加入 " + memberTeam.getTeamName());
+            resp.setCurrentTeamStatusText(memberTeam == null ? "已加入本届球队" : "已加入本届 " + memberTeam.getTeamName());
         } else {
-            resp.setCurrentTeamStatusText("未加入球队");
+            resp.setCurrentTeamStatusText("未加入本届球队");
         }
         String cannotInviteReason = resolveInviteCannotReason(profile, activeMembership);
         resp.setCanInvite(cannotInviteReason == null);
@@ -402,7 +647,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
             return "球员未认证";
         }
         if (activeMembership != null) {
-            return "该球员已加入其他球队";
+            return "该球员已加入本届其他球队";
         }
         return null;
     }

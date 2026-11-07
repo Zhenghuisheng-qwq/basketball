@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS `basket_series` (
   `icon_file_id` BIGINT DEFAULT NULL COMMENT '图标文件ID',
   `cover_file_id` BIGINT DEFAULT NULL COMMENT '封面文件ID',
   `banner_file_id` BIGINT DEFAULT NULL COMMENT 'Banner文件ID',
+  `honor_icon_url` VARCHAR(512) DEFAULT NULL COMMENT '球员荣誉头像URL',
   `sort_order` INT NOT NULL DEFAULT 0 COMMENT '排序',
   `enabled` TINYINT NOT NULL DEFAULT 1 COMMENT '是否启用：1启用 0停用',
   `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',

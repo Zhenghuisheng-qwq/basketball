@@ -14,6 +14,7 @@ public class BasketSeriesVo {
     private Long iconFileId;
     private Long coverFileId;
     private Long bannerFileId;
+    private String honorIconUrl;
     private Integer sortOrder;
     private Integer enabled;
     private Date createTime;

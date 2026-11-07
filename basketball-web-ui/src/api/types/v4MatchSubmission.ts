@@ -105,6 +105,8 @@ export interface V4MatchSubmissionDetail {
   submissionMode?: string
   draftComplete?: number
   seriesSubmissionId?: string
+  canSubmit?: boolean
+  cannotSubmitReason?: string
 }
 
 export interface V4MyMatchItem {

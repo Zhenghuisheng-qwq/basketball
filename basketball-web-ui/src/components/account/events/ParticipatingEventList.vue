@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { useRouter } from 'vue-router'
 import EventStatusBadge from './EventStatusBadge.vue'
 import type { ParticipatingEvent } from '@/types/accountEvents'
 
 const { t } = useI18n()
+const router = useRouter()
 
 defineProps<{
   events: ParticipatingEvent[]
@@ -32,6 +34,7 @@ const emit = defineEmits<{
           <span>{{ t('accountEvents.joined.participation', { type: item.participationTypeText }) }}</span>
           <span>{{ t('accountEvents.joined.identity', { identity: item.identityText }) }}</span>
           <span v-if="item.stageSummary">{{ t('accountEvents.joined.stage', { stage: item.stageSummary }) }}</span>
+          <span v-if="item.formatSummary">{{ t('accountEvents.joined.format', { format: item.formatSummary }) }}</span>
           <span v-if="item.rankSummary">{{ item.rankSummary }}</span>
           <span v-if="item.qualificationSummary">{{ t('accountEvents.joined.qualification', { status: item.qualificationSummary }) }}</span>
           <EventStatusBadge
@@ -62,6 +65,13 @@ const emit = defineEmits<{
           @click="emit('matchDataAction', item)"
         >
           {{ item.matchDataActionText }}
+        </button>
+        <button
+          type="button"
+          class="account-btn-secondary"
+          @click="router.push({ name: 'AccountPerformance', query: item.divisionId ? { divisionId: item.divisionId } : {} })"
+        >
+          {{ t('accountEvents.joined.viewPerformance') }}
         </button>
         <button
           type="button"

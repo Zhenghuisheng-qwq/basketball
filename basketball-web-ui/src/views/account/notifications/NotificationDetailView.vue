@@ -63,10 +63,13 @@ async function refreshAfterInviteAction(accept: boolean) {
 
   actionLoading.value = true
   try {
-    await teamStore.respondInvitationAction(inviteId, accept)
+    const result = await teamStore.respondInvitationAction(inviteId, accept)
     const refreshed = await notificationStore.loadDetail(notificationId.value)
     detailItem.value = refreshed
-    ElMessage.success(accept ? t('accountShell.notifications.joined') : t('accountShell.notifications.declined'))
+    const awaitingAudit = accept && result?.invitationStatus === 5
+    ElMessage.success(accept
+      ? t(awaitingAudit ? 'accountShell.notifications.awaitingAudit' : 'accountShell.notifications.joined')
+      : t('accountShell.notifications.declined'))
   } catch (error) {
     ElMessage.error(error instanceof Error ? error.message : t('accountShell.notifications.actionFailed'))
     throw error

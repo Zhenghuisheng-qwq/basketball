@@ -74,7 +74,7 @@ const infoItems = computed(() => [
     value: props.profile.currentStage,
     icon: stageIcon,
   },
-])
+].filter((item) => item.key !== 'stage' || Boolean(item.value && item.value !== '--')))
 </script>
 <template>
   <section class="player-detail-hero" :aria-label="t('publicPages.player.heroAria')">

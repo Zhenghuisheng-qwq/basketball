@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
 import java.io.Serializable;
+import java.util.Date;
 
 @Data
 @ApiModel("可继承历史球队摘要")
@@ -45,4 +46,10 @@ public class InheritableTeamSummaryResp implements Serializable {
 
     @ApiModelProperty("不可继承原因")
     private String cannotInheritReason;
+
+    @ApiModelProperty("是否为报名入口的默认推荐。只取最近一次报名审核通过、且当前仍有管理权的球队")
+    private Boolean recommended;
+
+    @ApiModelProperty("最近一次报名审核通过时间。草稿、驳回、取消不参与推荐排序")
+    private Date lastApprovedTime;
 }

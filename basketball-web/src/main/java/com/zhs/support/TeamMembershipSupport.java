@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.zhs.dao.BasketTeamJoinApplicationDao;
 import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.enums.TeamJoinApplicationStatusEnum;
+import com.zhs.enums.TeamMemberRoleEnum;
 import com.zhs.enums.TeamMembershipStatusEnum;
 import com.zhs.exception.BusinessReason;
 import com.zhs.exception.ServiceException;
@@ -109,6 +110,27 @@ public class TeamMembershipSupport {
         if (reason != null) {
             throw joinBlocked(reason);
         }
+    }
+
+    /**
+     * 只看目标赛事。历史赛事里的队长或球员记录不占本届名额。
+     * 本届已有其他队时，队长和普通球员分开提示。
+     */
+    public BusinessReason resolveEventJoinBlock(Long memberId, Long divisionId, Long targetTeamId) {
+        if (divisionId == null) {
+            return null;
+        }
+        BasketTeamMember membership = findActiveMembership(memberId, divisionId);
+        if (membership == null) {
+            return null;
+        }
+        if (targetTeamId != null && targetTeamId.equals(membership.getTeamId())) {
+            return BusinessReason.ALREADY_ON_THIS_TEAM;
+        }
+        if (TeamMemberRoleEnum.CAPTAIN.getCode().equalsIgnoreCase(membership.getRoleType())) {
+            return BusinessReason.EVENT_CAPTAIN_CONFLICT;
+        }
+        return BusinessReason.EVENT_TEAM_CONFLICT;
     }
 
     private ServiceException joinBlocked(String reason) {

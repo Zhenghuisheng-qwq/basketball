@@ -38,6 +38,8 @@
         <result property="teamName" column="team_name" />
         <result property="divisionId" column="division_id" />
         <result property="divisionName" column="division_name" />
+        <result property="teamDivisionId" column="team_division_id" />
+        <result property="teamDivisionName" column="team_division_name" />
         <result property="registrationId" column="registration_id" />
         <result property="changeType" column="change_type" />
         <result property="subjectPlayerId" column="subject_player_id" />
@@ -71,6 +73,8 @@
                t.team_name as team_name,
                c.division_id as division_id,
                d.division_name as division_name,
+               t.division_id as team_division_id,
+               td.division_name as team_division_name,
                c.registration_id as registration_id,
                c.change_type as change_type,
                c.subject_player_id as subject_player_id,
@@ -92,6 +96,7 @@
         from basket_team_membership_change c
         left join basket_team t on t.id = c.team_id
         left join basket_division d on d.id = c.division_id
+        left join basket_division td on td.id = t.division_id
         left join basket_player_profile p on p.id = c.subject_player_id and p.is_delete = 0
         left join basket_member_profile mp on mp.member_id = c.subject_member_id and mp.is_delete = 0
         left join basket_member_profile imp on imp.member_id = c.initiator_member_id and imp.is_delete = 0
@@ -104,8 +109,10 @@
                i.team_id as team_id,
                t.team_no as team_no,
                t.team_name as team_name,
-               t.division_id as division_id,
-               d.division_name as division_name,
+               null as division_id,
+               '待核实' as division_name,
+               t.division_id as team_division_id,
+               td.division_name as team_division_name,
                null as registration_id,
                'INVITE_JOIN' as change_type,
                i.invitee_player_id as subject_player_id,
@@ -132,7 +139,7 @@
                1 as legacy_record
         from basket_team_invitation i
         left join basket_team t on t.id = i.team_id
-        left join basket_division d on d.id = t.division_id
+        left join basket_division td on td.id = t.division_id
         left join basket_player_profile p on p.id = i.invitee_player_id and p.is_delete = 0
         left join basket_member_profile mp on mp.member_id = i.invitee_member_id and mp.is_delete = 0
         left join basket_member_profile imp on imp.member_id = i.inviter_member_id and imp.is_delete = 0
@@ -149,8 +156,10 @@
                m.team_id as team_id,
                t.team_no as team_no,
                t.team_name as team_name,
-               t.division_id as division_id,
-               d.division_name as division_name,
+               m.division_id as division_id,
+               coalesce(d.division_name, '待核实') as division_name,
+               t.division_id as team_division_id,
+               td.division_name as team_division_name,
                null as registration_id,
                case when m.membership_status = 0 then 'VOLUNTARY_LEAVE' else 'CAPTAIN_REMOVE' end as change_type,
                m.player_id as subject_player_id,
@@ -171,7 +180,8 @@
                1 as legacy_record
         from basket_team_member m
         left join basket_team t on t.id = m.team_id
-        left join basket_division d on d.id = t.division_id
+        left join basket_division d on d.id = m.division_id
+        left join basket_division td on td.id = t.division_id
         left join basket_player_profile p on p.id = m.player_id and p.is_delete = 0
         left join basket_member_profile mp on mp.member_id = m.member_id and mp.is_delete = 0
         where m.is_delete = 0
@@ -199,6 +209,9 @@
             <if test="teamName != null and teamName != ''">
                 and u.team_name like concat('%', #{teamName}, '%')
             </if>
+            <if test="divisionName != null and divisionName != ''">
+                and u.division_name like concat('%', #{divisionName}, '%')
+            </if>
             <if test="changeStatus != null and changeStatus != ''">
                 and u.change_status = #{changeStatus}
             </if>
@@ -221,6 +234,8 @@
                t.team_name as team_name,
                c.division_id as division_id,
                d.division_name as division_name,
+               t.division_id as team_division_id,
+               td.division_name as team_division_name,
                c.registration_id as registration_id,
                c.change_type as change_type,
                c.subject_player_id as subject_player_id,
@@ -244,6 +259,7 @@
         from basket_team_membership_change c
         left join basket_team t on t.id = c.team_id
         left join basket_division d on d.id = c.division_id
+        left join basket_division td on td.id = t.division_id
         left join basket_player_profile p on p.id = c.subject_player_id and p.is_delete = 0
         left join basket_member_profile mp on mp.member_id = c.subject_member_id and mp.is_delete = 0
         left join basket_member_profile imp on imp.member_id = c.initiator_member_id and imp.is_delete = 0

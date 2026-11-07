@@ -30,7 +30,8 @@ public interface IAccountTeamService {
     List<InheritableTeamSummaryResp> listInheritableTeams(Long divisionId);
 
     /**
-     * 把本届未使用的队长授权绑到原球队。不新建球队，荣誉和历史仍挂在原球队主键上。
+     * 把本届未使用的队长授权绑到原球队。只继承球队，不带队员。
+     * 荣誉和历史仍挂在原球队主键上；当前名单只有队长。老球员按赛季结束归档，生涯还在这支球队上，之后由队长邀请。
      */
     TeamDetailResp bindGrantToTeam(String teamId, Long divisionId, String clientIp);
 

@@ -85,11 +85,13 @@ export interface MyApplication {
   applicationTypeText: string
   status: string
   statusText: string
+  eventStatusText?: string
   statusHint?: string
   invitedTeamCode?: string
   confirmedCount?: number
   rosterMax?: number
   submitTime?: string
+  seasonId?: string
   actionText: string
   actionType: ApplicationActionType
   pending?: boolean
@@ -122,6 +124,7 @@ export interface ParticipatingEvent {
   pendingTaskCount?: number
   pendingTaskText?: string
   stageSummary?: string
+  formatSummary?: string
   rankSummary?: string
   qualificationSummary?: string
   nextMatchSummary?: string

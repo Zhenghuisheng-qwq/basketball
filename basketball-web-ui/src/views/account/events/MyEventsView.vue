@@ -276,7 +276,10 @@ function handleAvailableAction(event: AvailableEvent) {
 
 function handleApplicationAction(application: MyApplication) {
   if (application.status === 'APPROVED') {
-    setTab('joined')
+    router.push({
+      name: 'AccountPerformance',
+      query: application.divisionId ? { divisionId: String(application.divisionId) } : {},
+    })
     return
   }
   if (application.applicationType === 'INDIVIDUAL') {

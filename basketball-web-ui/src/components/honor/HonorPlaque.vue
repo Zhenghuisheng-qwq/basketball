@@ -9,6 +9,7 @@ const props = withDefaults(
     date?: string
     tone?: 'champion' | 'runner' | 'third' | 'award'
     mark?: 'trophy' | 'shield' | 'star'
+    iconUrl?: string
     clickable?: boolean
   }>(),
   {
@@ -16,6 +17,7 @@ const props = withDefaults(
     date: '',
     tone: 'award',
     mark: 'trophy',
+    iconUrl: '',
     clickable: false,
   },
 )
@@ -47,19 +49,20 @@ function onSelect() {
     @keydown.enter="onSelect"
   >
     <div class="honor-plaque__emblem" aria-hidden="true">
-      <svg class="honor-plaque__laurel" viewBox="0 0 120 96">
+      <img v-if="iconUrl" class="honor-plaque__icon" :src="iconUrl" alt="" />
+      <svg v-else class="honor-plaque__laurel" viewBox="0 0 120 96">
         <path d="M28 74c-2-18 4-34 16-46 2 10 2 22-2 34-6 4-10 8-14 12z" />
         <path d="M22 68c2-3 6-8 12-12 1 6 0 12-2 18-4 0-7-2-10-6z" />
         <path d="M92 74c2-18-4-34-16-46-2 10-2 22 2 34 6 4 10 8 14 12z" />
         <path d="M98 68c-2-3-6-8-12-12-1 6 0 12 2 18 4 0 7-2 10-6z" />
       </svg>
-      <img v-if="mark === 'trophy'" class="honor-plaque__trophy" :src="championTrophy" alt="" />
-      <svg v-else-if="mark === 'shield'" class="honor-plaque__mark" viewBox="0 0 72 72">
+      <img v-if="!iconUrl && mark === 'trophy'" class="honor-plaque__trophy" :src="championTrophy" alt="" />
+      <svg v-else-if="!iconUrl && mark === 'shield'" class="honor-plaque__mark" viewBox="0 0 72 72">
         <path d="M36 8l20 8v16c0 12-8 20-20 24C24 52 16 44 16 32V16z" fill="#1a140c" stroke="#e8c56a" stroke-width="2" />
         <path d="M28 30h16v8c0 6-4 10-8 12-4-2-8-6-8-12z" fill="#e8c56a" />
         <text x="36" y="28" text-anchor="middle" fill="#f3e3c2" font-size="7" font-weight="700">CNPA</text>
       </svg>
-      <svg v-else class="honor-plaque__mark" viewBox="0 0 72 72">
+      <svg v-else-if="!iconUrl" class="honor-plaque__mark" viewBox="0 0 72 72">
         <circle cx="36" cy="34" r="16" fill="none" stroke="#e8c56a" stroke-width="2" />
         <path d="M36 22l3.2 7 7.6.6-5.8 4.8 1.8 7.4L36 37.8 29.2 41.8l1.8-7.4-5.8-4.8 7.6-.6z" fill="#f0d48a" />
       </svg>
@@ -131,6 +134,15 @@ function onSelect() {
   height: 108px;
   fill: #e4c36a;
   opacity: 0.9;
+}
+
+.honor-plaque__icon {
+  position: relative;
+  z-index: 1;
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.45));
 }
 
 .honor-plaque__trophy,
