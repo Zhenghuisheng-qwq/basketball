@@ -14,6 +14,9 @@ public class HomeBannerListResp {
     private String subtitleEn;
     private Long imageFileId;
     private String imageUrl;
+    private Long mobileImageFileId;
+    private String mobileImageUrl;
+    private String altText;
     private String positionCode;
     private String targetType;
     private String targetValue;

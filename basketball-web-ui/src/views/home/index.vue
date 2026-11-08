@@ -57,8 +57,12 @@ type HomeEventCard = {
 type HomeBannerItem = {
   id: string
   image: string
+  mobileImage?: string
+  alt?: string
   title: string
   subtitle: string
+  targetType?: string
+  targetValue?: string
 }
 
 const router = useRouter()
@@ -165,11 +169,41 @@ const visibleMatches = computed(() => filteredMatches.value.slice(0, PREVIEW_MAT
 function mapBanner(item: PublicHomeBannerResp): HomeBannerItem | null {
   const image = item.imageUrl?.trim()
   if (!image) return null
+  const mobileImage = item.mobileImageUrl?.trim()
   return {
     id: item.bannerId,
     image,
+    mobileImage: mobileImage || undefined,
+    alt: item.altText?.trim() || undefined,
     title: localizedText(item.title, item.titleEn, ''),
     subtitle: localizedText(item.subtitle, item.subtitleEn, ''),
+    targetType: item.targetType || undefined,
+    targetValue: item.targetValue || undefined,
+  }
+}
+
+function openBanner(banner: HomeBannerItem) {
+  const type = (banner.targetType || 'NONE').toUpperCase()
+  const value = banner.targetValue?.trim() || ''
+  if (type === 'NONE' || !value || value.toLowerCase().startsWith('javascript:')) return
+  if (type === 'EXTERNAL') {
+    if (/^https?:\/\//i.test(value)) window.open(value, '_blank', 'noopener,noreferrer')
+    return
+  }
+  if (type === 'ANNOUNCEMENT') {
+    router.push({ name: 'AnnouncementDetail', params: { announcementId: value } })
+    return
+  }
+  if (type === 'PLAYER') {
+    router.push({ name: 'PlayerDetail', params: { playerId: value } })
+    return
+  }
+  if (type === 'TEAM') {
+    router.push({ path: `/tournament/team/${value}` })
+    return
+  }
+  if (type === 'TOURNAMENT') {
+    router.push({ name: 'V4SeasonDetail', params: { seasonId: value } })
   }
 }
 
@@ -419,6 +453,7 @@ onMounted(() => {
       :banners="banners"
       :loading="bannerState === 'loading'"
       :error-message="bannerState === 'error' ? bannerError : ''"
+      @open="openBanner"
     />
 
     <section id="matches" class="site-section home-match-section">

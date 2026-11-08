@@ -18,9 +18,7 @@ import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 @Service
 public class BasketPublicBannerServiceImpl implements IBasketPublicBannerService {
@@ -51,10 +49,15 @@ public class BasketPublicBannerServiceImpl implements IBasketPublicBannerService
         if (CollectionUtils.isEmpty(list)) {
             return Collections.emptyList();
         }
-        Set<Long> fileIds = list.stream()
-                .map(BasketHomeBanner::getImageFileId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(HashSet::new));
+        Set<Long> fileIds = new HashSet<>();
+        for (BasketHomeBanner item : list) {
+            if (item.getImageFileId() != null) {
+                fileIds.add(item.getImageFileId());
+            }
+            if (item.getMobileImageFileId() != null) {
+                fileIds.add(item.getMobileImageFileId());
+            }
+        }
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(fileIds);
         List<PublicHomeBannerResp> result = new ArrayList<>(list.size());
         for (BasketHomeBanner item : list) {
@@ -65,6 +68,8 @@ public class BasketPublicBannerServiceImpl implements IBasketPublicBannerService
             vo.setSubtitle(item.getSubtitle());
             vo.setSubtitleEn(item.getSubtitleEn());
             vo.setImageUrl(urlMap.get(item.getImageFileId()));
+            vo.setMobileImageUrl(urlMap.get(item.getMobileImageFileId()));
+            vo.setAltText(item.getAltText());
             vo.setPositionCode(item.getPositionCode());
             vo.setTargetType(item.getTargetType());
             vo.setTargetValue(item.getTargetValue());

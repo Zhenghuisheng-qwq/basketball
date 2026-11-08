@@ -67,6 +67,8 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
         banner.setSubtitle(req.getSubtitle());
         banner.setSubtitleEn(req.getSubtitleEn());
         banner.setImageFileId(req.getImageFileId());
+        banner.setMobileImageFileId(req.getMobileImageFileId());
+        banner.setAltText(normalizeAltText(req.getAltText()));
         banner.setPositionCode(StringUtils.isEmpty(req.getPositionCode()) ? DEFAULT_POSITION : req.getPositionCode());
         banner.setTargetType(targetType.getCode());
         banner.setTargetValue(req.getTargetValue());
@@ -107,6 +109,8 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
         if (req.getImageFileId() != null) {
             existing.setImageFileId(req.getImageFileId());
         }
+        existing.setMobileImageFileId(req.getMobileImageFileId());
+        existing.setAltText(normalizeAltText(req.getAltText()));
         if (req.getPositionCode() != null) {
             existing.setPositionCode(req.getPositionCode());
         }
@@ -173,6 +177,20 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
             throw new ServiceException("删除失败");
         }
         publicCacheCleaner.clearAfterCommit();
+    }
+
+    private String normalizeAltText(String altText) {
+        if (altText == null) {
+            return null;
+        }
+        String trimmed = altText.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        if (trimmed.length() > 256) {
+            throw new ServiceException("替代文字不能超过256字");
+        }
+        return trimmed;
     }
 
     private void validateTarget(BannerTargetTypeEnum targetType, String targetValue) {

@@ -12,6 +12,8 @@ public class HomeBannerAddReq {
     private String subtitle;
     private String subtitleEn;
     private Long imageFileId;
+    private Long mobileImageFileId;
+    private String altText;
     private String positionCode;
     private String targetType;
     private String targetValue;

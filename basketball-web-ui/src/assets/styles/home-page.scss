@@ -1888,17 +1888,42 @@
 .home-hero__frame {
   position: relative;
   width: 100%;
+  aspect-ratio: 1983 / 793;
   overflow: hidden;
   background: #000;
 }
 
+.home-hero__frame--linked {
+  cursor: pointer;
+}
+
 .home-hero__image {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  height: auto;
-  object-fit: contain;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   user-select: none;
   -webkit-user-drag: none;
+  animation: home-hero-fade 0.45s ease;
+}
+
+@keyframes home-hero-fade {
+  from {
+    opacity: 0.45;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-hero__image {
+    animation: none;
+  }
 }
 
 .home-hero__tear {

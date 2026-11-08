@@ -1,8 +1,8 @@
 <template>
   <div class="app-container">
     <el-alert
-      title="首页 Banner 管理：不会替换官网静态资源 home_top.png，仅管理运营可配置的横幅位。"
-      type="warning"
+      title="已发布的 HOME_TOP 按排序显示在首页。只有一张时不轮播，全部下线后仍使用默认宣传图 home_top.png。电脑端建议 1983×793，手机图可选。"
+      type="info"
       :closable="false"
       show-icon
       class="mb8"
@@ -79,9 +79,14 @@
         <el-descriptions-item label="跳转类型">{{ detail.targetType }}</el-descriptions-item>
         <el-descriptions-item label="跳转值">{{ detail.targetValue || '-' }}</el-descriptions-item>
         <el-descriptions-item label="状态">{{ detail.bannerStatusName }}</el-descriptions-item>
-        <el-descriptions-item label="图片">
-          <el-image v-if="detail.imageUrl" :src="detail.imageUrl" style="width: 240px; height: 120px" fit="cover" />
+        <el-descriptions-item label="替代文字">{{ detail.altText || '-' }}</el-descriptions-item>
+        <el-descriptions-item label="电脑端图片">
+          <el-image v-if="detail.imageUrl" :src="detail.imageUrl" style="width: 240px; height: 96px" fit="cover" />
           <span v-else>-</span>
+        </el-descriptions-item>
+        <el-descriptions-item label="手机端图片">
+          <el-image v-if="detail.mobileImageUrl" :src="detail.mobileImageUrl" style="width: 120px; height: 96px" fit="cover" />
+          <span v-else>未上传，窄屏使用电脑端图片</span>
         </el-descriptions-item>
       </el-descriptions>
     </el-drawer>
@@ -110,7 +115,17 @@
         </el-form-item>
         <el-form-item label="图片预览">
           <image-upload v-model="imagePreview" :limit="1" :file-size="5" />
-          <div class="el-upload__tip">预览上传走 /common/upload；提交请填写 basket_file_asset 文件 ID。不会替换 home_top.png。</div>
+          <div class="el-upload__tip">建议 1983×793。预览上传走 /common/upload；提交请填写 basket_file_asset 文件 ID。</div>
+        </el-form-item>
+        <el-form-item label="手机图文件ID">
+          <el-input-number v-model="form.mobileImageFileId" :min="1" controls-position="right" style="width: 100%" placeholder="可不填" />
+        </el-form-item>
+        <el-form-item label="手机图预览">
+          <image-upload v-model="mobilePreview" :limit="1" :file-size="5" />
+          <div class="el-upload__tip">可选。不填时窄屏居中裁切电脑端图片，页面高度不变。</div>
+        </el-form-item>
+        <el-form-item label="替代文字">
+          <el-input v-model="form.altText" maxlength="256" show-word-limit placeholder="图片无法显示时使用，不出现在画面上" />
         </el-form-item>
         <el-form-item label="位置">
           <el-select v-model="form.positionCode" style="width: 100%">
@@ -172,6 +187,7 @@ const dialogOpen = ref(false)
 const dialogTitle = ref('')
 const currentId = ref<number>()
 const imagePreview = ref('')
+const mobilePreview = ref('')
 
 const queryParams = ref<HomeBannerQuery>({
   pageNum: 1,
@@ -218,6 +234,8 @@ function resetFormData() {
     subtitle: undefined,
     subtitleEn: '',
     imageFileId: undefined,
+    mobileImageFileId: undefined,
+    altText: '',
     positionCode: 'HOME_TOP',
     targetType: 'NONE',
     targetValue: undefined,
@@ -226,6 +244,7 @@ function resetFormData() {
     sortNo: 0
   }
   imagePreview.value = ''
+  mobilePreview.value = ''
   proxy.resetForm('formRef')
 }
 
@@ -248,6 +267,8 @@ function handleUpdate(row: HomeBannerListItem) {
       subtitle: data.subtitle,
       subtitleEn: data.subtitleEn || '',
       imageFileId: data.imageFileId,
+      mobileImageFileId: data.mobileImageFileId,
+      altText: data.altText || '',
       positionCode: data.positionCode || 'HOME_TOP',
       targetType: data.targetType || 'NONE',
       targetValue: data.targetValue,
@@ -256,6 +277,7 @@ function handleUpdate(row: HomeBannerListItem) {
       sortNo: data.sortNo ?? 0
     }
     imagePreview.value = data.imageUrl || ''
+    mobilePreview.value = data.mobileImageUrl || ''
     dialogTitle.value = '修改首页横幅'
     dialogOpen.value = true
   })

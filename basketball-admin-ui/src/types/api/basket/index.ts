@@ -1938,6 +1938,9 @@ export interface HomeBannerListItem {
   subtitleEn?: string
   imageFileId?: number
   imageUrl?: string
+  mobileImageFileId?: number
+  mobileImageUrl?: string
+  altText?: string
   positionCode?: string
   targetType?: string
   targetValue?: string
@@ -1957,6 +1960,8 @@ export interface HomeBannerAddReq {
   subtitle?: string
   subtitleEn?: string
   imageFileId?: number
+  mobileImageFileId?: number
+  altText?: string
   positionCode?: string
   targetType?: string
   targetValue?: string
@@ -1972,6 +1977,8 @@ export interface HomeBannerEditReq {
   subtitle?: string
   subtitleEn?: string
   imageFileId?: number
+  mobileImageFileId?: number
+  altText?: string
   positionCode?: string
   targetType?: string
   targetValue?: string

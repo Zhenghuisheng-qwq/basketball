@@ -145,6 +145,8 @@ export interface PublicHomeBannerResp {
   subtitle?: string | null
   subtitleEn?: string | null
   imageUrl?: string | null
+  mobileImageUrl?: string | null
+  altText?: string | null
   positionCode?: string | null
   targetType?: string | null
   targetValue?: string | null

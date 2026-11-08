@@ -31,6 +31,12 @@ public class PublicHomeBannerResp implements Serializable {
     @ApiModelProperty("图片 URL")
     private String imageUrl;
 
+    @ApiModelProperty("手机端图片 URL，空则使用电脑端图片")
+    private String mobileImageUrl;
+
+    @ApiModelProperty("图片替代文字")
+    private String altText;
+
     @ApiModelProperty("展示位置")
     private String positionCode;
 

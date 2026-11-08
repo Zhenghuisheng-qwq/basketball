@@ -54,6 +54,13 @@ public class BasketHomeBanner implements Serializable {
     @ApiModelProperty(value = "图片文件主键")
     private Long imageFileId;
 
+    @JsonSerialize(using = ToStringSerializer.class)
+    @ApiModelProperty(value = "手机端图片文件主键")
+    private Long mobileImageFileId;
+
+    @ApiModelProperty(value = "图片替代文字")
+    private String altText;
+
 
     @ApiModelProperty(value = "展示位置")
     private String positionCode;

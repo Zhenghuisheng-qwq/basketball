@@ -9,6 +9,8 @@
         <result property="subtitle" column="subtitle"/>
         <result property="subtitleEn" column="subtitle_en"/>
         <result property="imageFileId" column="image_file_id"/>
+        <result property="mobileImageFileId" column="mobile_image_file_id"/>
+        <result property="altText" column="alt_text"/>
         <result property="positionCode" column="position_code"/>
         <result property="targetType" column="target_type"/>
         <result property="targetValue" column="target_value"/>
@@ -23,16 +25,18 @@
 
     <sql id="listSelect">
         select b.id, b.banner_name as bannerName, b.title, b.title_en as titleEn, b.subtitle, b.subtitle_en as subtitleEn, b.image_file_id as imageFileId,
-               img.access_url as imageUrl, b.position_code as positionCode, b.target_type as targetType,
+               img.access_url as imageUrl, b.mobile_image_file_id as mobileImageFileId, mob.access_url as mobileImageUrl,
+               b.alt_text as altText, b.position_code as positionCode, b.target_type as targetType,
                b.target_value as targetValue, b.start_time as startTime, b.end_time as endTime,
                b.banner_status as bannerStatus, b.sort_no as sortNo,
                b.create_time as createTime, b.update_time as updateTime
         from basket_home_banner b
         left join basket_file_asset img on img.id = b.image_file_id and img.is_delete = 0
+        left join basket_file_asset mob on mob.id = b.mobile_image_file_id and mob.is_delete = 0
     </sql>
 
     <select id="selectById" resultMap="BasketHomeBannerResult">
-        select id, banner_name, title, title_en, subtitle, subtitle_en, image_file_id, position_code, target_type, target_value,
+        select id, banner_name, title, title_en, subtitle, subtitle_en, image_file_id, mobile_image_file_id, alt_text, position_code, target_type, target_value,
                start_time, end_time, banner_status, sort_no, create_time, update_time, is_delete
         from basket_home_banner where id = #{id} and is_delete = 0
     </select>
@@ -55,10 +59,10 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_home_banner (
-            banner_name, title, title_en, subtitle, subtitle_en, image_file_id, position_code, target_type, target_value,
+            banner_name, title, title_en, subtitle, subtitle_en, image_file_id, mobile_image_file_id, alt_text, position_code, target_type, target_value,
             start_time, end_time, banner_status, sort_no, create_time, update_time, is_delete
         ) values (
-            #{bannerName}, #{title}, #{titleEn}, #{subtitle}, #{subtitleEn}, #{imageFileId}, #{positionCode}, #{targetType}, #{targetValue},
+            #{bannerName}, #{title}, #{titleEn}, #{subtitle}, #{subtitleEn}, #{imageFileId}, #{mobileImageFileId}, #{altText}, #{positionCode}, #{targetType}, #{targetValue},
             #{startTime}, #{endTime}, #{bannerStatus}, #{sortNo}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
@@ -72,6 +76,8 @@
             <if test="subtitle != null">subtitle = #{subtitle},</if>
             <if test="subtitleEn != null">subtitle_en = #{subtitleEn},</if>
             <if test="imageFileId != null">image_file_id = #{imageFileId},</if>
+            mobile_image_file_id = #{mobileImageFileId},
+            alt_text = #{altText},
             <if test="positionCode != null">position_code = #{positionCode},</if>
             <if test="targetType != null">target_type = #{targetType},</if>
             <if test="targetValue != null">target_value = #{targetValue},</if>
