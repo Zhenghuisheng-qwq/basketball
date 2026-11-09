@@ -39,6 +39,13 @@ export function updateHomeBanner(id: number, data: HomeBannerEditReq): Promise<A
   })
 }
 
+export function publishHomeBannerGroup(): Promise<AjaxResult> {
+  return request({
+    url: '/basket/home-content/publish-group',
+    method: 'post'
+  })
+}
+
 export function publishHomeBanner(id: number): Promise<AjaxResult> {
   return request({
     url: `/basket/home-content/${id}/publish`,

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import teamBackground from '@/assets/icon/tournament/team_background.png'
+import { usePublicPageHero } from '@/composables/usePublicPageHero'
 import compareIcon1 from '@/assets/icon/tournament/compare_1.png'
 import compareIcon2 from '@/assets/icon/tournament/compare_2.png'
 import compareIcon3 from '@/assets/icon/tournament/compare_3.png'
@@ -37,6 +38,10 @@ import './styles/team.scss'
 
 const route = useRoute()
 const router = useRouter()
+const pageHero = usePublicPageHero('EVENT_SEASON', computed(() => {
+  const query = route.query.seasonId
+  return typeof query === 'string' ? query : ''
+}))
 const { t } = useI18n()
 
 const selectorVisible = ref(false)
@@ -146,8 +151,14 @@ const rightTeam = computed<TeamBase | null>(() => {
 })
 
 const compareHeroBgStyle = computed(() => ({
-  backgroundImage: `url(${teamBackground})`,
+  backgroundImage: `url(${pageHero.configured.value ? pageHero.imageUrl.value : teamBackground})`,
+  backgroundPosition: pageHero.configured.value ? pageHero.objectPosition.value : 'center',
 }))
+const compareHeroOverlayStyle = computed(() => {
+  if (!pageHero.configured.value) return undefined
+  if (pageHero.fullImage.value) return { opacity: 0 }
+  return { opacity: 1, background: `rgba(0, 0, 0, ${pageHero.maskOpacity.value / 100})` }
+})
 
 const overviewIconMap: Record<string, string> = {
   winRate: compareIcon1,
@@ -463,7 +474,7 @@ function getTeamNameSizeClass(name: string) {
     <div class="site-shell team-compare-page__shell">
       <section class="compare-hero">
         <div class="compare-hero__bg" :style="compareHeroBgStyle" aria-hidden="true" />
-        <div class="compare-hero__overlay" aria-hidden="true" />
+        <div class="compare-hero__overlay" :style="compareHeroOverlayStyle" aria-hidden="true" />
 
         <div class="compare-hero__inner team-compare-content">
           <nav class="compare-hero__crumb" :aria-label="t('publicPages.team.breadcrumb')">

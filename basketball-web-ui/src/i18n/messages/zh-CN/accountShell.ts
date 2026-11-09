@@ -46,8 +46,13 @@ export default {
   },
   performancePage: {
     needVerification: '完成球员认证后，这里会展示和公开球员页相同的出场、比赛、数据和荣誉。',
-    openPublic: '打开公开球员页',
+    openPublic: '查看公开主页',
     goVerify: '去认证球员',
+    noParticipation: '还没有已参加的已发布赛事。',
+    noTeamSnapshot: '暂无球队快照',
+    eventStatus: '赛事状态',
+    careerCumulative: '全部赛事累计',
+    careerCumulativeDesc: '这里汇总全部已发布赛事，不随上面选中的单届变化。统计仍用现在的生涯口径。',
   },
   overview: {
     loadFailed: '加载个人中心失败',

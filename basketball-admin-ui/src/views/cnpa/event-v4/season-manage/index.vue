@@ -91,6 +91,7 @@
               <el-button link type="primary" @click="handleOpenSeasonDetail(scope.row)">赛季详情</el-button>
               <el-button link type="primary" @click="handleContinuePublish(scope.row)" v-if="scope.row.publishStatus === 'DRAFT'">继续发布</el-button>
               <el-button link type="primary" @click="handleEditSeason(scope.row)" v-hasPermi="['basket:v4Season:edit']" v-if="scope.row.seasonStatus !== 'ARCHIVED'">编辑基础资料</el-button>
+              <el-button link type="primary" @click="handleSeasonHero(scope.row)" v-hasPermi="['basket:pageHero:query', 'basket:v4Season:query']">头图</el-button>
               <el-button link type="primary" @click="handleSelectSeason(scope.row)">查看赛区</el-button>
               <el-button link type="success" @click="handlePublishSeason(scope.row)" v-hasPermi="['basket:v4Season:publish']" v-if="scope.row.publishStatus === 'DRAFT' || scope.row.publishStatus === 'OFFLINE'">发布</el-button>
               <el-button link type="warning" @click="handleOfflineSeason(scope.row)" v-hasPermi="['basket:v4Season:offline']" v-if="scope.row.publishStatus === 'PUBLISHED'">下线</el-button>
@@ -403,6 +404,10 @@
       @success="handleWizardSuccess"
     />
 
+    <el-dialog v-model="heroOpen" :title="`赛事头图${heroSeasonName ? ' — ' + heroSeasonName : ''}`" width="760px" append-to-body>
+      <page-hero-form v-if="heroOpen && heroSeasonId" page-key="EVENT_SEASON" :season-id="heroSeasonId" :season-name="heroSeasonName" />
+    </el-dialog>
+
   </div>
 </template>
 
@@ -410,6 +415,7 @@
 import { computed, getCurrentInstance, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import PublishWizardDialog from '../publish/components/PublishWizardDialog.vue'
+import PageHeroForm from '@/views/cnpa/content/page-hero/PageHeroForm.vue'
 import DivisionFormatRulesPanel from '../publish/components/DivisionFormatRulesPanel.vue'
 import { listV4Series, type BasketSeriesVo } from '@/api/cnpa/event-v4/series'
 import {
@@ -763,6 +769,16 @@ function handleWizardSuccess() {
   if (selectedSeason.value?.id === wizardSeasonId.value) {
     loadDivisionList()
   }
+}
+
+const heroOpen = ref(false)
+const heroSeasonId = ref<number>()
+const heroSeasonName = ref('')
+
+function handleSeasonHero(row: BasketSeasonListVo) {
+  heroSeasonId.value = row.id
+  heroSeasonName.value = row.displayTitle || row.seasonName || ''
+  heroOpen.value = true
 }
 
 function handleEditSeason(row: BasketSeasonListVo) {

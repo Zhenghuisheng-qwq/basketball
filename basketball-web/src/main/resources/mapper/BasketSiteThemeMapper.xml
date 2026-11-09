@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketSiteThemeDao">
+    <select id="selectPublished" resultType="com.zhs.model.BasketSiteTheme">
+        select t.id, t.bg_color as bgColor, t.bg_image_file_id as bgImageFileId,
+               t.mobile_bg_image_file_id as mobileBgImageFileId, t.bg_display as bgDisplay,
+               t.colors_json as colorsJson, t.theme_status as themeStatus, t.version_no as versionNo
+        from basket_site_theme_binding b
+        join basket_site_theme t on t.id = b.theme_id and t.is_delete = 0 and t.theme_status = 1
+        where b.is_delete = 0 and b.scope_type = #{scopeType} and b.scope_id = #{scopeId}
+        limit 1
+    </select>
+</mapper>

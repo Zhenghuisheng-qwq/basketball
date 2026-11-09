@@ -9,16 +9,23 @@ import stageIcon from '@/assets/icon/person/stage.png'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import type { PlayerProfile } from '../types'
+import { usePublicPageHero } from '@/composables/usePublicPageHero'
 
 const props = defineProps<{
   profile: PlayerProfile
 }>()
 
 const { t } = useI18n()
+const pageHero = usePublicPageHero('EVENT_SEASON', computed(() => props.profile.seasonId || ''))
 
-const heroBgStyle = computed(() => ({
-  backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 48%, rgba(0,0,0,0.32) 100%), url(${teamBackground})`,
-}))
+const heroBgStyle = computed(() => {
+  const image = pageHero.configured.value ? pageHero.imageUrl.value : teamBackground
+  const mask = pageHero.configured.value && !pageHero.fullImage.value ? pageHero.maskOpacity.value / 100 : 0.82
+  return {
+    backgroundImage: `linear-gradient(90deg, rgba(0,0,0,${mask}) 0%, rgba(0,0,0,0.55) 48%, rgba(0,0,0,0.32) 100%), url(${image})`,
+    backgroundPosition: pageHero.configured.value ? pageHero.objectPosition.value : 'center',
+  }
+})
 
 const teamForLogo = computed(() => ({
   id: props.profile.currentTeamId,

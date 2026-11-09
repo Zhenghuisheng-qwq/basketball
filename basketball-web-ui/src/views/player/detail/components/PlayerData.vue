@@ -183,6 +183,16 @@ watch(
 )
 
 watch(
+  () => props.detail.profile.divisionId,
+  (divisionId) => {
+    const id = String(divisionId || '')
+    if (id && props.detail.seasonStageOptions.some((item) => item.id === id)) {
+      selectedStageId.value = id
+    }
+  },
+)
+
+watch(
   () => props.detail.seasonStageOptions,
   (options) => {
     if (!options.some((item) => item.id === selectedStageId.value)) {

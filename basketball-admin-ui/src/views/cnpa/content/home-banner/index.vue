@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <el-alert
-      title="已发布的 HOME_TOP 按排序显示在首页。只有一张时不轮播，全部下线后仍使用默认宣传图 home_top.png。电脑端建议 1983×793，手机图可选。"
+      title="电脑端建议 1983×793。文字请留在画面四周的安全区内，避免轮播裁切。修改已发布横幅不会立刻改变官网，点「发布首页轮播」后整组生效。只有一张时不轮播，全部停用后仍使用默认宣传图。"
       type="info"
       :closable="false"
       show-icon
@@ -32,6 +32,9 @@
       <el-col :span="1.5">
         <el-button type="primary" plain icon="Plus" @click="handleAdd" v-hasPermi="['basket:homeContent:add']">新增</el-button>
       </el-col>
+      <el-col :span="1.5">
+        <el-button type="success" plain icon="Upload" @click="handlePublishGroup" v-hasPermi="['basket:homeContent:publish']">发布首页轮播</el-button>
+      </el-col>
       <right-toolbar v-model:showSearch="showSearch" @queryTable="getList" />
     </el-row>
 
@@ -46,6 +49,11 @@
         </template>
       </el-table-column>
       <el-table-column label="跳转" prop="targetType" width="110" />
+      <el-table-column label="未发布修改" min-width="120">
+        <template #default="scope">
+          <span>{{ scope.row.pendingChangeLabel || '-' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="状态" prop="bannerStatus" width="100">
         <template #default="scope">
           <dict-tag :options="HOME_BANNER_STATUS_OPTIONS" :value="scope.row.bannerStatus" />
@@ -60,10 +68,8 @@
       <el-table-column label="操作" align="center" width="280" class-name="small-padding fixed-width">
         <template #default="scope">
           <el-button link type="primary" icon="View" @click="handleDetail(scope.row)" v-hasPermi="['basket:homeContent:query']">详情</el-button>
-          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['basket:homeContent:edit']" v-if="[0, 2].includes(scope.row.bannerStatus!)">修改</el-button>
-          <el-button link type="success" icon="Upload" @click="handlePublish(scope.row)" v-hasPermi="['basket:homeContent:publish']" v-if="[0, 2].includes(scope.row.bannerStatus!)">发布</el-button>
-          <el-button link type="warning" icon="Download" @click="handleOffline(scope.row)" v-hasPermi="['basket:homeContent:offline']" v-if="scope.row.bannerStatus === 1">下线</el-button>
-          <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['basket:homeContent:remove']" v-if="[0, 2].includes(scope.row.bannerStatus!)">删除</el-button>
+          <el-button link type="primary" icon="Edit" @click="handleUpdate(scope.row)" v-hasPermi="['basket:homeContent:edit']">修改</el-button>
+          <el-button link type="danger" icon="Delete" @click="handleDelete(scope.row)" v-hasPermi="['basket:homeContent:remove']">删除</el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -88,10 +94,23 @@
           <el-image v-if="detail.mobileImageUrl" :src="detail.mobileImageUrl" style="width: 120px; height: 96px" fit="cover" />
           <span v-else>未上传，窄屏使用电脑端图片</span>
         </el-descriptions-item>
+        <el-descriptions-item label="未发布修改">{{ detail.pendingChangeLabel || '无' }}</el-descriptions-item>
+        <el-descriptions-item v-if="detail.hasDraft === 1" label="草稿电脑图">
+          <el-image v-if="detail.draftImageUrl" :src="detail.draftImageUrl" style="width: 240px; height: 96px" fit="cover" />
+          <span v-else>沿用线上图片</span>
+        </el-descriptions-item>
       </el-descriptions>
     </el-drawer>
 
     <el-dialog :title="dialogTitle" v-model="dialogOpen" width="680px" append-to-body>
+      <el-alert
+        v-if="editingPublished"
+        title="这张横幅已在线上。保存只写入草稿，官网要等「发布首页轮播」后才改变。"
+        type="warning"
+        :closable="false"
+        show-icon
+        class="mb8"
+      />
       <el-form ref="formRef" :model="form" :rules="rules" label-width="110px">
         <el-form-item label="名称" prop="bannerName">
           <el-input v-model="form.bannerName" />
@@ -115,14 +134,15 @@
         </el-form-item>
         <el-form-item label="图片预览">
           <image-upload v-model="imagePreview" :limit="1" :file-size="5" />
-          <div class="el-upload__tip">建议 1983×793。预览上传走 /common/upload；提交请填写 basket_file_asset 文件 ID。</div>
+          <div class="el-upload__tip">建议 1983×793。/common/upload 只返回图片地址，没有 basket_file_asset.id，预览不会写入文件 ID，提交仍填写已有文件 ID。</div>
         </el-form-item>
         <el-form-item label="手机图文件ID">
-          <el-input-number v-model="form.mobileImageFileId" :min="1" controls-position="right" style="width: 100%" placeholder="可不填" />
+          <el-input-number v-model="form.mobileImageFileId" :min="1" :value-on-clear="null" controls-position="right" style="width: 100%" />
+          <el-button v-if="form.mobileImageFileId" link type="primary" @click="form.mobileImageFileId = undefined">清除</el-button>
         </el-form-item>
         <el-form-item label="手机图预览">
           <image-upload v-model="mobilePreview" :limit="1" :file-size="5" />
-          <div class="el-upload__tip">可选。不填时窄屏居中裁切电脑端图片，页面高度不变。</div>
+          <div class="el-upload__tip">可选。不填时窄屏居中裁切电脑端图片，页面高度不变。预览同样不会生成文件 ID。</div>
         </el-form-item>
         <el-form-item label="替代文字">
           <el-input v-model="form.altText" maxlength="256" show-word-limit placeholder="图片无法显示时使用，不出现在画面上" />
@@ -149,6 +169,10 @@
         <el-form-item label="排序">
           <el-input-number v-model="form.sortNo" :min="0" controls-position="right" style="width: 100%" />
         </el-form-item>
+        <el-form-item label="发布后显示">
+          <el-switch v-model="form.draftEnabled" :active-value="1" :inactive-value="0" />
+          <div class="el-upload__tip">关闭后，要等发布首页轮播才会从官网去掉。</div>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogOpen = false">取消</el-button>
@@ -164,8 +188,7 @@ import {
   delHomeBanner,
   getHomeBanner,
   listHomeBanner,
-  offlineHomeBanner,
-  publishHomeBanner,
+  publishHomeBannerGroup,
   updateHomeBanner
 } from '@/api/basket/homeContent'
 import type { HomeBannerAddReq, HomeBannerListItem, HomeBannerQuery } from '@/types'
@@ -186,6 +209,7 @@ const detail = ref<HomeBannerListItem>()
 const dialogOpen = ref(false)
 const dialogTitle = ref('')
 const currentId = ref<number>()
+const editingPublished = ref(false)
 const imagePreview = ref('')
 const mobilePreview = ref('')
 
@@ -198,7 +222,8 @@ const form = ref<HomeBannerAddReq>({
   bannerName: '',
   positionCode: 'HOME_TOP',
   targetType: 'NONE',
-  sortNo: 0
+  sortNo: 0,
+  draftEnabled: 1
 })
 
 const rules = {
@@ -241,11 +266,34 @@ function resetFormData() {
     targetValue: undefined,
     startTime: undefined,
     endTime: undefined,
-    sortNo: 0
+    sortNo: 0,
+    draftEnabled: 1
   }
   imagePreview.value = ''
   mobilePreview.value = ''
+  editingPublished.value = false
   proxy.resetForm('formRef')
+}
+
+function formSource(data: HomeBannerListItem) {
+  if (data.hasDraft !== 1) return data
+  return {
+    ...data,
+    title: data.draftTitle,
+    titleEn: data.draftTitleEn,
+    subtitle: data.draftSubtitle,
+    subtitleEn: data.draftSubtitleEn,
+    imageFileId: data.draftImageFileId ?? data.imageFileId,
+    imageUrl: data.draftImageUrl || data.imageUrl,
+    mobileImageFileId: data.draftMobileImageFileId,
+    mobileImageUrl: data.draftMobileImageUrl,
+    altText: data.draftAltText,
+    targetType: data.draftTargetType || data.targetType,
+    targetValue: data.draftTargetValue,
+    sortNo: data.draftSortNo ?? data.sortNo,
+    startTime: data.draftStartTime,
+    endTime: data.draftEndTime
+  }
 }
 
 function handleAdd() {
@@ -260,24 +308,27 @@ function handleUpdate(row: HomeBannerListItem) {
   currentId.value = row.id
   getHomeBanner(row.id).then(res => {
     const data = res.data!
+    const source = formSource(data)
+    editingPublished.value = data.bannerStatus === 1
     form.value = {
-      bannerName: data.bannerName || '',
-      title: data.title,
-      titleEn: data.titleEn || '',
-      subtitle: data.subtitle,
-      subtitleEn: data.subtitleEn || '',
-      imageFileId: data.imageFileId,
-      mobileImageFileId: data.mobileImageFileId,
-      altText: data.altText || '',
-      positionCode: data.positionCode || 'HOME_TOP',
-      targetType: data.targetType || 'NONE',
-      targetValue: data.targetValue,
-      startTime: data.startTime,
-      endTime: data.endTime,
-      sortNo: data.sortNo ?? 0
+      bannerName: source.bannerName || '',
+      title: source.title,
+      titleEn: source.titleEn || '',
+      subtitle: source.subtitle,
+      subtitleEn: source.subtitleEn || '',
+      imageFileId: source.imageFileId,
+      mobileImageFileId: source.mobileImageFileId,
+      altText: source.altText || '',
+      positionCode: 'HOME_TOP',
+      targetType: source.targetType || 'NONE',
+      targetValue: source.targetValue,
+      startTime: source.startTime,
+      endTime: source.endTime,
+      sortNo: source.sortNo ?? 0,
+      draftEnabled: data.hasDraft === 1 ? (data.draftEnabled ?? 1) : (data.bannerStatus === 2 ? 0 : 1)
     }
-    imagePreview.value = data.imageUrl || ''
-    mobilePreview.value = data.mobileImageUrl || ''
+    imagePreview.value = source.imageUrl || ''
+    mobilePreview.value = source.mobileImageUrl || ''
     dialogTitle.value = '修改首页横幅'
     dialogOpen.value = true
   })
@@ -304,29 +355,23 @@ function submitForm() {
   })
 }
 
-function handlePublish(row: HomeBannerListItem) {
-  proxy.$modal.confirm(`确认发布横幅「${row.bannerName}」？`).then(() =>
-    publishHomeBanner(row.id)
-  ).then(() => {
-    proxy.$modal.msgSuccess('发布成功')
-    getList()
-  }).catch(() => {})
-}
-
-function handleOffline(row: HomeBannerListItem) {
-  proxy.$modal.confirm(`确认下线横幅「${row.bannerName}」？`).then(() =>
-    offlineHomeBanner(row.id)
-  ).then(() => {
-    proxy.$modal.msgSuccess('下线成功')
+function handlePublishGroup() {
+  proxy.$modal.confirm('发布后，首页顶部轮播会整组换成当前草稿。发布失败时线上不变。').then(() =>
+    publishHomeBannerGroup()
+  ).then((res: { msg?: string }) => {
+    proxy.$modal.msgSuccess(res?.msg || '首页轮播已发布')
     getList()
   }).catch(() => {})
 }
 
 function handleDelete(row: HomeBannerListItem) {
-  proxy.$modal.confirm(`确认删除横幅「${row.bannerName}」？`).then(() =>
+  const message = row.bannerStatus === 1
+    ? `「${row.bannerName}」会在发布首页轮播后从官网删除，现在官网不变。`
+    : `确认删除横幅「${row.bannerName}」？`
+  proxy.$modal.confirm(message).then(() =>
     delHomeBanner(row.id)
   ).then(() => {
-    proxy.$modal.msgSuccess('删除成功')
+    proxy.$modal.msgSuccess(row.bannerStatus === 1 ? '已记入草稿，发布后删除' : '删除成功')
     getList()
   }).catch(() => {})
 }

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { useRouter } from 'vue-router'
+import { inject } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import { hasMatchSeriesId, publicContestDetailLabel, publicContestDetailPath } from '@/utils/v4Display'
@@ -17,8 +18,10 @@ withDefaults(
   },
 )
 
+const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
+const accountFrame = inject<boolean>('accountPerformanceFrame', false)
 
 function resultLabel(row: PlayerMatchRecord): string {
   if (row.result === 'UNDECIDED') return row.resultLabel || t('publicPages.player.undecided')
@@ -71,13 +74,31 @@ function formatShot(made: number | null | undefined, attempted: number | null | 
 function openMatchDetail(matchId: string) {
   const id = String(matchId || '').trim()
   if (!id) return
+  if (accountFrame) {
+    router.push({
+      name: 'AccountPerformanceMatch',
+      params: { matchId: id },
+      query: route.query.divisionId ? { divisionId: String(route.query.divisionId) } : {},
+    })
+    return
+  }
   router.push(publicContestDetailPath({ unitType: 'MATCH', matchId: id }) || `/events/match/${id}`)
 }
 
 function openSeriesDetail(seriesId?: string) {
+  const id = String(seriesId || '').trim()
+  if (!id) return
+  if (accountFrame) {
+    router.push({
+      name: 'AccountPerformanceSeries',
+      params: { seriesId: id },
+      query: route.query.divisionId ? { divisionId: String(route.query.divisionId) } : {},
+    })
+    return
+  }
   const path = publicContestDetailPath({
     unitType: 'MATCH_SERIES',
-    matchSeriesId: seriesId,
+    matchSeriesId: id,
   })
   if (!path) return
   router.push(path)

@@ -23,4 +23,12 @@ public interface BasketHomeBannerMapper {
                             @Param("toStatus") Integer toStatus);
 
     int softDelete(@Param("id") Long id, @Param("fromStatuses") List<Integer> fromStatuses);
+
+    List<BasketHomeBanner> selectHomeTopForUpdate();
+
+    int updateDraft(BasketHomeBanner banner);
+
+    int applyPublish(BasketHomeBanner banner);
+
+    int markDeleted(@Param("id") Long id);
 }

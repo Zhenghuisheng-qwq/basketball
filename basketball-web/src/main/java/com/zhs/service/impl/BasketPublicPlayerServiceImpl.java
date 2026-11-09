@@ -10,7 +10,10 @@ import com.zhs.dao.BasketTeamMemberDao;
 import com.zhs.dao.v4.BasketDivisionDao;
 import com.zhs.dao.v4.BasketEventPlayerDao;
 import com.zhs.dao.v4.BasketEventTeamDao;
+import com.zhs.dao.v4.BasketPersonalRegistrationDao;
 import com.zhs.dao.v4.BasketPlayerStatDao;
+import com.zhs.dao.v4.BasketRegistrationDao;
+import com.zhs.dao.v4.BasketRegistrationPlayerDao;
 import com.zhs.dao.v4.BasketSeasonDao;
 import com.zhs.dao.v4.BasketSeriesDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
@@ -21,7 +24,9 @@ import com.zhs.enums.TeamStatusEnum;
 import com.zhs.enums.v4.DivisionStatusEnum;
 import com.zhs.enums.v4.MatchPublishStatusEnum;
 import com.zhs.enums.v4.MatchStatusEnum;
+import com.zhs.enums.v4.PersonalRegistrationStatusEnum;
 import com.zhs.enums.v4.PublishStatusEnum;
+import com.zhs.enums.v4.RegistrationStatusEnum;
 import com.zhs.exception.ServiceException;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketPlayerRank;
@@ -30,7 +35,10 @@ import com.zhs.model.BasketTeamMember;
 import com.zhs.model.v4.BasketDivision;
 import com.zhs.model.v4.BasketEventPlayer;
 import com.zhs.model.v4.BasketEventTeam;
+import com.zhs.model.v4.BasketPersonalRegistration;
 import com.zhs.model.v4.BasketPlayerStat;
+import com.zhs.model.v4.BasketRegistration;
+import com.zhs.model.v4.BasketRegistrationPlayer;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketSeries;
 import com.zhs.model.v4.BasketV4Match;
@@ -57,6 +65,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -78,6 +87,12 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
     private BasketEventTeamDao eventTeamDao;
     @Resource
     private BasketPlayerStatDao playerStatDao;
+    @Resource
+    private BasketRegistrationDao registrationDao;
+    @Resource
+    private BasketRegistrationPlayerDao registrationPlayerDao;
+    @Resource
+    private BasketPersonalRegistrationDao personalRegistrationDao;
     @Resource
     private BasketSeasonDao seasonDao;
     @Resource
@@ -371,7 +386,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
                 .eq(BasketEventPlayer::getSourcePlayerId, playerId)
                 .eq(BasketEventPlayer::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .eq(seasonId != null, BasketEventPlayer::getSeasonId, seasonId));
-        if (CollectionUtils.isEmpty(eventPlayers)) {
+        if (CollectionUtils.isEmpty(eventPlayers) && !ownerView) {
             return Collections.emptyList();
         }
 
@@ -379,11 +394,13 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
                 .map(BasketEventPlayer::getId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
-        List<BasketPlayerStat> stats = playerStatDao.selectList(new LambdaQueryWrapper<BasketPlayerStat>()
+        List<BasketPlayerStat> stats = eventPlayerIds.isEmpty()
+                ? Collections.emptyList()
+                : playerStatDao.selectList(new LambdaQueryWrapper<BasketPlayerStat>()
                 .in(BasketPlayerStat::getEventPlayerId, eventPlayerIds)
                 .eq(BasketPlayerStat::getIsDelete, BasketPublicConstants.NOT_DELETED)
                 .eq(seasonId != null, BasketPlayerStat::getSeasonId, seasonId));
-        if (CollectionUtils.isEmpty(stats)) {
+        if (CollectionUtils.isEmpty(stats) && !ownerView) {
             return Collections.emptyList();
         }
 
@@ -479,6 +496,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             vo.setAvatarUrl(avatar);
 
             int games = stat.getMatchCount() == null ? 0 : stat.getMatchCount();
+            vo.setHasOfficialStat(Boolean.TRUE);
             vo.setGames(games);
             vo.setPoints(stat.getPoints());
             vo.setRebounds(stat.getRebound());
@@ -503,18 +521,240 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
 
             rows.add(vo);
         }
+        if (ownerView) {
+            appendOwnerParticipations(player, seasonId, rows, seasonMap);
+        }
+        sortSeasonStats(rows, seasonMap);
+        return rows;
+    }
 
+    /**
+     * 个人中心选择器：已发布赛季里报名已通过或已有阵容的届次。
+     * 没有技术统计的行不写 0，球队名只取赛事快照。
+     */
+    private void appendOwnerParticipations(BasketPlayerProfile player,
+                                           Long seasonId,
+                                           List<PublicPlayerSeasonStatVo> rows,
+                                           Map<Long, BasketSeason> seasonMap) {
+        Set<Long> covered = rows.stream()
+                .map(PublicPlayerSeasonStatVo::getDivisionId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<Long, ParticipationSeed> seeds = new LinkedHashMap<>();
+        List<BasketEventPlayer> eventPlayers = eventPlayerDao.selectList(new LambdaQueryWrapper<BasketEventPlayer>()
+                .eq(BasketEventPlayer::getSourcePlayerId, player.getId())
+                .eq(BasketEventPlayer::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(seasonId != null, BasketEventPlayer::getSeasonId, seasonId)
+                .orderByDesc(BasketEventPlayer::getId));
+        for (BasketEventPlayer eventPlayer : eventPlayers) {
+            rememberParticipation(seeds, covered, eventPlayer.getDivisionId(), eventPlayer.getSeasonId(),
+                    eventPlayer.getEventTeamId(), eventPlayer.getId(), null, eventPlayer.getPlayerNameSnapshot());
+        }
+        List<BasketPersonalRegistration> personals = personalRegistrationDao.selectList(new LambdaQueryWrapper<BasketPersonalRegistration>()
+                .eq(BasketPersonalRegistration::getPlayerId, player.getId())
+                .eq(BasketPersonalRegistration::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .in(BasketPersonalRegistration::getRegistrationStatus,
+                        PersonalRegistrationStatusEnum.APPROVED.getCode(),
+                        PersonalRegistrationStatusEnum.ASSIGNED.getCode(),
+                        PersonalRegistrationStatusEnum.CONVERTED.getCode())
+                .eq(seasonId != null, BasketPersonalRegistration::getSeasonId, seasonId));
+        for (BasketPersonalRegistration registration : personals) {
+            rememberParticipation(seeds, covered, registration.getDivisionId(), registration.getSeasonId(),
+                    null, null, null, null);
+        }
+        List<BasketRegistrationPlayer> roster = registrationPlayerDao.selectList(new LambdaQueryWrapper<BasketRegistrationPlayer>()
+                .eq(BasketRegistrationPlayer::getPlayerId, player.getId())
+                .eq(BasketRegistrationPlayer::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(seasonId != null, BasketRegistrationPlayer::getSeasonId, seasonId));
+        if (!roster.isEmpty()) {
+            Set<Long> registrationIds = roster.stream()
+                    .map(BasketRegistrationPlayer::getRegistrationId)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toSet());
+            Map<Long, BasketRegistration> registrationMap = new HashMap<>();
+            if (!registrationIds.isEmpty()) {
+                for (BasketRegistration registration : registrationDao.selectByIds(registrationIds)) {
+                    if (registration != null && registration.getId() != null) {
+                        registrationMap.put(registration.getId(), registration);
+                    }
+                }
+            }
+            for (BasketRegistrationPlayer item : roster) {
+                BasketRegistration registration = registrationMap.get(item.getRegistrationId());
+                if (!approvedRegistration(registration)) {
+                    continue;
+                }
+                rememberParticipation(seeds, covered, item.getDivisionId(), item.getSeasonId(),
+                        null, null, item.getTeamId(), item.getPlayerNameSnapshot());
+            }
+        }
+        List<BasketRegistration> captainRegs = registrationDao.selectList(new LambdaQueryWrapper<BasketRegistration>()
+                .eq(BasketRegistration::getCaptainPlayerId, player.getId())
+                .eq(BasketRegistration::getRegistrationStatus, RegistrationStatusEnum.APPROVED.getCode())
+                .eq(BasketRegistration::getIsDelete, BasketPublicConstants.NOT_DELETED)
+                .eq(seasonId != null, BasketRegistration::getSeasonId, seasonId));
+        for (BasketRegistration registration : captainRegs) {
+            rememberParticipation(seeds, covered, registration.getDivisionId(), registration.getSeasonId(),
+                    null, null, registration.getTeamId(), null);
+        }
+        if (seeds.isEmpty()) {
+            return;
+        }
+        Set<Long> divisionIds = seeds.values().stream().map(seed -> seed.divisionId).collect(Collectors.toSet());
+        Map<Long, BasketDivision> divisionMap = new HashMap<>();
+        for (BasketDivision division : divisionDao.selectByIds(divisionIds)) {
+            if (division != null && Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                divisionMap.put(division.getId(), division);
+            }
+        }
+        Set<Long> seasonIds = new java.util.HashSet<>();
+        for (ParticipationSeed seed : seeds.values()) {
+            if (seed.seasonId != null) {
+                seasonIds.add(seed.seasonId);
+            }
+            BasketDivision division = divisionMap.get(seed.divisionId);
+            if (division != null && division.getSeasonId() != null) {
+                seasonIds.add(division.getSeasonId());
+            }
+        }
+        Map<Long, BasketSeason> loadedSeasons = publicSupport.loadSeasonMap(seasonIds);
+        Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(loadedSeasons.values().stream()
+                .map(BasketSeason::getSeriesId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet()));
+        Set<Long> eventTeamIds = seeds.values().stream().map(seed -> seed.eventTeamId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketEventTeam> eventTeamMap = new HashMap<>();
+        if (!eventTeamIds.isEmpty()) {
+            for (BasketEventTeam team : eventTeamDao.selectByIds(eventTeamIds)) {
+                if (team != null && Objects.equals(team.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
+                    eventTeamMap.put(team.getId(), team);
+                }
+            }
+        }
+        List<BasketEventTeam> divisionTeams = eventTeamDao.selectList(new LambdaQueryWrapper<BasketEventTeam>()
+                .in(BasketEventTeam::getDivisionId, divisionIds)
+                .eq(BasketEventTeam::getIsDelete, BasketPublicConstants.NOT_DELETED));
+        Map<Long, String> logoMap = new HashMap<>();
+        logoMap.putAll(publicSupport.loadAccessUrlMap(eventTeamMap.values().stream()
+                .map(BasketEventTeam::getTeamLogoFileId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet())));
+        logoMap.putAll(publicSupport.loadAccessUrlMap(divisionTeams.stream()
+                .map(BasketEventTeam::getTeamLogoFileId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet())));
+        String displayName = publicSupport.resolveDisplayName(player);
+        for (ParticipationSeed seed : seeds.values()) {
+            BasketDivision division = divisionMap.get(seed.divisionId);
+            if (division == null) {
+                continue;
+            }
+            Long resolvedSeasonId = seed.seasonId != null ? seed.seasonId : division.getSeasonId();
+            BasketSeason season = loadedSeasons.get(resolvedSeasonId);
+            if (season == null || !PublishStatusEnum.PUBLISHED.getCode().equals(season.getPublishStatus())) {
+                continue;
+            }
+            BasketEventTeam eventTeam = seed.eventTeamId != null ? eventTeamMap.get(seed.eventTeamId) : null;
+            if (eventTeam == null && seed.sourceTeamId != null) {
+                eventTeam = divisionTeams.stream()
+                        .filter(team -> seed.divisionId.equals(team.getDivisionId())
+                                && seed.sourceTeamId.equals(team.getSourceTeamId()))
+                        .findFirst()
+                        .orElse(null);
+            }
+            PublicPlayerSeasonStatVo vo = new PublicPlayerSeasonStatVo();
+            BasketSeries series = season.getSeriesId() != null ? seriesMap.get(season.getSeriesId()) : null;
+            if (series != null) {
+                vo.setSeriesId(series.getId());
+                vo.setSeriesName(series.getSeriesName());
+            }
+            vo.setSeasonId(season.getId());
+            vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
+            vo.setDivisionId(division.getId());
+            vo.setDivisionName(division.getDivisionName());
+            vo.setDivisionStatus(division.getDivisionStatus());
+            vo.setMatchEndTime(division.getMatchEndTime());
+            vo.setPlatformCode(division.getPlatformCode());
+            vo.setGameMode(division.getGameMode());
+            vo.setPlayerId(player.getId());
+            vo.setSourcePlayerId(player.getId());
+            vo.setEventPlayerId(seed.eventPlayerId);
+            vo.setPlayerName(org.springframework.util.StringUtils.hasText(seed.playerName) ? seed.playerName : displayName);
+            vo.setHasOfficialStat(Boolean.FALSE);
+            if (eventTeam != null) {
+                vo.setEventTeamId(eventTeam.getId());
+                vo.setTeamId(eventTeam.getId());
+                vo.setTeamName(eventTeam.getTeamNameSnapshot());
+                vo.setTeamLogoUrl(logoMap.get(eventTeam.getTeamLogoFileId()));
+            }
+            rows.add(vo);
+            seasonMap.put(season.getId(), season);
+        }
+    }
+
+    private static void rememberParticipation(Map<Long, ParticipationSeed> seeds,
+                                              Set<Long> covered,
+                                              Long divisionId,
+                                              Long seasonId,
+                                              Long eventTeamId,
+                                              Long eventPlayerId,
+                                              Long sourceTeamId,
+                                              String playerName) {
+        if (divisionId == null || covered.contains(divisionId)) {
+            return;
+        }
+        ParticipationSeed existing = seeds.get(divisionId);
+        if (existing == null) {
+            ParticipationSeed seed = new ParticipationSeed();
+            seed.divisionId = divisionId;
+            seed.seasonId = seasonId;
+            seed.eventTeamId = eventTeamId;
+            seed.eventPlayerId = eventPlayerId;
+            seed.sourceTeamId = sourceTeamId;
+            seed.playerName = playerName;
+            seeds.put(divisionId, seed);
+            return;
+        }
+        if (existing.eventTeamId == null) {
+            existing.eventTeamId = eventTeamId;
+        }
+        if (existing.eventPlayerId == null) {
+            existing.eventPlayerId = eventPlayerId;
+        }
+        if (existing.sourceTeamId == null) {
+            existing.sourceTeamId = sourceTeamId;
+        }
+        if (!org.springframework.util.StringUtils.hasText(existing.playerName)) {
+            existing.playerName = playerName;
+        }
+    }
+
+    private static boolean approvedRegistration(BasketRegistration registration) {
+        return registration != null
+                && Objects.equals(registration.getIsDelete(), BasketPublicConstants.NOT_DELETED)
+                && RegistrationStatusEnum.APPROVED.getCode().equals(registration.getRegistrationStatus());
+    }
+
+    private static void sortSeasonStats(List<PublicPlayerSeasonStatVo> rows, Map<Long, BasketSeason> seasonMap) {
         rows.sort(Comparator
-                .comparing((PublicPlayerSeasonStatVo item) -> {
+                .comparing((PublicPlayerSeasonStatVo item) -> Boolean.TRUE.equals(item.getHasOfficialStat()) ? 0 : 1)
+                .thenComparing((PublicPlayerSeasonStatVo item) -> {
                     BasketSeason season = seasonMap.get(item.getSeasonId());
-                    Date t = season == null ? null : (season.getMatchStartTime() != null
+                    Date time = season == null ? null : (season.getMatchStartTime() != null
                             ? season.getMatchStartTime()
                             : season.getCreateTime());
-                    return t == null ? 0L : t.getTime();
-                })
-                .reversed()
+                    return time == null ? 0L : time.getTime();
+                }, Comparator.reverseOrder())
                 .thenComparing(item -> item.getDivisionId() == null ? 0L : item.getDivisionId(), Comparator.reverseOrder()));
-        return rows;
+    }
+
+    private static final class ParticipationSeed {
+        private Long divisionId;
+        private Long seasonId;
+        private Long eventTeamId;
+        private Long eventPlayerId;
+        private Long sourceTeamId;
+        private String playerName;
     }
 
     private BigDecimal avgOf(Integer total, int games) {

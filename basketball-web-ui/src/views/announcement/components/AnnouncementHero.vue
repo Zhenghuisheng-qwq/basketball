@@ -1,8 +1,15 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import ssggTopBackground from '@/assets/icon/ssgg/ssgg_top_background.png'
+import { usePublicPageHero } from '@/composables/usePublicPageHero'
 
 const { t } = useI18n()
+const pageHero = usePublicPageHero('ANNOUNCEMENT')
+const heroSrc = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : ssggTopBackground))
+const heroStyle = computed(() => (
+  pageHero.configured.value ? { objectPosition: pageHero.objectPosition.value } : undefined
+))
 
 withDefaults(
   defineProps<{
@@ -23,9 +30,16 @@ withDefaults(
       <div class="announcement-hero__frame cnpa-public-hero-frame">
         <img
           class="announcement-hero__image"
-          :src="ssggTopBackground"
-          :alt="t('publicPages.announcement.centerAria')"
+          :src="heroSrc"
+          :alt="pageHero.altText.value || t('publicPages.announcement.centerAria')"
+          :style="heroStyle"
           draggable="false"
+        />
+        <div
+          v-if="pageHero.configured.value && !pageHero.fullImage.value"
+          class="announcement-hero__mask"
+          :style="{ background: `rgba(0, 0, 0, ${pageHero.maskOpacity.value / 100})` }"
+          aria-hidden="true"
         />
       </div>
     </div>
@@ -41,5 +55,12 @@ withDefaults(
 
 .announcement-hero__frame {
   background: #000;
+}
+
+.announcement-hero__mask {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
 }
 </style>

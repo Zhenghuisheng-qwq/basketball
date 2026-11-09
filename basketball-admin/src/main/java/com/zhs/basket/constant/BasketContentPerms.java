@@ -55,6 +55,16 @@ public final class BasketContentPerms {
     public static final String HOME_CONTENT_OFFLINE = "basket:homeContent:offline";
     public static final String HOME_CONTENT_REMOVE = "basket:homeContent:remove";
 
+    public static final String PAGE_HERO_LIST = "basket:pageHero:list";
+    public static final String PAGE_HERO_QUERY = "basket:pageHero:query";
+    public static final String PAGE_HERO_EDIT = "basket:pageHero:edit";
+    public static final String PAGE_HERO_PUBLISH = "basket:pageHero:publish";
+
+    public static final String SITE_THEME_LIST = "basket:siteTheme:list";
+    public static final String SITE_THEME_QUERY = "basket:siteTheme:query";
+    public static final String SITE_THEME_EDIT = "basket:siteTheme:edit";
+    public static final String SITE_THEME_PUBLISH = "basket:siteTheme:publish";
+
     public static final String PARTNER_LIST = "basket:partner:list";
     public static final String PARTNER_QUERY = "basket:partner:query";
     public static final String PARTNER_ADD = "basket:partner:add";

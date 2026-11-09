@@ -5,12 +5,12 @@
  */
 
 :root {
-  --account-sidebar-width: clamp(240px, 16vw, 300px);
-  --account-main-padding-x: clamp(24px, 2.5vw, 48px);
-  --account-main-padding-y: clamp(24px, 2.5vw, 48px);
+  --account-sidebar-width: clamp(240px, 16vw, 280px);
+  --account-main-padding-x: clamp(40px, 3.4vw, 72px);
+  --account-main-padding-y: clamp(28px, 2.6vw, 48px);
 
-  /* Desktop content cap: fill remaining main area, never exceed 1440px */
-  --account-content-max: 1440px;
+  /* Desktop content cap: leave a clear gutter beside the sidebar */
+  --account-content-max: 1120px;
   --account-card-gap: clamp(18px, 1.6vw, 28px);
 
   --account-card-padding: clamp(24px, 2vw, 34px);

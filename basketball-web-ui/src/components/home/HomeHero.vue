@@ -35,6 +35,7 @@ const narrow = ref(false)
 let timer: number | null = null
 let media: MediaQueryList | null = null
 let touchStartX = 0
+let suppressClick = false
 
 const activeBanner = computed(() => props.banners[activeIndex.value] ?? null)
 const backgroundImage = computed(() => {
@@ -108,8 +109,11 @@ function onTouchStart(event: TouchEvent) {
 
 function onTouchEnd(event: TouchEvent) {
   const delta = (event.changedTouches[0]?.clientX ?? 0) - touchStartX
-  if (delta <= -SWIPE_PX) nextBanner()
-  else if (delta >= SWIPE_PX) previousBanner()
+  if (Math.abs(delta) >= SWIPE_PX) {
+    suppressClick = true
+    if (delta < 0) nextBanner()
+    else previousBanner()
+  }
   resume()
 }
 
@@ -121,6 +125,10 @@ function onFocusOut(event: FocusEvent) {
 }
 
 function onFrameClick(event: MouseEvent) {
+  if (suppressClick) {
+    suppressClick = false
+    return
+  }
   const target = event.target as HTMLElement | null
   if (target?.closest('button')) return
   if (!canOpen.value || !activeBanner.value) return

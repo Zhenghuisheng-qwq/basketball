@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.dao.BasketPageHeroDao">
+    <select id="selectPublished" resultType="com.zhs.model.BasketPageHero">
+        select id, page_key as pageKey, season_id as seasonId, mode,
+               image_file_id as imageFileId, mobile_image_file_id as mobileImageFileId,
+               focus_x as focusX, focus_y as focusY, mask_opacity as maskOpacity, alt_text as altText,
+               hero_status as heroStatus
+        from basket_page_hero
+        where is_delete = 0
+          and hero_status = 1
+          and page_key = #{pageKey}
+          and season_id = #{seasonId}
+        limit 1
+    </select>
+</mapper>

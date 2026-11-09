@@ -7,6 +7,7 @@ import router from './router'
 import { i18n } from '@/i18n'
 import { initAuthState } from '@/composables/useAuth'
 import { installBrowserDeterrence } from '@/security/browserDeterrence'
+import { installPublicTheme } from '@/theme/publicTheme'
 import { useLocaleStore } from '@/stores/locale'
 import '@/assets/styles/index.scss'
 import '@/assets/styles/account-layout.css'
@@ -21,6 +22,7 @@ async function bootstrap() {
   app.use(i18n)
   useLocaleStore().init()
   await initAuthState()
+  installPublicTheme(router)
   app.use(router)
   app.use(ElementPlus)
   app.mount('#app')

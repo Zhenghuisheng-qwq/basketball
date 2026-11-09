@@ -182,7 +182,7 @@ function mapBanner(item: PublicHomeBannerResp): HomeBannerItem | null {
   }
 }
 
-function openBanner(banner: HomeBannerItem) {
+function openBanner(banner: { targetType?: string; targetValue?: string }) {
   const type = (banner.targetType || 'NONE').toUpperCase()
   const value = banner.targetValue?.trim() || ''
   if (type === 'NONE' || !value || value.toLowerCase().startsWith('javascript:')) return
@@ -297,7 +297,7 @@ async function loadBanners() {
   bannerState.value = 'loading'
   bannerError.value = ''
   try {
-    const res = await getPublicHomeBanners()
+    const res = await getPublicHomeBanners('HOME_TOP')
     rawBanners.value = res.data ?? []
     bannerState.value = rawBanners.value.some((item) => item.imageUrl?.trim()) ? 'success' : 'empty'
   } catch (err) {

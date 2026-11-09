@@ -336,6 +336,30 @@ const router = createRouter({
 
         {
 
+          path: 'performance/match/:matchId',
+
+          name: 'AccountPerformanceMatch',
+
+          component: () => import('@/views/events/v4/V4MatchDetailPage.vue'),
+
+          meta: { title: '比赛详情' },
+
+        },
+
+        {
+
+          path: 'performance/match-series/:seriesId',
+
+          name: 'AccountPerformanceSeries',
+
+          component: () => import('@/views/events/v4/V4MatchDetailPage.vue'),
+
+          meta: { title: '系列赛详情' },
+
+        },
+
+        {
+
           path: 'profile',
 
           name: 'AccountProfile',

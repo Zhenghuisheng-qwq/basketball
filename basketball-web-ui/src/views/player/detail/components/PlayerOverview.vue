@@ -9,6 +9,7 @@ import type { PlayerCareerStatistics, PlayerDetailData } from '../types'
 
 const props = defineProps<{
   detail: PlayerDetailData
+  blankWithoutGames?: boolean
 }>()
 
 const router = useRouter()
@@ -23,7 +24,7 @@ const seasonStat = computed<PlayerCareerStatistics | null>(() => {
 
 const seasonBoxes = computed(() => {
   const row = seasonStat.value
-  if (!row) return []
+  if (!row || (props.blankWithoutGames && !(Number(row.games) > 0))) return []
   return [
     { key: 'games', label: t('publicPages.player.games'), value: formatStat(row.games, false), accent: false },
     { key: 'pts', label: t('publicPages.player.avgPoints'), value: formatStat(row.points, true), accent: true },
@@ -42,7 +43,7 @@ const countBoxes = computed(() => {
   const count = (code: string) =>
     honorItems.value.filter((item) => (item.honorCode || '').toUpperCase() === code).length
   return [
-    { key: 'games', icon: 'court', label: t('publicPages.player.gamesCount'), count: seasonStat.value?.games ?? '--', unit: t('publicPages.player.gamesUnit') },
+    { key: 'games', icon: 'court', label: t('publicPages.player.gamesCount'), count: props.blankWithoutGames && !(Number(seasonStat.value?.games) > 0) ? '--' : (seasonStat.value?.games ?? '--'), unit: t('publicPages.player.gamesUnit') },
     { key: 'WEEKLY_BEST', icon: 'star', label: t('publicPages.player.weeklyPlayer'), count: count('WEEKLY_BEST'), unit: t('publicPages.player.timesUnit') },
     { key: 'ALL_TOURNAMENT', icon: 'laurel', label: t('publicPages.hall.allTournament'), count: count('ALL_TOURNAMENT'), unit: t('publicPages.player.timesUnit') },
     { key: 'ALL_DEFENSIVE', icon: 'shield', label: t('publicPages.hall.allDefensive'), count: count('ALL_DEFENSIVE'), unit: t('publicPages.player.timesUnit') },

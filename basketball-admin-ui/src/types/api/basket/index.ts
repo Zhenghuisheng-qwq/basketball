@@ -1948,6 +1948,24 @@ export interface HomeBannerListItem {
   endTime?: string
   bannerStatus?: number
   bannerStatusName?: string
+  pendingChangeLabel?: string
+  hasDraft?: number
+  draftEnabled?: number
+  draftRemove?: number
+  draftImageFileId?: number
+  draftImageUrl?: string
+  draftMobileImageFileId?: number
+  draftMobileImageUrl?: string
+  draftAltText?: string
+  draftTitle?: string
+  draftTitleEn?: string
+  draftSubtitle?: string
+  draftSubtitleEn?: string
+  draftTargetType?: string
+  draftTargetValue?: string
+  draftSortNo?: number
+  draftStartTime?: string
+  draftEndTime?: string
   sortNo?: number
   createTime?: string
   updateTime?: string
@@ -1968,6 +1986,7 @@ export interface HomeBannerAddReq {
   startTime?: string
   endTime?: string
   sortNo?: number
+  draftEnabled?: number
 }
 
 export interface HomeBannerEditReq {
@@ -1985,6 +2004,115 @@ export interface HomeBannerEditReq {
   startTime?: string
   endTime?: string
   sortNo?: number
+  draftEnabled?: number
+}
+
+export interface PageHeroResp {
+  id?: number
+  pageKey?: string
+  seasonId?: number
+  seasonName?: string
+  mode?: string
+  imageFileId?: number
+  imageUrl?: string
+  mobileImageFileId?: number
+  mobileImageUrl?: string
+  focusX?: number
+  focusY?: number
+  maskOpacity?: number
+  altText?: string
+  heroStatus?: number
+  heroStatusName?: string
+  hasDraft?: number
+  draftMode?: string
+  draftImageFileId?: number
+  draftImageUrl?: string
+  draftMobileImageFileId?: number
+  draftMobileImageUrl?: string
+  draftFocusX?: number
+  draftFocusY?: number
+  draftMaskOpacity?: number
+  draftAltText?: string
+  draftEnabled?: number
+  versionNo?: number
+  pendingChangeLabel?: string
+  exists?: boolean
+}
+
+export interface ThemeColorReq {
+  primary?: string
+  secondary?: string
+  accent?: string
+  content?: string
+  card?: string
+  tableHead?: string
+  border?: string
+  text?: string
+  textMuted?: string
+  onAccent?: string
+}
+
+export interface SiteThemeBinding {
+  id?: number
+  scopeType?: string
+  scopeId?: number
+  themeId?: number
+  themeName?: string
+  seasonName?: string
+  themeVersion?: number
+  scopeLabel?: string
+}
+
+export interface SiteThemeResp {
+  id?: number
+  themeName?: string
+  description?: string
+  bgColor?: string
+  bgImageFileId?: number
+  bgImageUrl?: string
+  mobileBgImageFileId?: number
+  mobileBgImageUrl?: string
+  bgDisplay?: string
+  colors?: ThemeColorReq
+  themeStatus?: number
+  themeStatusName?: string
+  hasDraft?: number
+  versionNo?: number
+  pendingChangeLabel?: string
+  bindings?: SiteThemeBinding[]
+}
+
+export interface SiteThemeSaveReq {
+  id?: number
+  versionNo?: number
+  themeName?: string
+  description?: string
+  bgColor?: string
+  bgImageFileId?: number
+  mobileBgImageFileId?: number
+  bgDisplay?: string
+  colors?: ThemeColorReq
+  scopeType?: string
+  seasonId?: number
+}
+
+export interface SiteThemeImpact {
+  affected?: string[]
+  replaceHint?: string
+}
+
+export interface PageHeroSaveReq {
+  pageKey: string
+  seasonId?: number
+  versionNo?: number
+  mode?: string
+  imageFileId?: number
+  mobileImageFileId?: number
+  altText?: string
+  focusX?: number
+  focusY?: number
+  maskOpacity?: number
+  draftEnabled?: number
 }
 
 export interface PartnerQuery extends PageDomain {

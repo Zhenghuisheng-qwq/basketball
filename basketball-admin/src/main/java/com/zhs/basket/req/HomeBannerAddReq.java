@@ -20,4 +20,6 @@ public class HomeBannerAddReq {
     private Date startTime;
     private Date endTime;
     private Integer sortNo;
+    /** 1 发布后在首页显示，0 发布后停用 */
+    private Integer draftEnabled;
 }

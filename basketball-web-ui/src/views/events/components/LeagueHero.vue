@@ -6,10 +6,18 @@ import LeagueHeroMeta from './LeagueHeroMeta.vue'
 import { useLeagueHeroMeta } from '../composables/useLeagueHeroMeta'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 import { pickCompetitionSeriesCode, resolveCompetitionTheme } from '@/config/competitionTheme'
+import { usePublicPageHero } from '@/composables/usePublicPageHero'
 
 const route = useRoute()
 const { t } = useI18n()
 const { heroMetaItems } = useLeagueHeroMeta()
+const seasonHeroId = computed(() => {
+  const param = route.params.seasonId
+  if (typeof param === 'string' && param.trim()) return param.trim()
+  const query = route.query.seasonId
+  return typeof query === 'string' ? query.trim() : ''
+})
+const pageHero = usePublicPageHero('EVENT_SEASON', seasonHeroId)
 const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
 const seriesLabel = computed(
   () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || t('events.title'),
@@ -24,20 +32,29 @@ const seriesCode = computed(() => {
   )
 })
 const heroTheme = computed(() => resolveCompetitionTheme(seriesCode.value))
-const heroImage = computed(() => heroTheme.value.topImage)
-const heroOverlayStyle = computed(() => ({ background: heroTheme.value.overlay }))
+const heroImage = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : heroTheme.value.topImage))
+const heroPosition = computed(() => (
+  pageHero.configured.value ? pageHero.objectPosition.value : heroTheme.value.backgroundPosition
+))
+const heroAlt = computed(() => pageHero.altText.value || seriesLabel.value)
+const showHeroMeta = computed(() => !(pageHero.configured.value && pageHero.fullImage.value))
+const heroOverlayStyle = computed(() => {
+  if (pageHero.configured.value && pageHero.fullImage.value) return { background: 'transparent' }
+  if (pageHero.configured.value) return { background: `rgba(0, 0, 0, ${pageHero.maskOpacity.value / 100})` }
+  return { background: heroTheme.value.overlay }
+})
 </script>
 <template>
   <section class="league-hero" :aria-label="seriesLabel">
     <img
       class="league-hero__image"
       :src="heroImage"
-      :alt="seriesLabel"
-      :style="{ objectPosition: heroTheme.backgroundPosition }"
+      :alt="heroAlt"
+      :style="{ objectPosition: heroPosition }"
     />
     <div class="league-hero__overlay" :style="heroOverlayStyle" aria-hidden="true" />
 
-    <LeagueHeroMeta class="league-hero__meta" :items="heroMetaItems" />
+    <LeagueHeroMeta v-if="showHeroMeta" class="league-hero__meta" :items="heroMetaItems" />
   </section>
 </template>
 <style scoped lang="scss">

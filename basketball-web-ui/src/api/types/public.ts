@@ -138,6 +138,29 @@ export interface PublicSocialLinkResp {
   sortOrder?: number | null
 }
 
+export interface PublicSiteThemeResp {
+  configured?: boolean
+  source?: string | null
+  bgColor?: string | null
+  bgImageUrl?: string | null
+  mobileBgImageUrl?: string | null
+  bgDisplay?: string | null
+  colors?: Record<string, string> | null
+}
+
+export interface PublicPageHeroResp {
+  configured?: boolean
+  pageKey?: string | null
+  seasonId?: string | null
+  mode?: string | null
+  imageUrl?: string | null
+  mobileImageUrl?: string | null
+  focusX?: number | null
+  focusY?: number | null
+  maskOpacity?: number | null
+  altText?: string | null
+}
+
 export interface PublicHomeBannerResp {
   bannerId: string
   title?: string | null
@@ -486,6 +509,7 @@ export interface PublicPlayerSeasonStatVo {
   playerName?: string | null
   avatarUrl?: string | null
   games?: number | null
+  hasOfficialStat?: boolean | null
   starts?: number | null
   points?: number | null
   rebounds?: number | null

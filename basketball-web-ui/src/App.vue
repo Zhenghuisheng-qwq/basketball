@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { computed, nextTick, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { ElConfigProvider } from 'element-plus'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
@@ -8,6 +8,7 @@ import WebHeader from '@/components/layout/WebHeader.vue'
 import WebFooter from '@/components/layout/WebFooter.vue'
 import { applyRouteDocumentTitle } from '@/i18n/documentTitle'
 import { useLocaleStore } from '@/stores/locale'
+import { ensurePublicThemeApplied, publicThemeState } from '@/theme/publicTheme'
 
 const route = useRoute()
 const localeStore = useLocaleStore()
@@ -29,6 +30,19 @@ const isAuthRoute = computed(
 const isAccountRoute = computed(() => route.path.startsWith('/account'))
 
 const useStandaloneChrome = computed(() => isAuthRoute.value || isAccountRoute.value)
+const themeReady = computed(() => publicThemeState.ready)
+
+function applyTheme() {
+  return ensurePublicThemeApplied(route, document.querySelector('.site-main'))
+}
+
+onMounted(() => {
+  void applyTheme()
+})
+
+watch(() => route.fullPath, () => {
+  void nextTick().then(applyTheme)
+})
 </script>
 
 <template>
@@ -42,6 +56,7 @@ const useStandaloneChrome = computed(() => isAuthRoute.value || isAccountRoute.v
         isAuthRoute ? 'app-main--auth' : '',
         isAccountRoute ? 'app-main--account' : '',
       ]"
+      :style="!useStandaloneChrome && !themeReady ? { visibility: 'hidden' } : undefined"
     >
       <router-view />
     </main>

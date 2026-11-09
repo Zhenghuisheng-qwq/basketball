@@ -21,4 +21,9 @@ public interface IBasketHomeBannerService {
     void offline(Long id);
 
     void remove(Long id);
+
+    /**
+     * 发布 HOME_TOP 整组草稿。没有未发布修改时返回 -1。否则返回发布后仍在线上的张数。
+     */
+    int publishHomeTop();
 }

@@ -7,6 +7,7 @@ import type { PlayerDetailData, PlayerHonor, PlayerTeamHistory } from '../types'
 
 defineProps<{
   detail: PlayerDetailData
+  cumulative?: boolean
 }>()
 
 const route = useRoute()
@@ -67,11 +68,11 @@ function openHonor(tournamentId?: string) {
   <div class="player-detail-career">
     <header class="player-detail-career__intro">
       <h2 class="player-detail-career__title">
-        {{ t('publicPages.player.careerTitle') }}
+        {{ cumulative ? t('accountShell.performancePage.careerCumulative') : t('publicPages.player.careerTitle') }}
         <span>PLAYER CAREER</span>
       </h2>
       <p class="player-detail-career__desc">
-        {{ t('publicPages.player.careerDesc') }}
+        {{ cumulative ? t('accountShell.performancePage.careerCumulativeDesc') : t('publicPages.player.careerDesc') }}
       </p>
     </header>
 

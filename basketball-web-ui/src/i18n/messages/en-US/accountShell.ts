@@ -46,8 +46,13 @@ export default {
   },
   performancePage: {
     needVerification: 'After player verification, this page shows the same games, matches, stats, and honors as the public player page.',
-    openPublic: 'Open public player page',
+    openPublic: 'View public profile',
     goVerify: 'Verify player',
+    noParticipation: 'No published event participation yet.',
+    noTeamSnapshot: 'No team snapshot yet',
+    eventStatus: 'Event status',
+    careerCumulative: 'All events combined',
+    careerCumulativeDesc: 'These figures cover every published event and stay the same when the event above changes. The existing career totals are unchanged.',
   },
   overview: {
     loadFailed: 'Could not load the account center',

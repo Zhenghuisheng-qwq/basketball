@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import { usePublicPageHero } from '@/composables/usePublicPageHero'
 import { useI18n } from 'vue-i18n'
 import { getPublicPartners } from '@/api/public/partner'
 import type { PublicPartnerSupportRecordResp } from '@/api/types/public'
@@ -8,6 +9,11 @@ import partnersHeroImg from '@/assets/icon/hzhb/hzhb.png'
 
 const PAGE_SIZE = 8
 const { t, locale } = useI18n()
+const pageHero = usePublicPageHero('PARTNER')
+const heroSrc = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : partnersHeroImg))
+const heroStyle = computed(() => (
+  pageHero.configured.value ? { objectPosition: pageHero.objectPosition.value } : undefined
+))
 
 const loading = ref(false)
 const error = ref('')
@@ -112,9 +118,16 @@ void loadPartners(1)
         <div class="partners-hero__visual cnpa-public-hero-frame">
           <img
             class="partners-hero__image"
-            :src="partnersHeroImg"
-            :alt="t('publicPages.partners.heroAria')"
+            :src="heroSrc"
+            :alt="pageHero.altText.value || t('publicPages.partners.heroAria')"
+            :style="heroStyle"
             draggable="false"
+          />
+          <div
+            v-if="pageHero.configured.value && !pageHero.fullImage.value"
+            class="partners-hero__mask"
+            :style="{ background: `rgba(0, 0, 0, ${pageHero.maskOpacity.value / 100})` }"
+            aria-hidden="true"
           />
         </div>
       </div>
@@ -254,6 +267,13 @@ void loadPartners(1)
 .partners-hero__image {
   border: none;
   outline: none;
+}
+
+.partners-hero__mask {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
 }
 
 .partners-content {

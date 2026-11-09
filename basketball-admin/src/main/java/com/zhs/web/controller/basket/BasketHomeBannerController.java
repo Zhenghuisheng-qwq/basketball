@@ -51,6 +51,17 @@ public class BasketHomeBannerController extends BaseController {
 
     @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.HOME_CONTENT_PUBLISH + "')")
     @Log(title = "首页横幅", businessType = BusinessType.UPDATE)
+    @PostMapping("/publish-group")
+    public AjaxResult publishGroup() {
+        int liveCount = homeBannerService.publishHomeTop();
+        if (liveCount < 0) {
+            return success("没有未发布修改，线上保持不变");
+        }
+        return success("首页轮播已发布，线上 " + liveCount + " 张");
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.HOME_CONTENT_PUBLISH + "')")
+    @Log(title = "首页横幅", businessType = BusinessType.UPDATE)
     @PostMapping("/{id}/publish")
     public AjaxResult publish(@PathVariable Long id) {
         homeBannerService.publish(id);

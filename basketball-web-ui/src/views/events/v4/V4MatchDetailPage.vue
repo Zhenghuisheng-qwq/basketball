@@ -22,6 +22,7 @@ import SeriesGameTabs from '../match-detail/SeriesGameTabs.vue'
 import PeriodScoreBoard from '../match-detail/PeriodScoreBoard.vue'
 import BoxScorePanel from '../match-detail/BoxScorePanel.vue'
 import heroBg from '@/assets/icon/score/detail_top_background.png'
+import { usePublicPageHero } from '@/composables/usePublicPageHero'
 import {
   SERIES_TOTAL_TAB,
   formatMatchWhen,
@@ -38,7 +39,12 @@ const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
 
-const seriesMode = computed(() => route.name === 'V4MatchSeriesDetail')
+const accountContest = computed(() =>
+  route.name === 'AccountPerformanceMatch' || route.name === 'AccountPerformanceSeries',
+)
+const seriesMode = computed(() =>
+  route.name === 'V4MatchSeriesDetail' || route.name === 'AccountPerformanceSeries',
+)
 const seriesId = computed(() => String(route.params.seriesId || ''))
 const matchId = computed(() => String(route.params.matchId || ''))
 const gameQuery = computed(() => String(route.query.game || '').trim())
@@ -47,6 +53,17 @@ const loading = ref(true)
 const error = ref('')
 const series = ref<V4PublicMatchSeriesDetail | null>(null)
 const match = ref<V4PublicMatchDetail | null>(null)
+const heroSeasonId = computed(() => String(series.value?.seasonId || match.value?.seasonId || route.query.seasonId || ''))
+const pageHero = usePublicPageHero('EVENT_SEASON', heroSeasonId)
+const heroSrc = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : heroBg))
+const heroStyle = computed(() => (
+  pageHero.configured.value ? { objectPosition: pageHero.objectPosition.value } : undefined
+))
+const heroShadeStyle = computed(() => {
+  if (!pageHero.configured.value || pageHero.fullImage.value) return undefined
+  const mask = pageHero.maskOpacity.value / 100
+  return { background: `linear-gradient(180deg, rgba(0, 0, 0, ${mask}) 0%, rgba(5, 5, 5, 0.85) 100%)` }
+})
 const matchCache = ref<Record<string, V4PublicMatchDetail>>({})
 const selectedTeamId = ref('')
 const activeTab = ref(SERIES_TOTAL_TAB)
@@ -166,6 +183,10 @@ const breadcrumb = computed(() => {
 
 const parentSeriesPath = computed(() => {
   if (seriesMode.value) return ''
+  const seriesId = String(match.value?.matchSeriesId || '').trim()
+  if (accountContest.value) {
+    return seriesId ? `/account/performance/match-series/${seriesId}` : ''
+  }
   return publicContestDetailPath({
     unitType: 'MATCH_SERIES',
     matchSeriesId: match.value?.matchSeriesId,
@@ -232,6 +253,15 @@ const boxTeams = computed(() => [leftTeam.value, rightTeam.value].filter((team) 
 const seasonPath = computed(() => {
   const seasonId = series.value?.seasonId || match.value?.seasonId || String(route.query.seasonId || '')
   const divisionId = series.value?.divisionId || match.value?.divisionId || String(route.query.divisionId || '')
+  if (accountContest.value) {
+    return {
+      name: 'AccountPerformance',
+      query: {
+        tab: 'matches',
+        ...(divisionId ? { divisionId } : {}),
+      },
+    }
+  }
   if (!seasonId) return '/events'
   return {
     path: `/events/${seasonId}`,
@@ -258,9 +288,13 @@ function contestQuery() {
   }
 }
 
+function matchDetailPath(id: string) {
+  return accountContest.value ? `/account/performance/match/${id}` : `/events/match/${id}`
+}
+
 function goRealMatchDetail(id: string) {
   return router.push({
-    path: `/events/match/${id}`,
+    path: matchDetailPath(id),
     query: contestQuery(),
   })
 }
@@ -273,7 +307,7 @@ function applyTabFromRoute() {
   if (gameQuery.value && visibleGames.value.some((game) => String(game.matchId) === gameQuery.value)) {
     activeTab.value = SERIES_TOTAL_TAB
     void router.replace({
-      path: `/events/match/${gameQuery.value}`,
+      path: matchDetailPath(gameQuery.value),
       query: contestQuery(),
     })
     return
@@ -380,14 +414,15 @@ watch([seriesId, matchId, () => route.name], () => {
         <div class="match-detail-hero__frame">
           <img
             class="match-detail-hero__image"
-            :src="heroBg"
-            alt=""
+            :src="heroSrc"
+            :alt="pageHero.altText.value"
+            :style="heroStyle"
             draggable="false"
           />
-          <div class="match-detail-hero__shade" aria-hidden="true" />
+          <div class="match-detail-hero__shade" :style="heroShadeStyle" aria-hidden="true" />
           <div class="match-detail-hero__body">
         <nav class="match-detail-crumb">
-          <router-link to="/events">{{ t('events.title') }}</router-link>
+          <router-link :to="accountContest ? { name: 'AccountPerformance' } : '/events'">{{ t('events.title') }}</router-link>
           <span>/</span>
           <router-link :to="seasonPath">{{ breadcrumb[1] }}</router-link>
           <span>/</span>

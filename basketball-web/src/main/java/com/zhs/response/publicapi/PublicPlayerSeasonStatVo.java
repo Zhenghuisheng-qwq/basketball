@@ -49,6 +49,9 @@ public class PublicPlayerSeasonStatVo implements Serializable {
     private String avatarUrl;
 
     private Integer games;
+
+    /** 有正式赛季统计。false 表示只是已通过报名或已进阵容，还没有技术统计。 */
+    private Boolean hasOfficialStat;
     private Integer starts;
     private Integer points;
     private Integer rebounds;

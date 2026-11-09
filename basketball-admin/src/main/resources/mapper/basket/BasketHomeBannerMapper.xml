@@ -18,6 +18,21 @@
         <result property="endTime" column="end_time"/>
         <result property="bannerStatus" column="banner_status"/>
         <result property="sortNo" column="sort_no"/>
+        <result property="hasDraft" column="has_draft"/>
+        <result property="draftEnabled" column="draft_enabled"/>
+        <result property="draftRemove" column="draft_remove"/>
+        <result property="draftImageFileId" column="draft_image_file_id"/>
+        <result property="draftMobileImageFileId" column="draft_mobile_image_file_id"/>
+        <result property="draftAltText" column="draft_alt_text"/>
+        <result property="draftTitle" column="draft_title"/>
+        <result property="draftTitleEn" column="draft_title_en"/>
+        <result property="draftSubtitle" column="draft_subtitle"/>
+        <result property="draftSubtitleEn" column="draft_subtitle_en"/>
+        <result property="draftTargetType" column="draft_target_type"/>
+        <result property="draftTargetValue" column="draft_target_value"/>
+        <result property="draftSortNo" column="draft_sort_no"/>
+        <result property="draftStartTime" column="draft_start_time"/>
+        <result property="draftEndTime" column="draft_end_time"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
         <result property="isDelete" column="is_delete"/>
@@ -29,15 +44,27 @@
                b.alt_text as altText, b.position_code as positionCode, b.target_type as targetType,
                b.target_value as targetValue, b.start_time as startTime, b.end_time as endTime,
                b.banner_status as bannerStatus, b.sort_no as sortNo,
+               b.has_draft as hasDraft, b.draft_enabled as draftEnabled, b.draft_remove as draftRemove,
+               b.draft_image_file_id as draftImageFileId, dimg.access_url as draftImageUrl,
+               b.draft_mobile_image_file_id as draftMobileImageFileId, dmob.access_url as draftMobileImageUrl,
+               b.draft_alt_text as draftAltText, b.draft_title as draftTitle, b.draft_title_en as draftTitleEn,
+               b.draft_subtitle as draftSubtitle, b.draft_subtitle_en as draftSubtitleEn,
+               b.draft_target_type as draftTargetType, b.draft_target_value as draftTargetValue,
+               b.draft_sort_no as draftSortNo, b.draft_start_time as draftStartTime, b.draft_end_time as draftEndTime,
                b.create_time as createTime, b.update_time as updateTime
         from basket_home_banner b
         left join basket_file_asset img on img.id = b.image_file_id and img.is_delete = 0
         left join basket_file_asset mob on mob.id = b.mobile_image_file_id and mob.is_delete = 0
+        left join basket_file_asset dimg on dimg.id = b.draft_image_file_id and dimg.is_delete = 0
+        left join basket_file_asset dmob on dmob.id = b.draft_mobile_image_file_id and dmob.is_delete = 0
     </sql>
 
     <select id="selectById" resultMap="BasketHomeBannerResult">
         select id, banner_name, title, title_en, subtitle, subtitle_en, image_file_id, mobile_image_file_id, alt_text, position_code, target_type, target_value,
-               start_time, end_time, banner_status, sort_no, create_time, update_time, is_delete
+               start_time, end_time, banner_status, sort_no, has_draft, draft_enabled, draft_remove,
+               draft_image_file_id, draft_mobile_image_file_id, draft_alt_text, draft_title, draft_title_en,
+               draft_subtitle, draft_subtitle_en, draft_target_type, draft_target_value, draft_sort_no,
+               draft_start_time, draft_end_time, create_time, update_time, is_delete
         from basket_home_banner where id = #{id} and is_delete = 0
     </select>
 
@@ -60,10 +87,16 @@
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_home_banner (
             banner_name, title, title_en, subtitle, subtitle_en, image_file_id, mobile_image_file_id, alt_text, position_code, target_type, target_value,
-            start_time, end_time, banner_status, sort_no, create_time, update_time, is_delete
+            start_time, end_time, banner_status, sort_no, has_draft, draft_enabled, draft_remove,
+            draft_image_file_id, draft_mobile_image_file_id, draft_alt_text, draft_title, draft_title_en,
+            draft_subtitle, draft_subtitle_en, draft_target_type, draft_target_value, draft_sort_no,
+            draft_start_time, draft_end_time, create_time, update_time, is_delete
         ) values (
             #{bannerName}, #{title}, #{titleEn}, #{subtitle}, #{subtitleEn}, #{imageFileId}, #{mobileImageFileId}, #{altText}, #{positionCode}, #{targetType}, #{targetValue},
-            #{startTime}, #{endTime}, #{bannerStatus}, #{sortNo}, #{createTime}, #{updateTime}, #{isDelete}
+            #{startTime}, #{endTime}, #{bannerStatus}, #{sortNo}, #{hasDraft}, #{draftEnabled}, #{draftRemove},
+            #{draftImageFileId}, #{draftMobileImageFileId}, #{draftAltText}, #{draftTitle}, #{draftTitleEn},
+            #{draftSubtitle}, #{draftSubtitleEn}, #{draftTargetType}, #{draftTargetValue}, #{draftSortNo},
+            #{draftStartTime}, #{draftEndTime}, #{createTime}, #{updateTime}, #{isDelete}
         )
     </insert>
 
@@ -71,20 +104,35 @@
         update basket_home_banner
         <set>
             <if test="bannerName != null">banner_name = #{bannerName},</if>
-            <if test="title != null">title = #{title},</if>
-            <if test="titleEn != null">title_en = #{titleEn},</if>
-            <if test="subtitle != null">subtitle = #{subtitle},</if>
-            <if test="subtitleEn != null">subtitle_en = #{subtitleEn},</if>
+            title = #{title},
+            title_en = #{titleEn},
+            subtitle = #{subtitle},
+            subtitle_en = #{subtitleEn},
             <if test="imageFileId != null">image_file_id = #{imageFileId},</if>
             mobile_image_file_id = #{mobileImageFileId},
             alt_text = #{altText},
             <if test="positionCode != null">position_code = #{positionCode},</if>
             <if test="targetType != null">target_type = #{targetType},</if>
-            <if test="targetValue != null">target_value = #{targetValue},</if>
-            <if test="startTime != null">start_time = #{startTime},</if>
-            <if test="endTime != null">end_time = #{endTime},</if>
+            target_value = #{targetValue},
+            start_time = #{startTime},
+            end_time = #{endTime},
             <if test="sortNo != null">sort_no = #{sortNo},</if>
             <if test="bannerStatus != null">banner_status = #{bannerStatus},</if>
+            has_draft = #{hasDraft},
+            draft_enabled = #{draftEnabled},
+            draft_remove = #{draftRemove},
+            draft_image_file_id = #{draftImageFileId},
+            draft_mobile_image_file_id = #{draftMobileImageFileId},
+            draft_alt_text = #{draftAltText},
+            draft_title = #{draftTitle},
+            draft_title_en = #{draftTitleEn},
+            draft_subtitle = #{draftSubtitle},
+            draft_subtitle_en = #{draftSubtitleEn},
+            draft_target_type = #{draftTargetType},
+            draft_target_value = #{draftTargetValue},
+            draft_sort_no = #{draftSortNo},
+            draft_start_time = #{draftStartTime},
+            draft_end_time = #{draftEndTime},
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
@@ -100,5 +148,79 @@
         update basket_home_banner set is_delete = 1, update_time = now()
         where id = #{id} and is_delete = 0 and banner_status in
         <foreach collection="fromStatuses" item="s" open="(" separator="," close=")">#{s}</foreach>
+    </update>
+
+    <select id="selectHomeTopForUpdate" resultMap="BasketHomeBannerResult">
+        select id, banner_name, title, title_en, subtitle, subtitle_en, image_file_id, mobile_image_file_id, alt_text, position_code, target_type, target_value,
+               start_time, end_time, banner_status, sort_no, has_draft, draft_enabled, draft_remove,
+               draft_image_file_id, draft_mobile_image_file_id, draft_alt_text, draft_title, draft_title_en,
+               draft_subtitle, draft_subtitle_en, draft_target_type, draft_target_value, draft_sort_no,
+               draft_start_time, draft_end_time, create_time, update_time, is_delete
+        from basket_home_banner
+        where is_delete = 0 and position_code = 'HOME_TOP'
+        order by sort_no, id
+        for update
+    </select>
+
+    <update id="updateDraft">
+        update basket_home_banner
+        set banner_name = #{bannerName},
+            has_draft = 1,
+            draft_enabled = #{draftEnabled},
+            draft_remove = #{draftRemove},
+            draft_image_file_id = #{draftImageFileId},
+            draft_mobile_image_file_id = #{draftMobileImageFileId},
+            draft_alt_text = #{draftAltText},
+            draft_title = #{draftTitle},
+            draft_title_en = #{draftTitleEn},
+            draft_subtitle = #{draftSubtitle},
+            draft_subtitle_en = #{draftSubtitleEn},
+            draft_target_type = #{draftTargetType},
+            draft_target_value = #{draftTargetValue},
+            draft_sort_no = #{draftSortNo},
+            draft_start_time = #{draftStartTime},
+            draft_end_time = #{draftEndTime},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and banner_status = 1
+    </update>
+
+    <update id="applyPublish">
+        update basket_home_banner
+        set title = #{title},
+            title_en = #{titleEn},
+            subtitle = #{subtitle},
+            subtitle_en = #{subtitleEn},
+            image_file_id = #{imageFileId},
+            mobile_image_file_id = #{mobileImageFileId},
+            alt_text = #{altText},
+            target_type = #{targetType},
+            target_value = #{targetValue},
+            start_time = #{startTime},
+            end_time = #{endTime},
+            sort_no = #{sortNo},
+            banner_status = #{bannerStatus},
+            has_draft = 0,
+            draft_enabled = null,
+            draft_remove = 0,
+            draft_image_file_id = null,
+            draft_mobile_image_file_id = null,
+            draft_alt_text = null,
+            draft_title = null,
+            draft_title_en = null,
+            draft_subtitle = null,
+            draft_subtitle_en = null,
+            draft_target_type = null,
+            draft_target_value = null,
+            draft_sort_no = null,
+            draft_start_time = null,
+            draft_end_time = null,
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="markDeleted">
+        update basket_home_banner
+        set is_delete = 1, has_draft = 0, update_time = now()
+        where id = #{id} and is_delete = 0
     </update>
 </mapper>
