@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketPageHeroMapper">
+    <resultMap type="com.zhs.basket.domain.BasketPageHero" id="BasketPageHeroResult">
+        <id property="id" column="id"/>
+        <result property="pageKey" column="page_key"/>
+        <result property="seasonId" column="season_id"/>
+        <result property="mode" column="mode"/>
+        <result property="imageFileId" column="image_file_id"/>
+        <result property="mobileImageFileId" column="mobile_image_file_id"/>
+        <result property="focusX" column="focus_x"/>
+        <result property="focusY" column="focus_y"/>
+        <result property="maskOpacity" column="mask_opacity"/>
+        <result property="altText" column="alt_text"/>
+        <result property="heroStatus" column="hero_status"/>
+        <result property="hasDraft" column="has_draft"/>
+        <result property="draftMode" column="draft_mode"/>
+        <result property="draftImageFileId" column="draft_image_file_id"/>
+        <result property="draftMobileImageFileId" column="draft_mobile_image_file_id"/>
+        <result property="draftFocusX" column="draft_focus_x"/>
+        <result property="draftFocusY" column="draft_focus_y"/>
+        <result property="draftMaskOpacity" column="draft_mask_opacity"/>
+        <result property="draftAltText" column="draft_alt_text"/>
+        <result property="draftEnabled" column="draft_enabled"/>
+        <result property="versionNo" column="version_no"/>
+        <result property="activeKey" column="active_key"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <sql id="detailSelect">
+        select h.id, h.page_key as pageKey, h.season_id as seasonId,
+               coalesce(s.display_title, s.season_name) as seasonName,
+               h.mode, h.image_file_id as imageFileId, img.access_url as imageUrl,
+               h.mobile_image_file_id as mobileImageFileId, mob.access_url as mobileImageUrl,
+               h.focus_x as focusX, h.focus_y as focusY, h.mask_opacity as maskOpacity, h.alt_text as altText,
+               h.hero_status as heroStatus, h.has_draft as hasDraft,
+               h.draft_mode as draftMode, h.draft_image_file_id as draftImageFileId, dimg.access_url as draftImageUrl,
+               h.draft_mobile_image_file_id as draftMobileImageFileId, dmob.access_url as draftMobileImageUrl,
+               h.draft_focus_x as draftFocusX, h.draft_focus_y as draftFocusY,
+               h.draft_mask_opacity as draftMaskOpacity, h.draft_alt_text as draftAltText,
+               h.draft_enabled as draftEnabled, h.version_no as versionNo
+        from basket_page_hero h
+        left join basket_season s on s.id = h.season_id and h.season_id &lt;&gt; 0 and s.is_delete = 0
+        left join basket_file_asset img on img.id = h.image_file_id and img.is_delete = 0
+        left join basket_file_asset mob on mob.id = h.mobile_image_file_id and mob.is_delete = 0
+        left join basket_file_asset dimg on dimg.id = h.draft_image_file_id and dimg.is_delete = 0
+        left join basket_file_asset dmob on dmob.id = h.draft_mobile_image_file_id and dmob.is_delete = 0
+    </sql>
+
+    <select id="selectDetail" resultType="com.zhs.basket.resp.PageHeroResp">
+        <include refid="detailSelect"/>
+        where h.is_delete = 0 and h.page_key = #{pageKey} and h.season_id = #{seasonId}
+    </select>
+
+    <select id="selectGenericList" resultType="com.zhs.basket.resp.PageHeroResp">
+        <include refid="detailSelect"/>
+        where h.is_delete = 0 and h.season_id = 0
+          and h.page_key in ('DATA', 'HALL', 'ANNOUNCEMENT', 'PARTNER')
+        order by h.page_key
+    </select>
+
+    <select id="selectForUpdate" resultMap="BasketPageHeroResult">
+        select id, page_key, season_id, mode, image_file_id, mobile_image_file_id, focus_x, focus_y, mask_opacity, alt_text,
+               hero_status, has_draft, draft_mode, draft_image_file_id, draft_mobile_image_file_id,
+               draft_focus_x, draft_focus_y, draft_mask_opacity, draft_alt_text, draft_enabled,
+               version_no, active_key, update_by, create_time, update_time, is_delete
+        from basket_page_hero
+        where is_delete = 0 and page_key = #{pageKey} and season_id = #{seasonId}
+        limit 1
+        for update
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_page_hero (
+            page_key, season_id, mode, image_file_id, mobile_image_file_id, focus_x, focus_y, mask_opacity, alt_text,
+            hero_status, has_draft, draft_mode, draft_image_file_id, draft_mobile_image_file_id,
+            draft_focus_x, draft_focus_y, draft_mask_opacity, draft_alt_text, draft_enabled,
+            version_no, active_key, update_by, create_time, update_time, is_delete
+        ) values (
+            #{pageKey}, #{seasonId}, #{mode}, #{imageFileId}, #{mobileImageFileId}, #{focusX}, #{focusY}, #{maskOpacity}, #{altText},
+            #{heroStatus}, #{hasDraft}, #{draftMode}, #{draftImageFileId}, #{draftMobileImageFileId},
+            #{draftFocusX}, #{draftFocusY}, #{draftMaskOpacity}, #{draftAltText}, #{draftEnabled},
+            #{versionNo}, #{activeKey}, #{updateBy}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateDraft">
+        update basket_page_hero
+        set has_draft = 1,
+            draft_mode = #{draftMode},
+            draft_image_file_id = #{draftImageFileId},
+            draft_mobile_image_file_id = #{draftMobileImageFileId},
+            draft_focus_x = #{draftFocusX},
+            draft_focus_y = #{draftFocusY},
+            draft_mask_opacity = #{draftMaskOpacity},
+            draft_alt_text = #{draftAltText},
+            draft_enabled = #{draftEnabled},
+            version_no = version_no + 1,
+            update_by = #{updateBy},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and hero_status = 1 and version_no = #{versionNo}
+    </update>
+
+    <update id="updateWorking">
+        update basket_page_hero
+        set mode = #{mode},
+            image_file_id = #{imageFileId},
+            mobile_image_file_id = #{mobileImageFileId},
+            focus_x = #{focusX},
+            focus_y = #{focusY},
+            mask_opacity = #{maskOpacity},
+            alt_text = #{altText},
+            has_draft = 1,
+            draft_mode = #{draftMode},
+            draft_image_file_id = #{draftImageFileId},
+            draft_mobile_image_file_id = #{draftMobileImageFileId},
+            draft_focus_x = #{draftFocusX},
+            draft_focus_y = #{draftFocusY},
+            draft_mask_opacity = #{draftMaskOpacity},
+            draft_alt_text = #{draftAltText},
+            draft_enabled = #{draftEnabled},
+            version_no = version_no + 1,
+            update_by = #{updateBy},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and hero_status &lt;&gt; 1 and version_no = #{versionNo}
+    </update>
+
+    <update id="applyPublish">
+        update basket_page_hero
+        set mode = #{mode},
+            image_file_id = #{imageFileId},
+            mobile_image_file_id = #{mobileImageFileId},
+            focus_x = #{focusX},
+            focus_y = #{focusY},
+            mask_opacity = #{maskOpacity},
+            alt_text = #{altText},
+            hero_status = #{heroStatus},
+            has_draft = 0,
+            draft_mode = null,
+            draft_image_file_id = null,
+            draft_mobile_image_file_id = null,
+            draft_focus_x = null,
+            draft_focus_y = null,
+            draft_mask_opacity = null,
+            draft_alt_text = null,
+            draft_enabled = null,
+            version_no = version_no + 1,
+            update_by = #{updateBy},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and version_no = #{versionNo}
+    </update>
+</mapper>

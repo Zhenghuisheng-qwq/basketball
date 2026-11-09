@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.zhs.basket.mapper.BasketSiteThemeMapper">
+    <resultMap type="com.zhs.basket.domain.BasketSiteTheme" id="ThemeResult">
+        <id property="id" column="id"/>
+        <result property="themeName" column="theme_name"/>
+        <result property="description" column="description"/>
+        <result property="bgColor" column="bg_color"/>
+        <result property="bgImageFileId" column="bg_image_file_id"/>
+        <result property="mobileBgImageFileId" column="mobile_bg_image_file_id"/>
+        <result property="bgDisplay" column="bg_display"/>
+        <result property="colorsJson" column="colors_json"/>
+        <result property="draftJson" column="draft_json"/>
+        <result property="hasDraft" column="has_draft"/>
+        <result property="themeStatus" column="theme_status"/>
+        <result property="versionNo" column="version_no"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+        <result property="isDelete" column="is_delete"/>
+    </resultMap>
+
+    <resultMap type="com.zhs.basket.domain.BasketSiteThemeBinding" id="BindingResult">
+        <id property="id" column="id"/>
+        <result property="scopeType" column="scope_type"/>
+        <result property="scopeId" column="scope_id"/>
+        <result property="themeId" column="theme_id"/>
+        <result property="themeVersion" column="theme_version"/>
+        <result property="activeKey" column="active_key"/>
+        <result property="themeName" column="theme_name"/>
+        <result property="seasonName" column="season_name"/>
+    </resultMap>
+
+    <sql id="themeColumns">
+        id, theme_name, description, bg_color, bg_image_file_id, mobile_bg_image_file_id, bg_display,
+        colors_json, draft_json, has_draft, theme_status, version_no, update_by, create_time, update_time, is_delete
+    </sql>
+
+    <select id="selectAll" resultMap="ThemeResult">
+        select <include refid="themeColumns"/>
+        from basket_site_theme
+        where is_delete = 0
+        order by id desc
+    </select>
+
+    <select id="selectById" resultMap="ThemeResult">
+        select <include refid="themeColumns"/>
+        from basket_site_theme
+        where id = #{id} and is_delete = 0
+    </select>
+
+    <select id="selectForUpdate" resultMap="ThemeResult">
+        select <include refid="themeColumns"/>
+        from basket_site_theme
+        where id = #{id} and is_delete = 0
+        for update
+    </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_site_theme (
+            theme_name, description, bg_color, bg_image_file_id, mobile_bg_image_file_id, bg_display,
+            colors_json, draft_json, has_draft, theme_status, version_no, update_by, create_time, update_time, is_delete
+        ) values (
+            #{themeName}, #{description}, #{bgColor}, #{bgImageFileId}, #{mobileBgImageFileId}, #{bgDisplay},
+            #{colorsJson}, #{draftJson}, #{hasDraft}, #{themeStatus}, #{versionNo}, #{updateBy}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+
+    <update id="updateDraft">
+        update basket_site_theme
+        set has_draft = 1,
+            draft_json = #{draftJson},
+            version_no = version_no + 1,
+            update_by = #{updateBy},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and theme_status = 1 and version_no = #{versionNo}
+    </update>
+
+    <update id="updateWorking">
+        update basket_site_theme
+        set theme_name = #{themeName},
+            description = #{description},
+            bg_color = #{bgColor},
+            bg_image_file_id = #{bgImageFileId},
+            mobile_bg_image_file_id = #{mobileBgImageFileId},
+            bg_display = #{bgDisplay},
+            colors_json = #{colorsJson},
+            draft_json = #{draftJson},
+            has_draft = 1,
+            version_no = version_no + 1,
+            update_by = #{updateBy},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and theme_status &lt;&gt; 1 and version_no = #{versionNo}
+    </update>
+
+    <update id="applyPublish">
+        update basket_site_theme
+        set theme_name = #{themeName},
+            description = #{description},
+            bg_color = #{bgColor},
+            bg_image_file_id = #{bgImageFileId},
+            mobile_bg_image_file_id = #{mobileBgImageFileId},
+            bg_display = #{bgDisplay},
+            colors_json = #{colorsJson},
+            draft_json = null,
+            has_draft = 0,
+            theme_status = 1,
+            version_no = version_no + 1,
+            update_by = #{updateBy},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and version_no = #{versionNo}
+    </update>
+
+    <update id="updateStatus">
+        update basket_site_theme
+        set theme_status = #{status},
+            version_no = version_no + 1,
+            update_by = #{updateBy},
+            update_time = now()
+        where id = #{id} and is_delete = 0 and version_no = #{versionNo}
+    </update>
+
+    <update id="softDelete">
+        update basket_site_theme
+        set is_delete = 1, update_by = #{updateBy}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <select id="selectLiveBindings" resultMap="BindingResult">
+        select b.id, b.scope_type, b.scope_id, b.theme_id, b.theme_version, b.active_key,
+               t.theme_name, coalesce(s.display_title, s.season_name) as season_name
+        from basket_site_theme_binding b
+        left join basket_site_theme t on t.id = b.theme_id and t.is_delete = 0
+        left join basket_season s on s.id = b.scope_id and b.scope_type = 'SEASON' and s.is_delete = 0
+        where b.is_delete = 0
+        order by b.scope_type, b.scope_id
+    </select>
+
+    <select id="selectBinding" resultMap="BindingResult">
+        select b.id, b.scope_type, b.scope_id, b.theme_id, b.theme_version, b.active_key,
+               t.theme_name, coalesce(s.display_title, s.season_name) as season_name
+        from basket_site_theme_binding b
+        left join basket_site_theme t on t.id = b.theme_id
+        left join basket_season s on s.id = b.scope_id and b.scope_type = 'SEASON' and s.is_delete = 0
+        where b.is_delete = 0 and b.scope_type = #{scopeType} and b.scope_id = #{scopeId}
+    </select>
+
+    <select id="selectBindingForUpdate" resultMap="BindingResult">
+        select id, scope_type, scope_id, theme_id, theme_version, active_key
+        from basket_site_theme_binding
+        where is_delete = 0 and scope_type = #{scopeType} and scope_id = #{scopeId}
+        for update
+    </select>
+
+    <insert id="insertBinding" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_site_theme_binding (
+            scope_type, scope_id, theme_id, theme_version, active_key, update_by, create_time, update_time, is_delete
+        ) values (
+            #{scopeType}, #{scopeId}, #{themeId}, #{themeVersion}, #{activeKey}, #{updateBy}, #{createTime}, #{updateTime}, 0
+        )
+    </insert>
+
+    <update id="updateBinding">
+        update basket_site_theme_binding
+        set theme_id = #{themeId},
+            theme_version = #{themeVersion},
+            update_by = #{updateBy},
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="touchBindings">
+        update basket_site_theme_binding
+        set theme_version = #{themeVersion}, update_by = #{updateBy}, update_time = now()
+        where theme_id = #{themeId} and is_delete = 0
+    </update>
+
+    <update id="softDeleteBindingsByTheme">
+        update basket_site_theme_binding
+        set is_delete = 1, active_key = null, update_by = #{updateBy}, update_time = now()
+        where theme_id = #{themeId} and is_delete = 0
+    </update>
+
+    <select id="selectFileUrl" resultType="string">
+        select access_url from basket_file_asset where id = #{id} and is_delete = 0
+    </select>
+
+    <update id="softDeleteBinding">
+        update basket_site_theme_binding
+        set is_delete = 1, active_key = null, update_by = #{updateBy}, update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+</mapper>
