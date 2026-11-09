@@ -17,7 +17,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Objects;
@@ -27,7 +26,6 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
 
     private static final Integer NOT_DELETED = 0;
     private static final String DEFAULT_POSITION = "HOME_TOP";
-    private static final String GROUP_PUBLISH_MESSAGE = "首页轮播已改为整组发布，请使用「发布首页轮播」";
 
     @Autowired private BasketHomeBannerMapper homeBannerMapper;
     @Autowired private BasketPublicCacheCleaner publicCacheCleaner;
@@ -61,7 +59,6 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
         String position = normalizePosition(req.getPositionCode());
         BannerTargetTypeEnum targetType = BannerTargetTypeEnum.fromCode(req.getTargetType());
         validateTarget(targetType, req.getTargetValue());
-        int enabled = enabledFlag(req.getDraftEnabled());
 
         Date now = new Date();
         BasketHomeBanner banner = new BasketHomeBanner();
@@ -78,16 +75,14 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
         banner.setTargetValue(req.getTargetValue());
         banner.setStartTime(req.getStartTime());
         banner.setEndTime(req.getEndTime());
-        banner.setBannerStatus(BannerStatusEnum.DRAFT.getCode());
+        banner.setBannerStatus(BannerStatusEnum.PUBLISHED.getCode());
         banner.setSortNo(req.getSortNo() == null ? 0 : req.getSortNo());
-        banner.setHasDraft(1);
-        banner.setDraftEnabled(enabled);
-        banner.setDraftRemove(0);
-        copyLiveToDraft(banner);
+        clearDraft(banner);
         banner.setCreateTime(now);
         banner.setUpdateTime(now);
         banner.setIsDelete(NOT_DELETED);
         homeBannerMapper.insert(banner);
+        publicCacheCleaner.clearAfterCommit();
         return banner.getId();
     }
 
@@ -98,47 +93,67 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
         if (req == null) {
             throw new ServiceException("横幅内容不能为空");
         }
-        BannerStatusEnum status = BannerStatusEnum.fromCode(existing.getBannerStatus());
-        if (status == BannerStatusEnum.PUBLISHED) {
-            savePublishedDraft(existing, req);
-            return;
+        applyLiveEdit(existing, req);
+        if (Objects.equals(existing.getBannerStatus(), BannerStatusEnum.DRAFT.getCode())) {
+            existing.setBannerStatus(BannerStatusEnum.PUBLISHED.getCode());
         }
-        saveUnpublished(existing, req);
+        if (Objects.equals(existing.getBannerStatus(), BannerStatusEnum.PUBLISHED.getCode())
+                && existing.getImageFileId() == null) {
+            throw new ServiceException("横幅图片不能为空");
+        }
+        clearDraft(existing);
+        if (homeBannerMapper.updateById(existing) != 1) {
+            throw new ServiceException("更新失败");
+        }
+        if (Objects.equals(existing.getBannerStatus(), BannerStatusEnum.PUBLISHED.getCode())) {
+            publicCacheCleaner.clearAfterCommit();
+        }
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void publish(Long id) {
-        throw new ServiceException(GROUP_PUBLISH_MESSAGE);
+        BasketHomeBanner existing = require(id);
+        if (Objects.equals(existing.getHasDraft(), 1) && !Objects.equals(existing.getDraftRemove(), 1)) {
+            BasketHomeBanner next = buildPublishedRow(existing);
+            next.setBannerStatus(BannerStatusEnum.PUBLISHED.getCode());
+            if (next.getImageFileId() == null) {
+                throw new ServiceException("缺少电脑端图片，不能上架");
+            }
+            if (homeBannerMapper.applyPublish(next) != 1) {
+                throw new ServiceException("上架失败");
+            }
+        } else {
+            if (existing.getImageFileId() == null) {
+                throw new ServiceException("缺少电脑端图片，不能上架");
+            }
+            if (homeBannerMapper.shelf(id, BannerStatusEnum.PUBLISHED.getCode()) != 1) {
+                throw new ServiceException("上架失败");
+            }
+        }
+        publicCacheCleaner.clearAfterCommit();
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void offline(Long id) {
-        throw new ServiceException(GROUP_PUBLISH_MESSAGE);
+        require(id);
+        if (homeBannerMapper.shelf(id, BannerStatusEnum.OFFLINE.getCode()) != 1) {
+            throw new ServiceException("下架失败");
+        }
+        publicCacheCleaner.clearAfterCommit();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void remove(Long id) {
         BasketHomeBanner existing = require(id);
-        BannerStatusEnum status = BannerStatusEnum.fromCode(existing.getBannerStatus());
-        if (status == BannerStatusEnum.PUBLISHED) {
-            if (!Objects.equals(existing.getHasDraft(), 1)) {
-                copyLiveToDraft(existing);
-            }
-            existing.setHasDraft(1);
-            existing.setDraftEnabled(0);
-            existing.setDraftRemove(1);
-            if (StringUtils.isEmpty(existing.getBannerName())) {
-                existing.setBannerName("首页横幅");
-            }
-            if (homeBannerMapper.updateDraft(existing) != 1) {
-                throw new ServiceException("删除失败");
-            }
-            return;
-        }
-        if (homeBannerMapper.softDelete(id, Arrays.asList(
-                BannerStatusEnum.DRAFT.getCode(), BannerStatusEnum.OFFLINE.getCode())) != 1) {
+        boolean live = Objects.equals(existing.getBannerStatus(), BannerStatusEnum.PUBLISHED.getCode());
+        if (homeBannerMapper.markDeleted(id) != 1) {
             throw new ServiceException("删除失败");
+        }
+        if (live) {
+            publicCacheCleaner.clearAfterCommit();
         }
     }
 
@@ -172,6 +187,52 @@ public class BasketHomeBannerServiceImpl implements IBasketHomeBannerService {
         }
         publicCacheCleaner.clearAfterCommit();
         return countLive(rows, pending);
+    }
+
+    private void applyLiveEdit(BasketHomeBanner existing, HomeBannerEditReq req) {
+        if (req.getBannerName() != null && !req.getBannerName().isBlank()) {
+            existing.setBannerName(req.getBannerName().trim());
+        }
+        existing.setTitle(req.getTitle());
+        existing.setTitleEn(blankToNull(req.getTitleEn()));
+        existing.setSubtitle(req.getSubtitle());
+        existing.setSubtitleEn(blankToNull(req.getSubtitleEn()));
+        if (req.getImageFileId() != null) {
+            existing.setImageFileId(req.getImageFileId());
+        }
+        existing.setMobileImageFileId(req.getMobileImageFileId());
+        existing.setAltText(normalizeAltText(req.getAltText()));
+        existing.setPositionCode(normalizePosition(
+                req.getPositionCode() != null ? req.getPositionCode() : existing.getPositionCode()));
+        BannerTargetTypeEnum targetType = BannerTargetTypeEnum.fromCode(
+                req.getTargetType() != null ? req.getTargetType() : existing.getTargetType());
+        String targetValue = req.getTargetValue() != null ? req.getTargetValue() : existing.getTargetValue();
+        validateTarget(targetType, targetValue);
+        existing.setTargetType(targetType.getCode());
+        existing.setTargetValue(targetValue);
+        existing.setStartTime(req.getStartTime());
+        existing.setEndTime(req.getEndTime());
+        if (req.getSortNo() != null) {
+            existing.setSortNo(req.getSortNo());
+        }
+    }
+
+    private void clearDraft(BasketHomeBanner banner) {
+        banner.setHasDraft(0);
+        banner.setDraftEnabled(null);
+        banner.setDraftRemove(0);
+        banner.setDraftImageFileId(null);
+        banner.setDraftMobileImageFileId(null);
+        banner.setDraftAltText(null);
+        banner.setDraftTitle(null);
+        banner.setDraftTitleEn(null);
+        banner.setDraftSubtitle(null);
+        banner.setDraftSubtitleEn(null);
+        banner.setDraftTargetType(null);
+        banner.setDraftTargetValue(null);
+        banner.setDraftSortNo(null);
+        banner.setDraftStartTime(null);
+        banner.setDraftEndTime(null);
     }
 
     private void savePublishedDraft(BasketHomeBanner existing, HomeBannerEditReq req) {

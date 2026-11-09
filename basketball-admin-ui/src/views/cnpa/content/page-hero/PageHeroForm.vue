@@ -2,7 +2,7 @@
   <div v-loading="loading">
     <el-alert
       v-if="published"
-      title="当前头图已在线上。保存只写入草稿，官网要等发布后才改变。发布失败时线上仍是上一张。"
+      title="当前头图已在线上。再保存会立刻换成下面这张图。"
       type="warning"
       :closable="false"
       show-icon
@@ -20,20 +20,11 @@
         </el-radio-group>
         <div class="el-upload__tip">只显示图片时，赛事名不再叠在头图上，名称和时间仍在头图下面的原有区域。背景加文字时，名称、时间和阶段继续读赛季数据。</div>
       </el-form-item>
-      <el-form-item label="电脑图文件ID">
-        <el-input-number v-model="form.imageFileId" :min="1" :value-on-clear="null" controls-position="right" style="width: 100%" />
+      <el-form-item label="电脑端图片">
+        <content-image-upload v-model="form.imageFileId" v-model:preview="imagePreview" usage-type="PAGE_HERO" tip="建议 21:9。保存后官网立刻使用这张图。" />
       </el-form-item>
-      <el-form-item label="电脑图预览">
-        <image-upload v-model="imagePreview" :limit="1" :file-size="5" />
-        <div class="el-upload__tip">建议 21:9。/common/upload 只返回图片地址，没有 basket_file_asset.id，预览不会写入文件 ID。</div>
-      </el-form-item>
-      <el-form-item label="手机图文件ID">
-        <el-input-number v-model="form.mobileImageFileId" :min="1" :value-on-clear="null" controls-position="right" style="width: 100%" />
-        <el-button v-if="form.mobileImageFileId" link type="primary" @click="form.mobileImageFileId = undefined">清除</el-button>
-      </el-form-item>
-      <el-form-item label="手机图预览">
-        <image-upload v-model="mobilePreview" :limit="1" :file-size="5" />
-        <div class="el-upload__tip">可选。不填时窄屏使用电脑图。</div>
+      <el-form-item label="手机端图片">
+        <content-image-upload v-model="form.mobileImageFileId" v-model:preview="mobilePreview" usage-type="PAGE_HERO" tip="可选。不传时窄屏使用电脑端图片。" />
       </el-form-item>
       <el-form-item label="替代文字">
         <el-input v-model="form.altText" maxlength="256" show-word-limit />
@@ -48,20 +39,20 @@
         <el-slider v-model="form.maskOpacity" :min="0" :max="100" />
         <div class="el-upload__tip">只压暗头图，不改页面其他区域的颜色。</div>
       </el-form-item>
-      <el-form-item label="发布后显示">
+      <el-form-item label="上架">
         <el-switch v-model="form.draftEnabled" :active-value="1" :inactive-value="0" />
-        <div class="el-upload__tip">关闭后发布，官网回到这页原来的静态头图。</div>
+        <div class="el-upload__tip">打开后保存，官网立刻换成这张图。关闭后保存，页面回到原来的静态头图。</div>
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" @click="handleSave" v-hasPermi="['basket:pageHero:edit', 'basket:v4Season:edit']">保存草稿</el-button>
-        <el-button type="success" @click="handlePublish" v-hasPermi="['basket:pageHero:publish', 'basket:v4Season:publish']">发布头图</el-button>
+        <el-button type="primary" @click="handleSave" v-hasPermi="['basket:pageHero:edit', 'basket:pageHero:publish', 'basket:v4Season:edit', 'basket:v4Season:publish']">保存</el-button>
       </el-form-item>
     </el-form>
   </div>
 </template>
 
 <script setup lang="ts">
-import { getPageHero, publishPageHero, savePageHero } from '@/api/basket/pageHero'
+import { getPageHero, savePageHero } from '@/api/basket/pageHero'
+import ContentImageUpload from '@/components/ContentImageUpload/index.vue'
 import type { PageHeroResp, PageHeroSaveReq } from '@/types'
 
 const props = defineProps<{
@@ -132,19 +123,11 @@ function payload(): PageHeroSaveReq {
 }
 
 function handleSave() {
+  const shelved = form.value.draftEnabled !== 0
   savePageHero(payload()).then(res => {
-    proxy.$modal.msgSuccess('草稿已保存，官网不变')
+    proxy.$modal.msgSuccess(shelved ? '已上架' : '已下架，官网回到原来的头图')
     if (res.data) applyDetail(res.data)
   })
-}
-
-function handlePublish() {
-  proxy.$modal.confirm('发布后这页头图换成当前内容。发布失败时线上不变。').then(() =>
-    publishPageHero(payload())
-  ).then((res: { msg?: string }) => {
-    proxy.$modal.msgSuccess(res?.msg || '头图已发布')
-    load()
-  }).catch(() => {})
 }
 
 watch(() => [props.pageKey, props.seasonId], load, { immediate: true })

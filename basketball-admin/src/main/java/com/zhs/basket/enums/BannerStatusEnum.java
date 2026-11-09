@@ -6,9 +6,9 @@ import com.zhs.common.exception.ServiceException;
  * basket_home_banner.banner_status
  */
 public enum BannerStatusEnum {
-    DRAFT(0, "草稿"),
-    PUBLISHED(1, "已发布"),
-    OFFLINE(2, "已下线");
+    DRAFT(0, "未上架"),
+    PUBLISHED(1, "已上架"),
+    OFFLINE(2, "已下架");
 
     private final int code;
     private final String description;

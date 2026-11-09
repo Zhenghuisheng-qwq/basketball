@@ -1559,9 +1559,9 @@ export const ANNOUNCEMENT_CATEGORY_OPTIONS = [
 
 /** 首页横幅状态 */
 export const HOME_BANNER_STATUS_OPTIONS = [
-  { value: 0, label: '草稿' },
-  { value: 1, label: '已发布' },
-  { value: 2, label: '已下线' }
+  { value: 0, label: '未上架' },
+  { value: 1, label: '已上架' },
+  { value: 2, label: '已下架' }
 ]
 
 export const HOME_BANNER_TARGET_TYPE_OPTIONS = [

@@ -24,4 +24,14 @@
     <select id="selectById" resultMap="BasketFileAssetResult">
         select id, storage_provider, bucket_name, object_key, file_name, original_name, file_ext, mime_type, file_size, file_hash, access_url, usage_type, owner_member_id, file_status, remark, create_time, update_time, is_delete from basket_file_asset where id = #{id} and is_delete = 0
     </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_file_asset (
+            storage_provider, bucket_name, object_key, file_name, original_name, file_ext, mime_type,
+            file_size, file_hash, access_url, usage_type, owner_member_id, file_status, remark, is_delete
+        ) values (
+            #{storageProvider}, #{bucketName}, #{objectKey}, #{fileName}, #{originalName}, #{fileExt}, #{mimeType},
+            #{fileSize}, #{fileHash}, #{accessUrl}, #{usageType}, #{ownerMemberId}, #{fileStatus}, #{remark}, #{isDelete}
+        )
+    </insert>
 </mapper>

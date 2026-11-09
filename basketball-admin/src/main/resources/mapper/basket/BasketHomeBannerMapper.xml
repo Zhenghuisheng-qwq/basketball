@@ -223,4 +223,26 @@
         set is_delete = 1, has_draft = 0, update_time = now()
         where id = #{id} and is_delete = 0
     </update>
+
+    <update id="shelf">
+        update basket_home_banner
+        set banner_status = #{bannerStatus},
+            has_draft = 0,
+            draft_enabled = null,
+            draft_remove = 0,
+            draft_image_file_id = null,
+            draft_mobile_image_file_id = null,
+            draft_alt_text = null,
+            draft_title = null,
+            draft_title_en = null,
+            draft_subtitle = null,
+            draft_subtitle_en = null,
+            draft_target_type = null,
+            draft_target_value = null,
+            draft_sort_no = null,
+            draft_start_time = null,
+            draft_end_time = null,
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
 </mapper>

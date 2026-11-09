@@ -31,4 +31,6 @@ public interface BasketHomeBannerMapper {
     int applyPublish(BasketHomeBanner banner);
 
     int markDeleted(@Param("id") Long id);
+
+    int shelf(@Param("id") Long id, @Param("bannerStatus") Integer bannerStatus);
 }

@@ -67,26 +67,8 @@ public class BasketPageHeroServiceImpl implements IBasketPageHeroService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public PageHeroResp save(PageHeroSaveReq req) {
+        publish(req);
         Normalized input = normalize(req);
-        assertEdit(input.pageKey);
-        BasketPageHero existing = pageHeroMapper.selectForUpdate(input.pageKey, input.seasonId);
-        try {
-            if (existing == null) {
-                pageHeroMapper.insert(newRow(input, DRAFT));
-            } else if (Objects.equals(existing.getHeroStatus(), PUBLISHED)) {
-                BasketPageHero draft = draftOf(existing, input);
-                if (pageHeroMapper.updateDraft(draft) != 1) {
-                    throw conflict();
-                }
-            } else {
-                BasketPageHero working = workingOf(existing, input);
-                if (pageHeroMapper.updateWorking(working) != 1) {
-                    throw conflict();
-                }
-            }
-        } catch (DuplicateKeyException ex) {
-            throw new ServiceException("该页面头图已存在，请刷新后再保存");
-        }
         return requireDetail(input.pageKey, input.seasonId);
     }
 
@@ -94,11 +76,11 @@ public class BasketPageHeroServiceImpl implements IBasketPageHeroService {
     @Transactional(rollbackFor = Exception.class)
     public String publish(PageHeroSaveReq req) {
         Normalized input = normalize(req);
-        assertPublish(input.pageKey);
+        assertShelf(input.pageKey);
         BasketPageHero existing = pageHeroMapper.selectForUpdate(input.pageKey, input.seasonId);
         boolean enable = input.draftEnabled == 1;
         if (enable && input.imageFileId == null) {
-            throw new ServiceException("缺少电脑端图片，头图未发布");
+            throw new ServiceException("请先上传电脑端图片");
         }
         try {
             if (existing == null) {
@@ -123,7 +105,7 @@ public class BasketPageHeroServiceImpl implements IBasketPageHeroService {
             throw new ServiceException("该页面头图已存在，请刷新后再发布");
         }
         publicCacheCleaner.clearAfterCommit();
-        return enable ? "头图已发布" : "头图已停用，官网回到原来的头图";
+        return enable ? "已上架" : "已下架，官网回到原来的头图";
     }
 
     private PageHeroResp requireDetail(String pageKey, long seasonId) {
@@ -306,6 +288,18 @@ public class BasketPageHeroServiceImpl implements IBasketPageHeroService {
             return;
         }
         throw new ServiceException("没有权限编辑页面头图");
+    }
+
+    private void assertShelf(String pageKey) {
+        if (permissionService.hasPermi(BasketContentPerms.PAGE_HERO_EDIT)
+                || permissionService.hasPermi(BasketContentPerms.PAGE_HERO_PUBLISH)) {
+            return;
+        }
+        if (EVENT_SEASON.equals(pageKey) && (permissionService.hasPermi(BasketEventV4Perms.SEASON_EDIT)
+                || permissionService.hasPermi(BasketEventV4Perms.SEASON_PUBLISH))) {
+            return;
+        }
+        throw new ServiceException("没有权限上架页面头图");
     }
 
     private void assertPublish(String pageKey) {

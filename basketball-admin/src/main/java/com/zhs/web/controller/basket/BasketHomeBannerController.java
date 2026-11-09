@@ -65,7 +65,7 @@ public class BasketHomeBannerController extends BaseController {
     @PostMapping("/{id}/publish")
     public AjaxResult publish(@PathVariable Long id) {
         homeBannerService.publish(id);
-        return success();
+        return success("已上架");
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.HOME_CONTENT_OFFLINE + "')")
@@ -73,7 +73,7 @@ public class BasketHomeBannerController extends BaseController {
     @PostMapping("/{id}/offline")
     public AjaxResult offline(@PathVariable Long id) {
         homeBannerService.offline(id);
-        return success();
+        return success("已下架");
     }
 
     @PreAuthorize("@ss.hasPermi('" + BasketContentPerms.HOME_CONTENT_REMOVE + "')")
