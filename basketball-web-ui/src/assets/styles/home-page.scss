@@ -1907,23 +1907,6 @@
   object-position: center;
   user-select: none;
   -webkit-user-drag: none;
-  animation: home-hero-fade 0.45s ease;
-}
-
-@keyframes home-hero-fade {
-  from {
-    opacity: 0.45;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-hero__image {
-    animation: none;
-  }
 }
 
 .home-hero__tear {

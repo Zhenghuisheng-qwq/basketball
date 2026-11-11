@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import championTrophy from '@/assets/icon/team/champion-trophy.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const championTrophy = iconAssets['team/champion-trophy.png']
 
 const props = withDefaults(
   defineProps<{

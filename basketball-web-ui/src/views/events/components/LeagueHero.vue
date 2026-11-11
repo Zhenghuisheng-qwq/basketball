@@ -6,7 +6,7 @@ import LeagueHeroMeta from './LeagueHeroMeta.vue'
 import { useLeagueHeroMeta } from '../composables/useLeagueHeroMeta'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
 import { pickCompetitionSeriesCode, resolveCompetitionTheme } from '@/config/competitionTheme'
-import { usePublicPageHero } from '@/composables/usePublicPageHero'
+import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 
 const route = useRoute()
 const { t } = useI18n()
@@ -32,7 +32,12 @@ const seriesCode = computed(() => {
   )
 })
 const heroTheme = computed(() => resolveCompetitionTheme(seriesCode.value))
-const heroImage = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : heroTheme.value.topImage))
+const heroImage = computed(() => visibleHeroImage(
+  pageHero.settled.value,
+  pageHero.configured.value,
+  pageHero.imageUrl.value,
+  heroTheme.value.topImage,
+))
 const heroPosition = computed(() => (
   pageHero.configured.value ? pageHero.objectPosition.value : heroTheme.value.backgroundPosition
 ))
@@ -47,6 +52,7 @@ const heroOverlayStyle = computed(() => {
 <template>
   <section class="league-hero" :aria-label="seriesLabel">
     <img
+      v-if="heroImage"
       class="league-hero__image"
       :src="heroImage"
       :alt="heroAlt"

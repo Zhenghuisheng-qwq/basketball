@@ -2,13 +2,8 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import teamBackground from '@/assets/icon/tournament/team_background.png'
-import { usePublicPageHero } from '@/composables/usePublicPageHero'
-import compareIcon1 from '@/assets/icon/tournament/compare_1.png'
-import compareIcon2 from '@/assets/icon/tournament/compare_2.png'
-import compareIcon3 from '@/assets/icon/tournament/compare_3.png'
-import compareIcon4 from '@/assets/icon/tournament/compare_4.png'
-import vsIcon from '@/assets/icon/tournament/vs.png'
+import { iconAssets } from '@/constants/iconAssets'
+import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 import ComparisonMetricRow from '@/components/team/ComparisonMetricRow.vue'
 import ComparisonSummaryCard from '@/components/team/ComparisonSummaryCard.vue'
 import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
@@ -36,6 +31,12 @@ import {
 } from './utils/mapTeamCompare'
 import './styles/team.scss'
 
+const teamBackground = iconAssets['tournament/team_background.png']
+const compareIcon1 = iconAssets['tournament/compare_1.png']
+const compareIcon2 = iconAssets['tournament/compare_2.png']
+const compareIcon3 = iconAssets['tournament/compare_3.png']
+const compareIcon4 = iconAssets['tournament/compare_4.png']
+const vsIcon = iconAssets['tournament/vs.png']
 const route = useRoute()
 const router = useRouter()
 const pageHero = usePublicPageHero('EVENT_SEASON', computed(() => {
@@ -150,8 +151,14 @@ const rightTeam = computed<TeamBase | null>(() => {
   return placeholderTeamBase(rightTeamId.value)
 })
 
+const compareHeroImage = computed(() => visibleHeroImage(
+  pageHero.settled.value,
+  pageHero.configured.value,
+  pageHero.imageUrl.value,
+  teamBackground,
+))
 const compareHeroBgStyle = computed(() => ({
-  backgroundImage: `url(${pageHero.configured.value ? pageHero.imageUrl.value : teamBackground})`,
+  backgroundImage: compareHeroImage.value ? `url(${compareHeroImage.value})` : 'none',
   backgroundPosition: pageHero.configured.value ? pageHero.objectPosition.value : 'center',
 }))
 const compareHeroOverlayStyle = computed(() => {

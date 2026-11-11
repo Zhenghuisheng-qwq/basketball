@@ -24,7 +24,9 @@ import { goToPlayerDetail } from '@/utils/playerNavigate'
 import { displayText, formatDateTime, localizedText } from '@/utils/publicDisplay'
 import { pickLatestPublishedSeason, platformTag, seasonBelongsToSeries, seasonsNewestFirst } from '../hallFilters'
 import type { ChampionRosterMember } from '../types'
-import mrtMidBackground from '@/assets/icon/mrt/mrt_mid.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const mrtMidBackground = iconAssets['mrt/mrt_mid.png']
 
 const props = defineProps<{
   tournamentId: string

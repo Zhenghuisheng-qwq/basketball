@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { getPublicSocialLinks } from '@/api/publicSite'
 import type { PublicSocialLinkResp } from '@/api/types/public'
 import { isSafeHttpUrl, SOCIAL_PLATFORM_ICONS } from '@/constants/communityLinks'
+import { iconAssets } from '@/constants/iconAssets'
 import { localizedText } from '@/utils/publicDisplay'
 
 const { t } = useI18n()
@@ -60,20 +61,20 @@ function openLink(card: CommunityCard) {
       <div class="home-community-paper">
       <img
         class="home-community-bg"
-        src="@/assets/icon/home/join_cnpa.png"
+        :src="iconAssets['home/join_cnpa.png']"
         alt=""
         aria-hidden="true"
         draggable="false"
       />
       <img
         class="home-community-tear"
-        src="@/assets/icon/home/sizhi_cnpa_top.png"
+        :src="iconAssets['home/sizhi_cnpa_top.png']"
         alt=""
         aria-hidden="true"
         draggable="false"
       />
       <div class="home-community-tear-bottom" aria-hidden="true">
-        <img src="@/assets/icon/home/sizhi_cnpa_under.png" alt="" draggable="false" />
+        <img :src="iconAssets['home/sizhi_cnpa_under.png']" alt="" draggable="false" />
       </div>
       <div class="home-community-inner">
         <div class="home-community-grid">

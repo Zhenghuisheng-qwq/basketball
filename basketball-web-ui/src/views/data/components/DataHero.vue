@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import dataHeroBg from '@/assets/icon/data_hero_bg.png'
-import { usePublicPageHero } from '@/composables/usePublicPageHero'
+import { iconAssets } from '@/constants/iconAssets'
+import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 import type { TournamentGroup } from '../types'
 import TournamentSelector from './TournamentSelector.vue'
 
@@ -19,7 +19,13 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const pageHero = usePublicPageHero('DATA')
-const heroSrc = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : dataHeroBg))
+const dataHeroBg = iconAssets['data_hero_bg.png']
+const heroSrc = computed(() => visibleHeroImage(
+  pageHero.settled.value,
+  pageHero.configured.value,
+  pageHero.imageUrl.value,
+  dataHeroBg,
+))
 const heroStyle = computed(() => (
   pageHero.configured.value ? { objectPosition: pageHero.objectPosition.value } : undefined
 ))
@@ -32,6 +38,7 @@ function handleTournamentChange(value: string) {
   <section class="data-hero" :aria-label="t('publicPages.data.heroAria')">
     <div class="data-hero__visual cnpa-public-hero-frame">
       <img
+        v-if="heroSrc"
         class="data-hero__image"
         :src="heroSrc"
         :alt="pageHero.altText.value || t('publicPages.data.heroAria')"

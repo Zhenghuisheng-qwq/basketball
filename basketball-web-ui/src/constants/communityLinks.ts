@@ -1,8 +1,10 @@
 import type { CommunityLink } from '@/views/events/types/events'
-import iconKook from '@/assets/icon/home/social_kook.png'
-import iconWx from '@/assets/icon/home/social_wx.png'
-import iconBili from '@/assets/icon/home/social_bili.png'
-import iconDouyin from '@/assets/icon/home/social_douyin.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const iconKook = iconAssets['home/social_kook.png']
+const iconWx = iconAssets['home/social_wx.png']
+const iconBili = iconAssets['home/social_bili.png']
+const iconDouyin = iconAssets['home/social_douyin.png']
 
 export const SOCIAL_PLATFORM_ICONS: Record<string, string> = {
   KOOK: iconKook,

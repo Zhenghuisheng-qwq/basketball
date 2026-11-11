@@ -8,6 +8,7 @@ export function usePublicPageHero(
 ) {
   const hero = ref<PublicPageHeroResp | null>(null)
   const failed = ref(false)
+  const settled = ref(false)
   const narrow = ref(false)
   let seq = 0
 
@@ -25,13 +26,20 @@ export function usePublicPageHero(
       const current = ++seq
       failed.value = false
       hero.value = null
-      if (!key || (key === 'EVENT_SEASON' && !season)) return
+      settled.value = false
+      if (!key) {
+        if (current === seq) settled.value = true
+        return
+      }
+      if (key === 'EVENT_SEASON' && !season) return
       try {
         const res = await getPublicPageHero(key, key === 'EVENT_SEASON' ? season : undefined)
         if (current !== seq) return
         hero.value = res.data ?? null
       } catch {
         if (current === seq) hero.value = null
+      } finally {
+        if (current === seq) settled.value = true
       }
     },
     { immediate: true },
@@ -63,5 +71,11 @@ export function usePublicPageHero(
   })
   const altText = computed(() => hero.value?.altText || '')
 
-  return { configured, fullImage, imageUrl, objectPosition, maskOpacity, altText }
+  return { settled, configured, fullImage, imageUrl, objectPosition, maskOpacity, altText }
+}
+
+export function visibleHeroImage(settled: boolean, configured: boolean, imageUrl: string, fallback: string) {
+  if (!settled) return ''
+  if (configured && imageUrl) return imageUrl
+  return fallback
 }

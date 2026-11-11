@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import mrtTopBackground from '@/assets/icon/mrt/mrt_top_background.png'
-import { usePublicPageHero } from '@/composables/usePublicPageHero'
+import { iconAssets } from '@/constants/iconAssets'
+import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 
 const { t } = useI18n()
+const mrtTopBackground = iconAssets['mrt/mrt_top_background.png']
 const pageHero = usePublicPageHero('HALL')
-const heroSrc = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : mrtTopBackground))
+const heroSrc = computed(() => visibleHeroImage(
+  pageHero.settled.value,
+  pageHero.configured.value,
+  pageHero.imageUrl.value,
+  mrtTopBackground,
+))
 const heroStyle = computed(() => (
   pageHero.configured.value ? { objectPosition: pageHero.objectPosition.value } : undefined
 ))
@@ -17,6 +23,7 @@ const heroStyle = computed(() => (
     <div class="site-shell">
       <div class="hall-hero__frame cnpa-public-hero-frame">
         <img
+          v-if="heroSrc"
           class="hall-hero__image"
           :src="heroSrc"
           :alt="pageHero.altText.value || t('publicPages.hall.heroAria')"

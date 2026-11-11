@@ -12,7 +12,9 @@ import type { PublicHonorItemResp } from '@/api/types/public'
 import type { V4PublicSeasonItem, V4PublicSeriesItem } from '@/api/types/v4Public'
 import { displayText, formatDateTime } from '@/utils/publicDisplay'
 import { teamDetailLocation } from '@/utils/eventContext'
-import cnpaShield from '@/assets/icon/cnpa-shield.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const cnpaShield = iconAssets['cnpa-shield.png']
 import { pickLatestPublishedSeason, platformTag, seasonBelongsToSeries, seasonsNewestFirst } from '../hallFilters'
 
 const props = defineProps<{

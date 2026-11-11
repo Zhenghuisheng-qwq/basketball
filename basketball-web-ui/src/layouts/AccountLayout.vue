@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 import WebHeader from '@/components/layout/WebHeader.vue'
-import loginBackground from '@/assets/icon/login/login_background.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const loginBackground = iconAssets['login/login_background.png']
 
 const { t } = useI18n()
 </script>

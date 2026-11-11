@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import ssggTopBackground from '@/assets/icon/ssgg/ssgg_top_background.png'
-import { usePublicPageHero } from '@/composables/usePublicPageHero'
+import { iconAssets } from '@/constants/iconAssets'
+import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 
 const { t } = useI18n()
+const ssggTopBackground = iconAssets['ssgg/ssgg_top_background.png']
 const pageHero = usePublicPageHero('ANNOUNCEMENT')
-const heroSrc = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : ssggTopBackground))
+const heroSrc = computed(() => visibleHeroImage(
+  pageHero.settled.value,
+  pageHero.configured.value,
+  pageHero.imageUrl.value,
+  ssggTopBackground,
+))
 const heroStyle = computed(() => (
   pageHero.configured.value ? { objectPosition: pageHero.objectPosition.value } : undefined
 ))
@@ -29,6 +35,7 @@ withDefaults(
     <div class="site-shell">
       <div class="announcement-hero__frame cnpa-public-hero-frame">
         <img
+          v-if="heroSrc"
           class="announcement-hero__image"
           :src="heroSrc"
           :alt="pageHero.altText.value || t('publicPages.announcement.centerAria')"

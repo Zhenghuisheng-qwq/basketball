@@ -1,11 +1,13 @@
-import tournamentTop from '@/assets/icon/tournament_top.png'
-import tournamentFoot from '@/assets/icon/tournament_foot.png'
-import tournamentArenaTop from '@/assets/icon/tournament_arena_top.png'
-import tournamentArenaFoot from '@/assets/icon/tournament_arena_foot.png'
-import tournamentCupTop from '@/assets/icon/tournament_cup_top.png'
-import tournamentCupFoot from '@/assets/icon/tournament_cup_foot.png'
-import tournamentOpenTop from '@/assets/icon/tournament_open_top.png'
-import tournamentOpenFoot from '@/assets/icon/tournament_open_foot.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const tournamentTop = iconAssets['tournament_top.png']
+const tournamentFoot = iconAssets['tournament_foot.png']
+const tournamentArenaTop = iconAssets['tournament_arena_top.png']
+const tournamentArenaFoot = iconAssets['tournament_arena_foot.png']
+const tournamentCupTop = iconAssets['tournament_cup_top.png']
+const tournamentCupFoot = iconAssets['tournament_cup_foot.png']
+const tournamentOpenTop = iconAssets['tournament_open_top.png']
+const tournamentOpenFoot = iconAssets['tournament_open_foot.png']
 
 export type CompetitionSeriesCode = 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
 

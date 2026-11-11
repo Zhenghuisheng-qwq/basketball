@@ -1,9 +1,11 @@
 /** 官网顶部「赛事」Mega Menu 统一配置（桌面与移动端复用） */
 
-import iconLeague from '@/assets/icon/home/league.png'
-import iconArena from '@/assets/icon/home/arena.png'
-import iconCup from '@/assets/icon/home/cup.png'
-import iconOpen from '@/assets/icon/home/open.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const iconLeague = iconAssets['home/league.png']
+const iconArena = iconAssets['home/arena.png']
+const iconCup = iconAssets['home/cup.png']
+const iconOpen = iconAssets['home/open.png']
 
 export type MegaMenuType = 'event'
 

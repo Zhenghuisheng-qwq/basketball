@@ -3,7 +3,9 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
 import WebHeader from '@/components/layout/WebHeader.vue'
-import authBackground from '@/assets/icon/login/login_background.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const authBackground = iconAssets['login/login_background.png']
 
 type AuthContentVariant = 'login' | 'register' | 'verify' | 'complete'
 

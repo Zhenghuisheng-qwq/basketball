@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import defaultHeroImage from '@/assets/icon/home_top.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const defaultHeroImage = iconAssets['home_top.png']
 
 const { t } = useI18n()
 
@@ -40,9 +42,9 @@ let suppressClick = false
 const activeBanner = computed(() => props.banners[activeIndex.value] ?? null)
 const backgroundImage = computed(() => {
   const banner = activeBanner.value
-  if (!banner) return defaultHeroImage
+  if (!banner) return props.loading ? '' : defaultHeroImage
   if (narrow.value && banner.mobileImage) return banner.mobileImage
-  return banner.image || defaultHeroImage
+  return banner.image || (props.loading ? '' : defaultHeroImage)
 })
 const imageAlt = computed(() => activeBanner.value?.alt || activeBanner.value?.title || t('home.heroAlt'))
 const canOpen = computed(() => {
@@ -171,6 +173,7 @@ onBeforeUnmount(() => {
         @click="onFrameClick"
       >
         <img
+          v-if="backgroundImage"
           :key="`${activeBanner?.id || 'default'}-${backgroundImage}`"
           class="home-hero__image"
           :src="backgroundImage"
@@ -180,7 +183,7 @@ onBeforeUnmount(() => {
         />
         <img
           class="home-hero__tear"
-          src="@/assets/icon/sizhi.png"
+          :src="iconAssets['sizhi.png']"
           alt=""
           aria-hidden="true"
           draggable="false"

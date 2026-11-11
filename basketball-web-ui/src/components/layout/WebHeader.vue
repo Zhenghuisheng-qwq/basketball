@@ -2,7 +2,9 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import logoImg from '@/assets/icon/logo.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const logoImg = iconAssets['logo.png']
 import LocaleSwitch from './LocaleSwitch.vue'
 import PublicCompetitionMegaMenu from './PublicCompetitionMegaMenu.vue'
 import PublicCompetitionMobileMenu from './PublicCompetitionMobileMenu.vue'

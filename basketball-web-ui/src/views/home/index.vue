@@ -31,10 +31,12 @@ import {
   pickCurrentStageName,
   pickDefaultDivision,
 } from '@/utils/currentSeason'
-import iconLeague from '@/assets/icon/home/league.png'
-import iconCup from '@/assets/icon/home/cup.png'
-import iconArena from '@/assets/icon/home/arena.png'
-import iconOpen from '@/assets/icon/home/open.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const iconLeague = iconAssets['home/league.png']
+const iconCup = iconAssets['home/cup.png']
+const iconArena = iconAssets['home/arena.png']
+const iconOpen = iconAssets['home/open.png']
 type SectionState = 'loading' | 'success' | 'empty' | 'error'
 type HomeCompetitionFilter = 'ALL' | 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
 type HomeNewsTab = 'EVENT' | 'NOTICE'
@@ -534,7 +536,7 @@ onMounted(() => {
                       <span class="match-vs-glow" aria-hidden="true" />
                       <img
                         class="match-vs"
-                        src="@/assets/icon/home/vs.png"
+                        :src="iconAssets['home/vs.png']"
                         alt="VS"
                         width="56"
                         height="56"
@@ -658,25 +660,25 @@ onMounted(() => {
                       <h3 class="event-title">{{ card.title }}</h3>
                       <div v-if="card.seasonId" class="event-details">
                         <div v-if="card.divisionName" class="event-detail-item">
-                          <img src="@/assets/icon/home/stage.png" alt="" class="event-detail-icon" />
+                          <img :src="iconAssets['home/stage.png']" alt="" class="event-detail-icon" />
                           <span>{{ t('home.currentDivision', { name: localizedText(card.divisionName, card.divisionNameEn, '') }) }}</span>
                         </div>
                         <div v-if="card.seasonStatus" class="event-detail-item">
-                          <img src="@/assets/icon/home/user.png" alt="" class="event-detail-icon" />
+                          <img :src="iconAssets['home/user.png']" alt="" class="event-detail-icon" />
                           <span>{{ t('home.eventStatus', { status: v4SeasonStatusLabel(card.seasonStatus) }) }}</span>
                         </div>
                         <div v-if="card.currentStageName" class="event-detail-item">
-                          <img src="@/assets/icon/home/platform.png" alt="" class="event-detail-icon" />
+                          <img :src="iconAssets['home/platform.png']" alt="" class="event-detail-icon" />
                           <span>{{ t('home.stage', { name: card.currentStageName }) }}</span>
                         </div>
                         <div v-if="formatEventRange(card.matchStartTime, card.matchEndTime)" class="event-detail-item">
-                          <img src="@/assets/icon/home/date.png" alt="" class="event-detail-icon" />
+                          <img :src="iconAssets['home/date.png']" alt="" class="event-detail-icon" />
                           <span>{{ t('home.timeRange', { range: formatEventRange(card.matchStartTime, card.matchEndTime) }) }}</span>
                         </div>
                       </div>
                       <div v-else class="event-details">
                         <div class="event-detail-item">
-                          <img src="@/assets/icon/home/stage.png" alt="" class="event-detail-icon" />
+                          <img :src="iconAssets['home/stage.png']" alt="" class="event-detail-icon" />
                           <span>{{ t('home.noEvent') }}</span>
                         </div>
                       </div>

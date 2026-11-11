@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import logoImg from '@/assets/icon/logo.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const logoImg = iconAssets['logo.png']
 
 const { t } = useI18n()
 

@@ -5,9 +5,11 @@ import TornEdge from '@/components/home/TornEdge.vue'
 import { getPublicHomeDataFocus } from '@/api/publicHome'
 import type { PublicHomeDataFocusVo, PublicHomeFocusTeamVo, PublicHomePlayerLeaderVo } from '@/api/types/public'
 import { displayText, formatDecimal, initials } from '@/utils/publicDisplay'
-import iconPts from '@/assets/icon/home/basketball1.png'
-import iconAst from '@/assets/icon/home/basketball2.png'
-import iconReb from '@/assets/icon/home/basketball3.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const iconPts = iconAssets['home/basketball1.png']
+const iconAst = iconAssets['home/basketball2.png']
+const iconReb = iconAssets['home/basketball3.png']
 
 type SeriesFilter = 'LEAGUE' | 'ARENA' | 'CUP' | 'OPEN'
 type SectionState = 'loading' | 'success' | 'error'

@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import teamBackground from '@/assets/icon/tournament/team_background.png'
-import teamIcon from '@/assets/icon/team/master.png'
-import platformIcon from '@/assets/icon/person/platform.png'
-import positionIcon from '@/assets/icon/person/site.png'
-import stageIcon from '@/assets/icon/person/stage.png'
+import { iconAssets } from '@/constants/iconAssets'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import type { PlayerProfile } from '../types'
-import { usePublicPageHero } from '@/composables/usePublicPageHero'
+import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
+
+const teamBackground = iconAssets['tournament/team_background.png']
+const teamIcon = iconAssets['team/master.png']
+const platformIcon = iconAssets['person/platform.png']
+const positionIcon = iconAssets['person/site.png']
+const stageIcon = iconAssets['person/stage.png']
 
 const props = defineProps<{
   profile: PlayerProfile
@@ -19,7 +21,13 @@ const { t } = useI18n()
 const pageHero = usePublicPageHero('EVENT_SEASON', computed(() => props.profile.seasonId || ''))
 
 const heroBgStyle = computed(() => {
-  const image = pageHero.configured.value ? pageHero.imageUrl.value : teamBackground
+  const image = visibleHeroImage(
+    pageHero.settled.value,
+    pageHero.configured.value,
+    pageHero.imageUrl.value,
+    teamBackground,
+  )
+  if (!image) return { backgroundImage: 'none' }
   const mask = pageHero.configured.value && !pageHero.fullImage.value ? pageHero.maskOpacity.value / 100 : 0.82
   return {
     backgroundImage: `linear-gradient(90deg, rgba(0,0,0,${mask}) 0%, rgba(0,0,0,0.55) 48%, rgba(0,0,0,0.32) 100%), url(${image})`,

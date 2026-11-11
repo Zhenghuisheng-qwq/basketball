@@ -21,8 +21,8 @@ import SeriesProgress from '../match-detail/SeriesProgress.vue'
 import SeriesGameTabs from '../match-detail/SeriesGameTabs.vue'
 import PeriodScoreBoard from '../match-detail/PeriodScoreBoard.vue'
 import BoxScorePanel from '../match-detail/BoxScorePanel.vue'
-import heroBg from '@/assets/icon/score/detail_top_background.png'
-import { usePublicPageHero } from '@/composables/usePublicPageHero'
+import { iconAssets } from '@/constants/iconAssets'
+import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 import {
   SERIES_TOTAL_TAB,
   formatMatchWhen,
@@ -53,9 +53,15 @@ const loading = ref(true)
 const error = ref('')
 const series = ref<V4PublicMatchSeriesDetail | null>(null)
 const match = ref<V4PublicMatchDetail | null>(null)
+const heroBg = iconAssets['score/detail_top_background.png']
 const heroSeasonId = computed(() => String(series.value?.seasonId || match.value?.seasonId || route.query.seasonId || ''))
 const pageHero = usePublicPageHero('EVENT_SEASON', heroSeasonId)
-const heroSrc = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : heroBg))
+const heroSrc = computed(() => visibleHeroImage(
+  pageHero.settled.value,
+  pageHero.configured.value,
+  pageHero.imageUrl.value,
+  heroBg,
+))
 const heroStyle = computed(() => (
   pageHero.configured.value ? { objectPosition: pageHero.objectPosition.value } : undefined
 ))
@@ -413,6 +419,7 @@ watch([seriesId, matchId, () => route.name], () => {
       <div class="site-shell">
         <div class="match-detail-hero__frame">
           <img
+            v-if="heroSrc"
             class="match-detail-hero__image"
             :src="heroSrc"
             :alt="pageHero.altText.value"

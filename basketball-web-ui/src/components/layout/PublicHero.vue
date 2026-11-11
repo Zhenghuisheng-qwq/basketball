@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import tournamentTop from '@/assets/icon/tournament_top.png'
-import dataHeroBg from '@/assets/icon/data_hero_bg.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const tournamentTop = iconAssets['tournament_top.png']
+const dataHeroBg = iconAssets['data_hero_bg.png']
 
 export type PublicHeroVariant = 'competition' | 'data'
 

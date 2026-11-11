@@ -2,24 +2,25 @@
 import { computed, inject, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
-import teamBackground from '@/assets/icon/tournament/team_background.png'
-import captainIcon from '@/assets/icon/team/master.png'
-import platformIcon from '@/assets/icon/team/platform.png'
-import stageIcon from '@/assets/icon/team/stage.png'
-import rosterIcon from '@/assets/icon/team/lineup.png'
+import { iconAssets } from '@/constants/iconAssets'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
 import type { TeamBase, TeamStage } from '@/types/team'
 import {
   PUBLIC_TEAM_PAGE_KEY,
 } from '@/views/tournament/team/composables/usePublicTeamPage'
-import { usePublicPageHero } from '@/composables/usePublicPageHero'
+import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 
 const props = defineProps<{
   team: TeamBase
   teamId: string
 }>()
 
+const teamBackground = iconAssets['tournament/team_background.png']
+const captainIcon = iconAssets['team/master.png']
+const platformIcon = iconAssets['team/platform.png']
+const stageIcon = iconAssets['team/stage.png']
+const rosterIcon = iconAssets['team/lineup.png']
 const route = useRoute()
 const router = useRouter()
 const { t } = useI18n()
@@ -107,7 +108,13 @@ function handleSelectCompareTeam(targetTeamId: string) {
 }
 
 const heroBgStyle = computed(() => {
-  const image = pageHero.configured.value ? pageHero.imageUrl.value : teamBackground
+  const image = visibleHeroImage(
+    pageHero.settled.value,
+    pageHero.configured.value,
+    pageHero.imageUrl.value,
+    teamBackground,
+  )
+  if (!image) return { backgroundImage: 'none' }
   const mask = pageHero.configured.value && !pageHero.fullImage.value ? pageHero.maskOpacity.value / 100 : 0.72
   return {
     backgroundImage: `linear-gradient(90deg, rgba(0, 0, 0, ${mask}) 0%, rgba(0, 0, 0, 0.38) 45%, rgba(0, 0, 0, 0.15) 100%), url(${image})`,

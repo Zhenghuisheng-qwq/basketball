@@ -1,16 +1,23 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
-import { usePublicPageHero } from '@/composables/usePublicPageHero'
+import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 import { useI18n } from 'vue-i18n'
 import { getPublicPartners } from '@/api/public/partner'
 import type { PublicPartnerSupportRecordResp } from '@/api/types/public'
 import { displayText, toNumber } from '@/utils/publicDisplay'
-import partnersHeroImg from '@/assets/icon/hzhb/hzhb.png'
+import { iconAssets } from '@/constants/iconAssets'
+
+const partnersHeroImg = iconAssets['hzhb/hzhb.png']
 
 const PAGE_SIZE = 8
 const { t, locale } = useI18n()
 const pageHero = usePublicPageHero('PARTNER')
-const heroSrc = computed(() => (pageHero.configured.value ? pageHero.imageUrl.value : partnersHeroImg))
+const heroSrc = computed(() => visibleHeroImage(
+  pageHero.settled.value,
+  pageHero.configured.value,
+  pageHero.imageUrl.value,
+  partnersHeroImg,
+))
 const heroStyle = computed(() => (
   pageHero.configured.value ? { objectPosition: pageHero.objectPosition.value } : undefined
 ))
@@ -117,6 +124,7 @@ void loadPartners(1)
       <div class="site-shell partners-hero__shell">
         <div class="partners-hero__visual cnpa-public-hero-frame">
           <img
+            v-if="heroSrc"
             class="partners-hero__image"
             :src="heroSrc"
             :alt="pageHero.altText.value || t('publicPages.partners.heroAria')"
