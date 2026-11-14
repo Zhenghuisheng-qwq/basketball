@@ -1,23 +1,39 @@
-import { computed, ref, watch, type ComputedRef } from 'vue'
+import { computed, onMounted, ref, watch, type ComputedRef } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
+import { getV4PublicSeasonList } from '@/api/v4Public'
+import type { V4PublicSeasonItem } from '@/api/types/v4Public'
 import {
+  buildCurrentEventMenuEntries,
   competitionMenuGroups,
   type MegaMenuType,
   type MenuEntryHighlight,
   type PublicMenuEntry,
 } from '@/constants/publicCompetitionMenu'
+import { v4SeasonStatusLabel, v4SeriesDisplayLabel } from '@/utils/v4Display'
 
 export type OpenMenu = MegaMenuType | null
 
 const CLOSE_DELAY_MS = 200
 
 export function usePublicCompetitionMegaMenu() {
-  const { t } = useI18n()
+  const { t, locale } = useI18n()
   const route = useRoute()
   const router = useRouter()
 
   const openMenu = ref<OpenMenu>(null)
+  const seasons = ref<V4PublicSeasonItem[]>([])
+  const seasonsReady = ref(false)
+
+  const eventEntries = computed(() => {
+    if (!seasonsReady.value) return competitionMenuGroups.event[0].entries
+    return buildCurrentEventMenuEntries(seasons.value, {
+      locale: locale.value,
+      seriesLabel: (code) => v4SeriesDisplayLabel(undefined, code),
+      statusLabel: (status) => v4SeasonStatusLabel(status),
+      emptyHint: t('home.noEvent'),
+    })
+  })
 
   let closeTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -91,22 +107,30 @@ export function usePublicCompetitionMegaMenu() {
   }
 
   function getEntryHighlight(entry: PublicMenuEntry): MenuEntryHighlight | null {
-    if (!entry.id.startsWith('events-') || !isEventsListRoute()) return null
-
-    if (entry.id.startsWith('events-series-')) {
-      const code = entry.id.slice('events-series-'.length)
-      if (normalizeSeries() === code) return 'primary'
-    }
-
-    return null
+    const param = route.params.seasonId
+    const seasonParam = typeof param === 'string' ? param : (Array.isArray(param) ? param[0] : '')
+    if (entry.seasonId && seasonParam && entry.seasonId === seasonParam) return 'primary'
+    if (!entry.seriesCode || !isEventsListRoute()) return null
+    return normalizeSeries() === entry.seriesCode ? 'primary' : null
   }
 
   const currentGroups = computed(() => {
     if (!openMenu.value) return []
-    return competitionMenuGroups[openMenu.value].map((group) => ({
-      title: t(group.titleKey),
-      entries: group.entries,
-    }))
+    return [{
+      title: t('home.currentEvents'),
+      entries: eventEntries.value,
+    }]
+  })
+
+  onMounted(() => {
+    getV4PublicSeasonList()
+      .then((res) => {
+        seasons.value = res.data ?? []
+        seasonsReady.value = true
+      })
+      .catch(() => {
+        seasonsReady.value = false
+      })
   })
 
   watch(
@@ -120,7 +144,7 @@ export function usePublicCompetitionMegaMenu() {
     isOpen,
     openMenu,
     currentGroups,
-    competitionMenuGroups,
+    eventEntries,
     isTournamentRoute,
     isDataRoute,
     isEventsNavActive,

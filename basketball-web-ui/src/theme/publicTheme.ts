@@ -62,6 +62,9 @@ export function resolveThemeQuery(route: RouteLocationNormalized) {
   ) {
     return { skip: true, scope: '', seasonId: '' }
   }
+  if (path.startsWith('/player') || path.startsWith('/tournament/team')) {
+    return { skip: false, scope: 'BASE', seasonId: '' }
+  }
   if (path === '/' || path === '/home') return { skip: false, scope: 'HOME', seasonId: '' }
   if (
     path.startsWith('/data')

@@ -4,6 +4,7 @@ import com.zhs.basket.constant.BasketContentPerms;
 import com.zhs.basket.req.SiteThemePublishReq;
 import com.zhs.basket.req.SiteThemeSaveReq;
 import com.zhs.basket.service.IBasketSiteThemeService;
+import com.zhs.basket.service.v4.IBasketV4AdminOptionsService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
 import com.zhs.common.core.domain.AjaxResult;
@@ -26,10 +27,19 @@ public class BasketSiteThemeController extends BaseController {
     @Autowired
     private IBasketSiteThemeService themeService;
 
+    @Autowired
+    private IBasketV4AdminOptionsService optionsService;
+
     @PreAuthorize("@ss.hasAnyPermi('" + BasketContentPerms.SITE_THEME_LIST + "," + BasketContentPerms.SITE_THEME_QUERY + "')")
     @GetMapping("/list")
     public AjaxResult list() {
         return success(themeService.list());
+    }
+
+    @PreAuthorize("@ss.hasAnyPermi('" + BasketContentPerms.SITE_THEME_LIST + "," + BasketContentPerms.SITE_THEME_QUERY + "," + BasketContentPerms.SITE_THEME_PUBLISH + "')")
+    @GetMapping("/season-options")
+    public AjaxResult seasonOptions() {
+        return success(optionsService.selectSeasonOptions());
     }
 
     @PreAuthorize("@ss.hasAnyPermi('" + BasketContentPerms.SITE_THEME_QUERY + "," + BasketContentPerms.SITE_THEME_PUBLISH + "')")

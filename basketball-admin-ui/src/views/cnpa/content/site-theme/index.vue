@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <el-alert
-      title="主题可以发布到首页、基础主题或某一届赛事。数据中心、名人堂、公告和合作伙伴只用基础主题。个人中心不跟随主题。恢复默认只解除绑定，不删除主题。"
+      title="选全站会同时换首页和其余公开页。某一届赛事可以单独再发一次。球队页、球员页和个人中心不跟某一届赛事的主题走。恢复默认只解除绑定，不删除主题。"
       type="info"
       :closable="false"
       show-icon
@@ -80,13 +80,29 @@
       <el-form label-width="90px">
         <el-form-item label="发布到">
           <el-radio-group v-model="publishScope">
+            <el-radio label="GLOBAL">全站</el-radio>
             <el-radio label="HOME">首页</el-radio>
             <el-radio label="BASE">基础主题</el-radio>
             <el-radio label="SEASON">某一届赛事</el-radio>
           </el-radio-group>
         </el-form-item>
-        <el-form-item v-if="publishScope === 'SEASON'" label="赛季 ID">
-          <el-input-number v-model="publishSeasonId" :min="1" controls-position="right" />
+        <el-form-item v-if="publishScope === 'SEASON'" label="选择赛季">
+          <el-select
+            v-model="publishSeasonId"
+            filterable
+            clearable
+            placeholder="搜索赛季名称"
+            style="width: 100%"
+            :loading="seasonLoading"
+          >
+            <el-option
+              v-for="item in seasonOptions"
+              :key="item.id"
+              :label="seasonOptionLabel(item)"
+              :value="item.id"
+            />
+          </el-select>
+          <div class="field-tip">选中后，这一届赛事的前台页面使用该主题。</div>
         </el-form-item>
         <el-alert v-if="impactText" :title="impactText" type="warning" :closable="false" />
       </el-form>
@@ -105,10 +121,12 @@ import {
   getSiteTheme,
   impactSiteTheme,
   listSiteTheme,
+  listSiteThemeSeasonOptions,
   offlineSiteTheme,
   publishSiteTheme,
   saveSiteTheme,
-  unbindSiteTheme
+  unbindSiteTheme,
+  type SiteThemeSeasonOption
 } from '@/api/basket/siteTheme'
 import type { SiteThemeBinding, SiteThemeResp, SiteThemeSaveReq, ThemeColorReq } from '@/types'
 
@@ -120,6 +138,8 @@ const publishOpen = ref(false)
 const published = ref(false)
 const publishScope = ref('HOME')
 const publishSeasonId = ref<number>()
+const seasonOptions = ref<SiteThemeSeasonOption[]>([])
+const seasonLoading = ref(false)
 const impactText = ref('')
 const form = ref<SiteThemeSaveReq>(blank())
 
@@ -226,11 +246,38 @@ function openPublish(row: SiteThemeResp) {
       bgDisplay: data.bgDisplay || 'TOP_CENTER',
       colors: { ...defaultColors(), ...(data.colors || {}) }
     }
-    publishScope.value = 'HOME'
+    publishScope.value = 'GLOBAL'
     publishSeasonId.value = undefined
     impactText.value = ''
     publishOpen.value = true
+    loadSeasonOptions()
   })
+}
+
+function loadSeasonOptions() {
+  seasonLoading.value = true
+  listSiteThemeSeasonOptions().then(res => {
+    seasonOptions.value = res.data || []
+  }).finally(() => {
+    seasonLoading.value = false
+  })
+}
+
+function seasonOptionLabel(item: SiteThemeSeasonOption) {
+  const title = (item.label || '').trim()
+  const extra = (item.subLabel || '').trim()
+  if (!title) return extra || String(item.id)
+  if (!extra || title.includes(extra)) return title
+  if (extra.includes(title)) return extra
+  return `${title}（${extra}）`
+}
+
+function requireSeason() {
+  if (publishScope.value === 'SEASON' && !publishSeasonId.value) {
+    proxy.$modal.msgError('请选择赛季')
+    return false
+  }
+  return true
 }
 
 function loadImpact() {
@@ -238,6 +285,7 @@ function loadImpact() {
     proxy.$modal.msgError('请先保存主题')
     return
   }
+  if (!requireSeason()) return
   impactSiteTheme(form.value.id, publishScope.value, publishScope.value === 'SEASON' ? publishSeasonId.value : undefined).then(res => {
     const affected = res.data?.affected?.join('、') || '当前位置'
     impactText.value = `发布后会影响：${affected}。${res.data?.replaceHint || ''}`
@@ -249,6 +297,7 @@ function handlePublish() {
     proxy.$modal.msgError('请先保存主题')
     return
   }
+  if (!requireSeason()) return
   publishSiteTheme({
     ...form.value,
     scopeType: publishScope.value,
@@ -333,4 +382,5 @@ load()
 .bind-tag { margin: 0 6px 6px 0; }
 .swatch { display: inline-block; width: 28px; height: 18px; border: 1px solid #ddd; }
 .preview { display: inline-flex; align-items: center; min-width: 64px; height: 32px; margin-right: 8px; padding: 0 10px; }
+.field-tip { color: var(--el-text-color-secondary); font-size: 12px; line-height: 1.4; margin-top: 4px; }
 </style>

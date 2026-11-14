@@ -19,8 +19,8 @@ const props = withDefaults(
 )
 
 const edgeColor = computed(() => {
-  if (props.tone === 'gray') return '#e7e5e5'
-  return props.tone === 'light' ? '#e9e7e7' : '#050505'
+  if (props.tone === 'gray') return 'var(--theme-content, #e7e5e5)'
+  return props.tone === 'light' ? 'var(--theme-content, #e9e7e7)' : 'var(--theme-bg, #050505)'
 })
 
 const shadowColor = computed(() => {

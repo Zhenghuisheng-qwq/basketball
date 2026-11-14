@@ -11,6 +11,10 @@ export function goToRegistrationDetail(router: Router, registrationId: string) {
   })
 }
 
+function divisionKey(params: { seasonId?: string; divisionId?: string }) {
+  return String(params.divisionId || params.seasonId || '').trim()
+}
+
 /** 进入已有报名记录的填写/修改流程（携带 registrationId，避免空赛季列表） */
 export function goToRegistrationEditFlow(
   router: Router,
@@ -21,15 +25,16 @@ export function goToRegistrationEditFlow(
     platformCode?: string
   },
 ) {
-  const seasonKey = params.seasonId || params.divisionId
-  if (!seasonKey) {
+  const divisionId = divisionKey(params)
+  if (!divisionId) {
     goToRegistrationDetail(router, params.registrationId)
     return
   }
   router.push({
-    path: `/account/my-events/${seasonKey}/team-registration`,
+    name: 'AccountV4Registration',
+    params: { divisionId },
     query: {
-      registrationId: params.registrationId,
+      ...(params.registrationId ? { registrationId: params.registrationId } : {}),
       ...(params.platformCode ? { platformCode: params.platformCode } : {}),
     },
   })
@@ -50,15 +55,13 @@ export function goToNewTeamRegistration(
   event: Pick<AvailableEvent, 'seasonId' | 'divisionId' | 'platformCode'>,
   platformCode?: string,
 ) {
-  const seasonKey = event.seasonId || event.divisionId
-  if (!seasonKey) return
+  const divisionId = divisionKey(event)
+  if (!divisionId) return
   const resolvedPlatform = platformCode || event.platformCode
   router.push({
-    path: `/account/my-events/${seasonKey}/team-registration`,
-    query: {
-      ...(resolvedPlatform ? { platformCode: resolvedPlatform } : {}),
-      ...(event.seasonId ? { seasonId: event.seasonId } : {}),
-    },
+    name: 'AccountV4Registration',
+    params: { divisionId },
+    query: resolvedPlatform ? { platformCode: resolvedPlatform } : undefined,
   })
 }
 

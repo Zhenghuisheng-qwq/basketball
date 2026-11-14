@@ -17,7 +17,9 @@ import java.util.Set;
 public class BasketPublicHeroServiceImpl implements IBasketPublicHeroService {
 
     private static final String EVENT_SEASON = "EVENT_SEASON";
-    private static final Set<String> PAGE_KEYS = Set.of(EVENT_SEASON, "DATA", "HALL", "ANNOUNCEMENT", "PARTNER");
+    private static final Set<String> PAGE_KEYS = Set.of(
+            EVENT_SEASON, "DATA", "HALL", "ANNOUNCEMENT", "PARTNER",
+            "EVENT_LEAGUE", "EVENT_ARENA", "EVENT_CUP", "EVENT_OPEN");
 
     @Resource
     private BasketPageHeroDao pageHeroDao;

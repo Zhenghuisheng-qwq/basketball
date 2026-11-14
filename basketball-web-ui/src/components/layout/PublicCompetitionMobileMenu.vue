@@ -9,18 +9,19 @@ import {
 
 const { t } = useI18n()
 
-const eventGroups = computed(() =>
-  competitionMenuGroups.event.map((group) => ({
-    titleKey: group.titleKey,
-    title: t(group.titleKey),
-    entries: group.entries,
-  })),
-)
-
-defineProps<{
+const props = defineProps<{
   isEventsNavActive: boolean
+  entries?: PublicMenuEntry[]
   getEntryHighlight: (entry: PublicMenuEntry) => 'primary' | 'secondary' | null
 }>()
+
+const eventGroups = computed(() => [
+  {
+    titleKey: 'home.currentEvents',
+    title: t('home.currentEvents'),
+    entries: props.entries?.length ? props.entries : competitionMenuGroups.event[0].entries,
+  },
+])
 
 const emit = defineEmits<{
   navigate: [entry: PublicMenuEntry]
@@ -75,7 +76,10 @@ function handleNavigate(entry: PublicMenuEntry) {
               <img v-if="entry.icon" :src="entry.icon" alt="" />
               <template v-else>{{ entry.abbrev }}</template>
             </span>
-            <span>{{ entry.label }}</span>
+            <span class="mobile-competition-nav__copy">
+              <span>{{ entry.label }}</span>
+              <small v-if="entry.hint">{{ entry.hint }}</small>
+            </span>
           </button>
         </div>
       </div>
@@ -152,6 +156,19 @@ function handleNavigate(entry: PublicMenuEntry) {
 
   &--secondary {
     background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.mobile-competition-nav__copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+
+  small {
+    color: rgba(255, 255, 255, 0.58);
+    font-size: 12px;
+    font-weight: 600;
   }
 }
 

@@ -3,7 +3,6 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useRoute, useRouter } from 'vue-router'
 import { iconAssets } from '@/constants/iconAssets'
-import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 import ComparisonMetricRow from '@/components/team/ComparisonMetricRow.vue'
 import ComparisonSummaryCard from '@/components/team/ComparisonSummaryCard.vue'
 import TeamSelectModal from '@/components/team/TeamSelectModal.vue'
@@ -39,10 +38,6 @@ const compareIcon4 = iconAssets['tournament/compare_4.png']
 const vsIcon = iconAssets['tournament/vs.png']
 const route = useRoute()
 const router = useRouter()
-const pageHero = usePublicPageHero('EVENT_SEASON', computed(() => {
-  const query = route.query.seasonId
-  return typeof query === 'string' ? query : ''
-}))
 const { t } = useI18n()
 
 const selectorVisible = ref(false)
@@ -151,21 +146,10 @@ const rightTeam = computed<TeamBase | null>(() => {
   return placeholderTeamBase(rightTeamId.value)
 })
 
-const compareHeroImage = computed(() => visibleHeroImage(
-  pageHero.settled.value,
-  pageHero.configured.value,
-  pageHero.imageUrl.value,
-  teamBackground,
-))
 const compareHeroBgStyle = computed(() => ({
-  backgroundImage: compareHeroImage.value ? `url(${compareHeroImage.value})` : 'none',
-  backgroundPosition: pageHero.configured.value ? pageHero.objectPosition.value : 'center',
+  backgroundImage: `url(${teamBackground})`,
+  backgroundPosition: 'center',
 }))
-const compareHeroOverlayStyle = computed(() => {
-  if (!pageHero.configured.value) return undefined
-  if (pageHero.fullImage.value) return { opacity: 0 }
-  return { opacity: 1, background: `rgba(0, 0, 0, ${pageHero.maskOpacity.value / 100})` }
-})
 
 const overviewIconMap: Record<string, string> = {
   winRate: compareIcon1,
@@ -481,7 +465,7 @@ function getTeamNameSizeClass(name: string) {
     <div class="site-shell team-compare-page__shell">
       <section class="compare-hero">
         <div class="compare-hero__bg" :style="compareHeroBgStyle" aria-hidden="true" />
-        <div class="compare-hero__overlay" :style="compareHeroOverlayStyle" aria-hidden="true" />
+        <div class="compare-hero__overlay" aria-hidden="true" />
 
         <div class="compare-hero__inner team-compare-content">
           <nav class="compare-hero__crumb" :aria-label="t('publicPages.team.breadcrumb')">

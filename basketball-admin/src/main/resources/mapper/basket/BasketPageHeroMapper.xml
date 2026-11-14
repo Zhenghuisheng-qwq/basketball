@@ -58,7 +58,7 @@
     <select id="selectGenericList" resultType="com.zhs.basket.resp.PageHeroResp">
         <include refid="detailSelect"/>
         where h.is_delete = 0 and h.season_id = 0
-          and h.page_key in ('DATA', 'HALL', 'ANNOUNCEMENT', 'PARTNER')
+          and h.page_key in ('DATA', 'HALL', 'ANNOUNCEMENT', 'PARTNER', 'EVENT_LEAGUE', 'EVENT_ARENA', 'EVENT_CUP', 'EVENT_OPEN')
         order by h.page_key
     </select>
 

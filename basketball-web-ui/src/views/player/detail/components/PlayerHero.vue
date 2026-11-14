@@ -5,8 +5,6 @@ import { iconAssets } from '@/constants/iconAssets'
 import TeamLogo from '@/components/team/TeamLogo.vue'
 import PlayerAvatar from '@/components/player/PlayerAvatar.vue'
 import type { PlayerProfile } from '../types'
-import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
-
 const teamBackground = iconAssets['tournament/team_background.png']
 const teamIcon = iconAssets['team/master.png']
 const platformIcon = iconAssets['person/platform.png']
@@ -18,22 +16,11 @@ const props = defineProps<{
 }>()
 
 const { t } = useI18n()
-const pageHero = usePublicPageHero('EVENT_SEASON', computed(() => props.profile.seasonId || ''))
 
-const heroBgStyle = computed(() => {
-  const image = visibleHeroImage(
-    pageHero.settled.value,
-    pageHero.configured.value,
-    pageHero.imageUrl.value,
-    teamBackground,
-  )
-  if (!image) return { backgroundImage: 'none' }
-  const mask = pageHero.configured.value && !pageHero.fullImage.value ? pageHero.maskOpacity.value / 100 : 0.82
-  return {
-    backgroundImage: `linear-gradient(90deg, rgba(0,0,0,${mask}) 0%, rgba(0,0,0,0.55) 48%, rgba(0,0,0,0.32) 100%), url(${image})`,
-    backgroundPosition: pageHero.configured.value ? pageHero.objectPosition.value : 'center',
-  }
-})
+const heroBgStyle = computed(() => ({
+  backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.82) 0%, rgba(0,0,0,0.55) 48%, rgba(0,0,0,0.32) 100%), url(${teamBackground})`,
+  backgroundPosition: 'center',
+}))
 
 const teamForLogo = computed(() => ({
   id: props.profile.currentTeamId,

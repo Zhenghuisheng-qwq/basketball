@@ -32,6 +32,7 @@ const {
   toggleMenu,
   navigate: navigateMegaMenuEntry,
   getEntryHighlight,
+  eventEntries,
 } = usePublicCompetitionMegaMenu()
 
 const navItems = computed(() => [
@@ -441,6 +442,7 @@ onBeforeUnmount(() => {
 
         <PublicCompetitionMobileMenu
           :is-events-nav-active="isEventsNavActive"
+          :entries="eventEntries"
           :get-entry-highlight="getEntryHighlight"
           @navigate="handleMobileNavigate"
           @close="closeMobileMenu"

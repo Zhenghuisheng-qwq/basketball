@@ -83,6 +83,7 @@ function platformLabel(event: AvailableEvent) {
   <div class="event-list-card">
     <div class="event-table-head" :class="headClass">
       <span>{{ t('accountEvents.available.name') }}</span>
+      <span>{{ t('accountEvents.available.action') }}</span>
       <span>{{ t('accountEvents.available.season') }}</span>
       <span>{{ t('accountEvents.available.platform') }}</span>
       <span>{{ t('accountEvents.available.signupTime') }}</span>
@@ -97,7 +98,6 @@ function platformLabel(event: AvailableEvent) {
         <span>{{ t('accountEvents.available.myRoster') }}</span>
         <span>{{ t('accountEvents.available.captainGrant') }}</span>
       </template>
-      <span>{{ t('accountEvents.available.action') }}</span>
     </div>
 
     <div
@@ -109,6 +109,23 @@ function platformLabel(event: AvailableEvent) {
       <div class="event-table-row__name-cell">
         <strong class="event-table-row__name">{{ event.tournamentName }}</strong>
         <span v-if="event.displayTitle" class="event-table-row__subtitle">{{ event.displayTitle }}</span>
+      </div>
+      <div class="event-table-row__action">
+        <button
+          type="button"
+          :class="isPrimaryAction(event) ? 'account-btn-primary event-table-row__btn' : 'account-btn-secondary event-table-row__btn'"
+          :disabled="isPrimaryDisabled(event)"
+          :title="event.disabledReason"
+          @click="emit('action', event)"
+        >
+          {{ event.actionText }}
+        </button>
+        <span
+          v-if="isPrimaryDisabled(event) && event.disabledReason"
+          class="event-table-row__disabled-reason"
+        >
+          {{ event.disabledReason }}
+        </span>
       </div>
       <span>{{ event.seasonName || event.competitionSeasonName || '-' }}</span>
       <span>{{ platformLabel(event) }}</span>
@@ -132,24 +149,6 @@ function platformLabel(event: AvailableEvent) {
         <span>{{ event.userRosterStatusText || t('accountEvents.available.noRoster') }}</span>
         <span>{{ isCaptain ? (event.captainGrantStatusText || '-') : t('accountEvents.available.captainOnly') }}</span>
       </template>
-
-      <div class="event-table-row__action">
-        <button
-          type="button"
-          :class="isPrimaryAction(event) ? 'account-btn-primary event-table-row__btn' : 'account-btn-secondary event-table-row__btn'"
-          :disabled="isPrimaryDisabled(event)"
-          :title="event.disabledReason"
-          @click="emit('action', event)"
-        >
-          {{ event.actionText }}
-        </button>
-        <span
-          v-if="isPrimaryDisabled(event) && event.disabledReason"
-          class="event-table-row__disabled-reason"
-        >
-          {{ event.disabledReason }}
-        </span>
-      </div>
     </div>
   </div>
 </template>
@@ -176,36 +175,23 @@ function platformLabel(event: AvailableEvent) {
 .event-table-head--no-team,
 .event-table-row--no-team {
   grid-template-columns:
-    minmax(180px, 1.2fr)
+    minmax(160px, 1.2fr)
+    120px
     minmax(90px, 0.7fr)
     minmax(80px, 0.5fr)
     minmax(140px, 0.9fr)
     minmax(140px, 0.9fr)
     minmax(90px, 0.6fr)
-    minmax(100px, 0.6fr)
-    minmax(140px, 0.8fr);
+    minmax(100px, 0.6fr);
 }
 
 .event-table-head--member,
-.event-table-row--member {
-  grid-template-columns:
-    minmax(180px, 1.1fr)
-    minmax(90px, 0.7fr)
-    minmax(80px, 0.5fr)
-    minmax(130px, 0.85fr)
-    minmax(130px, 0.85fr)
-    minmax(90px, 0.6fr)
-    minmax(90px, 0.6fr)
-    minmax(80px, 0.5fr)
-    minmax(80px, 0.5fr)
-    minmax(90px, 0.55fr)
-    minmax(140px, 0.9fr);
-}
-
+.event-table-row--member,
 .event-table-head--captain,
 .event-table-row--captain {
   grid-template-columns:
-    minmax(180px, 1.1fr)
+    minmax(160px, 1.1fr)
+    120px
     minmax(90px, 0.7fr)
     minmax(80px, 0.5fr)
     minmax(130px, 0.85fr)
@@ -214,8 +200,7 @@ function platformLabel(event: AvailableEvent) {
     minmax(90px, 0.6fr)
     minmax(80px, 0.5fr)
     minmax(80px, 0.5fr)
-    minmax(100px, 0.6fr)
-    minmax(140px, 0.9fr);
+    minmax(100px, 0.6fr);
 }
 
 .event-table-head {
@@ -226,8 +211,8 @@ function platformLabel(event: AvailableEvent) {
   font-size: 13px;
   font-weight: 800;
 
-  span:last-child {
-    text-align: right;
+  span:nth-child(2) {
+    text-align: left;
   }
 }
 
@@ -264,7 +249,7 @@ function platformLabel(event: AvailableEvent) {
   &__action {
     display: flex;
     flex-wrap: wrap;
-    justify-content: flex-end;
+    justify-content: flex-start;
     gap: 6px;
   }
 
@@ -277,7 +262,7 @@ function platformLabel(event: AvailableEvent) {
 
   &__disabled-reason {
     width: 100%;
-    text-align: right;
+    text-align: left;
     font-size: 12px;
     color: #b42318;
     line-height: 1.3;

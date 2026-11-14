@@ -102,3 +102,130 @@
   color: var(--theme-text, #171717);
   border-bottom-color: var(--theme-border, rgba(22, 22, 22, 0.14));
 }
+
+/* 首页正文整页跟随已发布主题：纸带、资讯、当前赛事、比赛卡和数据焦点。 */
+.site-main[data-theme='custom'] .home-page {
+  .home-match-section,
+  .home-team-section,
+  .home-combined-section,
+  .home-data-focus-section,
+  .home-announce-section,
+  .home-community-section,
+  .home-current-event-section {
+    background: var(--theme-bg, #050505);
+  }
+
+  .paper-band-light {
+    background-color: var(--theme-content, #e9e7e7);
+    background-image: none;
+    color: var(--theme-text, #171717);
+  }
+
+  .combined-column-heading h2,
+  .section-head h2,
+  .section-head-dark h2,
+  .paper-band-light .section-head h2,
+  .event-title,
+  .match-time,
+  .data-leader-card h3,
+  .data-leader-card__team b,
+  .weekly-team__copy strong,
+  .weekly-stat b {
+    color: var(--theme-text, #171717);
+  }
+
+  .section-head h2::before,
+  .combined-column-heading h2::before {
+    background: var(--theme-primary, #e10613);
+  }
+
+  .home-kicker,
+  .news-more,
+  .data-leader-card strong,
+  .data-focus-filter__trigger small,
+  .weekly-stat b.is-accent,
+  .weekly-stat em {
+    color: var(--theme-accent, #e10613);
+  }
+
+  .news-tabs__item {
+    background: var(--theme-card, #fff);
+    color: var(--theme-text, #171717);
+    border: 1px solid var(--theme-border, rgba(25, 25, 25, 0.11));
+  }
+
+  .news-tabs__item--active {
+    background: var(--theme-primary, #e10613);
+    border-color: var(--theme-primary, #e10613);
+    color: var(--theme-on-accent, #fff);
+  }
+
+  .news-list__item {
+    border-bottom-color: var(--theme-border, rgba(25, 25, 25, 0.11));
+  }
+
+  .news-list__item strong {
+    color: var(--theme-text, #171717);
+  }
+
+  .news-list__item time,
+  .event-detail-item,
+  .data-leader-card__team small,
+  .weekly-team__copy small,
+  .weekly-stat > span,
+  .weekly-form > span,
+  .section-more-dark,
+  .match-date,
+  .home-state {
+    color: var(--theme-text-muted, #666);
+  }
+
+  .home-state--error {
+    color: #e10613;
+  }
+
+  .news-list__item:hover strong,
+  .section-more-dark:hover {
+    color: var(--theme-accent, #e10613);
+  }
+
+  .news-list__icon {
+    background: var(--theme-primary, #e10613);
+  }
+
+  .home-match-card,
+  .current-event-card,
+  .data-leader-card,
+  .weekly-focus-card,
+  .data-focus-filter__menu {
+    background: var(--theme-card, #fff);
+    color: var(--theme-text, #171717);
+    border-color: var(--theme-border, rgba(25, 25, 25, 0.11));
+  }
+
+  .data-focus-filter__menu button {
+    color: var(--theme-text, #171717);
+  }
+
+  .data-focus-filter__menu button[aria-selected='true'],
+  .data-focus-filter__menu button:hover {
+    color: var(--theme-accent, #e10613);
+  }
+
+  .weekly-focus-card {
+    border-left-color: var(--theme-primary, #e10613);
+  }
+
+  .event-status-tag,
+  .match-competition-tag {
+    background: var(--theme-card, #fff);
+    color: var(--theme-text-muted, #666);
+    border-color: var(--theme-border, rgba(25, 25, 25, 0.11));
+  }
+
+  .event-status-tag--active,
+  .event-status-tag--upcoming {
+    color: var(--theme-primary, #e10613);
+    border-color: var(--theme-primary, #e10613);
+  }
+}

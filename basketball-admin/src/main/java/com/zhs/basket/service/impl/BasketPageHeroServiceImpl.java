@@ -28,7 +28,9 @@ import java.util.Set;
 public class BasketPageHeroServiceImpl implements IBasketPageHeroService {
 
     static final String EVENT_SEASON = "EVENT_SEASON";
-    private static final Set<String> GENERIC_KEYS = Set.of("DATA", "HALL", "ANNOUNCEMENT", "PARTNER");
+    private static final Set<String> GENERIC_KEYS = Set.of(
+            "DATA", "HALL", "ANNOUNCEMENT", "PARTNER",
+            "EVENT_LEAGUE", "EVENT_ARENA", "EVENT_CUP", "EVENT_OPEN");
     private static final Set<String> MODES = Set.of("FULL_IMAGE", "BACKGROUND_TEXT");
     private static final int DRAFT = 0;
     private static final int PUBLISHED = 1;

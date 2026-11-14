@@ -108,7 +108,10 @@ defineExpose({
             <img v-if="entry.icon" :src="entry.icon" alt="" />
             <template v-else>{{ entry.abbrev }}</template>
           </span>
-          <span class="menu-entry__name">{{ entry.label }}</span>
+          <span class="menu-entry__copy">
+            <span class="menu-entry__name">{{ entry.label }}</span>
+            <span v-if="entry.hint" class="menu-entry__hint">{{ entry.hint }}</span>
+          </span>
         </button>
       </section>
     </div>
@@ -133,7 +136,7 @@ defineExpose({
 
   /* 赛事：贴近 master CompetitionDropdown 紧凑列表 */
   &[data-menu-type='event'] {
-    --mega-menu-width: clamp(220px, 16vw, 260px);
+    --mega-menu-width: clamp(260px, 22vw, 340px);
   }
 }
 
@@ -161,7 +164,7 @@ defineExpose({
 }
 
 .competition-mega-menu[data-menu-type='event'] .menu-section__title {
-  display: none;
+  margin: 0 12px 8px;
 }
 
 .menu-entry {
@@ -171,7 +174,7 @@ defineExpose({
   align-items: center;
   column-gap: 10px;
   width: 100%;
-  min-height: 44px;
+  min-height: 52px;
   margin: 0;
   padding: 6px 20px;
   border: 0;
@@ -245,10 +248,26 @@ defineExpose({
   }
 }
 
+.menu-entry__copy {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
 .menu-entry__name {
-  flex: 1;
   min-width: 0;
   font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.menu-entry__hint {
+  min-width: 0;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;

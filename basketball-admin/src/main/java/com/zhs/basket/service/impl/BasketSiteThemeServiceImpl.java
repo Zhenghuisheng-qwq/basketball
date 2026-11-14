@@ -36,7 +36,7 @@ import java.util.regex.Pattern;
 @Service
 public class BasketSiteThemeServiceImpl implements IBasketSiteThemeService {
 
-    private static final Set<String> SCOPES = Set.of("HOME", "SEASON", "BASE");
+    private static final Set<String> SCOPES = Set.of("HOME", "SEASON", "BASE", "GLOBAL");
     private static final Set<String> DISPLAYS = Set.of("TOP_CENTER", "SCROLL", "FIXED");
     private static final Pattern COLOR = Pattern.compile("^#[0-9a-fA-F]{6}$");
     private static final int DRAFT = 0;
@@ -110,8 +110,14 @@ public class BasketSiteThemeServiceImpl implements IBasketSiteThemeService {
         assertAny(BasketContentPerms.SITE_THEME_QUERY, BasketContentPerms.SITE_THEME_PUBLISH);
         BasketSiteTheme theme = require(themeId);
         String scope = normalizeScope(scopeType);
-        long scopeValue = normalizeScopeId(scope, seasonId);
         SiteThemeImpactResp resp = new SiteThemeImpactResp();
+        if ("GLOBAL".equals(scope)) {
+            resp.getAffected().add("首页");
+            resp.getAffected().add("数据中心、名人堂、公告、合作伙伴，以及没有单独主题的赛事页");
+            resp.setReplaceHint("全站会同时换掉首页和基础主题。某一届赛事如果单独发过主题，仍用那一届自己的。球队页和球员页不跟某一届赛事走。");
+            return resp;
+        }
+        long scopeValue = normalizeScopeId(scope, seasonId);
         for (SiteThemeBindingResp binding : bindingsOf(theme.getId())) {
             resp.getAffected().add(binding.getScopeLabel());
         }
@@ -152,10 +158,15 @@ public class BasketSiteThemeServiceImpl implements IBasketSiteThemeService {
         if (themeMapper.applyPublish(row) != 1) {
             throw conflict();
         }
-        upsertBinding(scope, scopeValue, existing.getId(), nextVersion);
+        if ("GLOBAL".equals(scope)) {
+            upsertBinding("HOME", 0L, existing.getId(), nextVersion);
+            upsertBinding("BASE", 0L, existing.getId(), nextVersion);
+        } else {
+            upsertBinding(scope, scopeValue, existing.getId(), nextVersion);
+        }
         themeMapper.touchBindings(existing.getId(), nextVersion, operator());
         publicCacheCleaner.clearAfterCommit();
-        return "主题已发布";
+        return "GLOBAL".equals(scope) ? "主题已发布到全站" : "主题已发布";
     }
 
     @Override

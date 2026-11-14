@@ -31,7 +31,10 @@ export function usePublicPageHero(
         if (current === seq) settled.value = true
         return
       }
-      if (key === 'EVENT_SEASON' && !season) return
+      if (key === 'EVENT_SEASON' && !season) {
+        if (current === seq) settled.value = true
+        return
+      }
       try {
         const res = await getPublicPageHero(key, key === 'EVENT_SEASON' ? season : undefined)
         if (current !== seq) return

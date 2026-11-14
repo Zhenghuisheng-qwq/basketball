@@ -9,8 +9,6 @@ import type { TeamBase, TeamStage } from '@/types/team'
 import {
   PUBLIC_TEAM_PAGE_KEY,
 } from '@/views/tournament/team/composables/usePublicTeamPage'
-import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
-
 const props = defineProps<{
   team: TeamBase
   teamId: string
@@ -26,12 +24,6 @@ const router = useRouter()
 const { t } = useI18n()
 const compareModalVisible = ref(false)
 const teamPageCtx = inject(PUBLIC_TEAM_PAGE_KEY, null)
-const pageHero = usePublicPageHero('EVENT_SEASON', computed(() => {
-  const fromTeam = teamPageCtx?.seasonId.value
-  if (fromTeam) return fromTeam
-  const query = route.query.seasonId
-  return typeof query === 'string' ? query : ''
-}))
 
 const stageLabels = computed<Record<TeamStage, string>>(() => ({
   regular: t('publicPages.team.regular'),
@@ -107,20 +99,10 @@ function handleSelectCompareTeam(targetTeamId: string) {
   })
 }
 
-const heroBgStyle = computed(() => {
-  const image = visibleHeroImage(
-    pageHero.settled.value,
-    pageHero.configured.value,
-    pageHero.imageUrl.value,
-    teamBackground,
-  )
-  if (!image) return { backgroundImage: 'none' }
-  const mask = pageHero.configured.value && !pageHero.fullImage.value ? pageHero.maskOpacity.value / 100 : 0.72
-  return {
-    backgroundImage: `linear-gradient(90deg, rgba(0, 0, 0, ${mask}) 0%, rgba(0, 0, 0, 0.38) 45%, rgba(0, 0, 0, 0.15) 100%), url(${image})`,
-    backgroundPosition: pageHero.configured.value ? pageHero.objectPosition.value : 'center',
-  }
-})
+const heroBgStyle = computed(() => ({
+  backgroundImage: `linear-gradient(90deg, rgba(0, 0, 0, 0.72) 0%, rgba(0, 0, 0, 0.38) 45%, rgba(0, 0, 0, 0.15) 100%), url(${teamBackground})`,
+  backgroundPosition: 'center',
+}))
 
 interface HeroInfoCard {
   key: string

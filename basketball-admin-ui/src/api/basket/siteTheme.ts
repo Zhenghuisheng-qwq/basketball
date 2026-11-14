@@ -36,3 +36,13 @@ export function deleteSiteTheme(id: number): Promise<AjaxResult> {
 export function impactSiteTheme(themeId: number, scopeType: string, seasonId?: number): Promise<AjaxResult<SiteThemeImpact>> {
   return request({ url: '/basket/site-theme/impact', method: 'get', params: { themeId, scopeType, seasonId } })
 }
+
+export interface SiteThemeSeasonOption {
+  id: number
+  label: string
+  subLabel?: string
+}
+
+export function listSiteThemeSeasonOptions(): Promise<AjaxResult<SiteThemeSeasonOption[]>> {
+  return request({ url: '/basket/site-theme/season-options', method: 'get' })
+}

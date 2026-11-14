@@ -996,26 +996,18 @@ async function processApplication(applicationId: string, approve: boolean) {
   }
 }
 
-async function startRegistrationForSeason(season: AvailableSeasonItemDto) {
-  if (!teamId.value) return
-  registrationDraftForm.seasonId = season.seasonId
-  registrationDraftForm.platformCode = season.platformCode || ''
-  try {
-    const detail = await teamStore.createRegistrationDraftAction(teamId.value, {
-      seasonId: season.seasonId,
-      platformCode: season.platformCode || undefined,
-      remark: registrationDraftForm.remark.trim() || undefined,
-    })
-    ElMessage.success(t('accountTeam.registration.saved'))
-    await refreshRegistrationLists()
-    goToRegistrationEditFlow(router, {
-      registrationId: detail.registrationId,
-      seasonId: detail.seasonId || season.seasonId,
-      platformCode: detail.platformCode || season.platformCode,
-    })
-  } catch (error) {
-    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.registration.createFailed'))
+function startRegistrationForSeason(season: AvailableSeasonItemDto) {
+  if (season.canRegister === false) {
+    ElMessage.warning(season.cannotRegisterReason || t('accountTeam.registration.createFailed'))
+    return
   }
+  const divisionId = String(season.seasonId || '').trim()
+  if (!divisionId) return
+  router.push({
+    name: 'AccountV4Registration',
+    params: { divisionId },
+    query: season.platformCode ? { platformCode: season.platformCode } : undefined,
+  })
 }
 
 async function confirmPlatformAndCreateDraft() {

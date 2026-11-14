@@ -5,47 +5,84 @@ import { useRoute } from 'vue-router'
 import LeagueHeroMeta from './LeagueHeroMeta.vue'
 import { useLeagueHeroMeta } from '../composables/useLeagueHeroMeta'
 import type { usePublicSeasonContext } from '../composables/usePublicSeasonContext'
-import { pickCompetitionSeriesCode, resolveCompetitionTheme } from '@/config/competitionTheme'
-import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
+import { resolveCompetitionTheme } from '@/config/competitionTheme'
+import { usePublicPageHero } from '@/composables/usePublicPageHero'
+
+function routeText(value: unknown) {
+  const raw = Array.isArray(value) ? value[0] : value
+  return String(raw ?? '').trim()
+}
+
+function firstKnownSeriesCode(...candidates: Array<string | null | undefined>) {
+  for (const candidate of candidates) {
+    const normalized = String(candidate || '').trim().toUpperCase()
+    if (normalized === 'LEAGUE' || normalized === 'ARENA' || normalized === 'CUP' || normalized === 'OPEN') {
+      return normalized
+    }
+  }
+  return ''
+}
 
 const route = useRoute()
 const { t } = useI18n()
 const { heroMetaItems } = useLeagueHeroMeta()
-const seasonHeroId = computed(() => {
-  const param = route.params.seasonId
-  if (typeof param === 'string' && param.trim()) return param.trim()
-  const query = route.query.seasonId
-  return typeof query === 'string' ? query.trim() : ''
-})
-const pageHero = usePublicPageHero('EVENT_SEASON', seasonHeroId)
+const seasonHeroId = computed(() => routeText(route.params.seasonId) || routeText(route.query.seasonId))
 const ctx = inject<ReturnType<typeof usePublicSeasonContext> | null>('publicSeasonContext', null)
 const seriesLabel = computed(
   () => ctx?.currentTournament.value?.tournamentName || ctx?.divisionDetail.value?.seriesName || t('events.title'),
 )
-const seriesCode = computed(() => {
-  const querySeries = route.query.series ?? route.query.seriesCode
-  return pickCompetitionSeriesCode(
-    typeof querySeries === 'string' ? querySeries : '',
-    ctx?.divisionDetail.value?.seriesCode,
-    ctx?.seasonDetail.value?.seriesCode,
-    ctx?.currentTournament.value?.tournamentNo,
-  )
-})
+const explicitSeriesCode = computed(() => firstKnownSeriesCode(
+  routeText(route.query.series ?? route.query.seriesCode),
+  ctx?.divisionDetail.value?.seriesCode,
+  ctx?.seasonDetail.value?.seriesCode,
+  ctx?.currentTournament.value?.tournamentNo,
+))
+const seriesCode = computed(() => explicitSeriesCode.value || 'LEAGUE')
+const pageHero = usePublicPageHero('EVENT_SEASON', seasonHeroId)
+const seriesHeroKey = computed(() => (explicitSeriesCode.value ? `EVENT_${explicitSeriesCode.value}` : ''))
+const seriesHero = usePublicPageHero(seriesHeroKey)
 const heroTheme = computed(() => resolveCompetitionTheme(seriesCode.value))
-const heroImage = computed(() => visibleHeroImage(
-  pageHero.settled.value,
-  pageHero.configured.value,
-  pageHero.imageUrl.value,
-  heroTheme.value.topImage,
+const seasonHeroActive = computed(() => Boolean(
+  seasonHeroId.value && pageHero.settled.value && pageHero.configured.value && pageHero.imageUrl.value,
 ))
-const heroPosition = computed(() => (
-  pageHero.configured.value ? pageHero.objectPosition.value : heroTheme.value.backgroundPosition
+const seriesHeroActive = computed(() => Boolean(
+  seriesHero.settled.value && seriesHero.configured.value && seriesHero.imageUrl.value,
 ))
-const heroAlt = computed(() => pageHero.altText.value || seriesLabel.value)
-const showHeroMeta = computed(() => !(pageHero.configured.value && pageHero.fullImage.value))
+const heroReady = computed(() => pageHero.settled.value && seriesHero.settled.value)
+const seriesLookupFinished = computed(() => {
+  if (!seasonHeroId.value) return true
+  const state = ctx?.overviewState.value
+  return state === 'success' || state === 'empty' || state === 'error'
+})
+const heroImage = computed(() => {
+  if (!heroReady.value) return ''
+  if (seasonHeroActive.value) return pageHero.imageUrl.value
+  if (seriesHeroActive.value) return seriesHero.imageUrl.value
+  if (explicitSeriesCode.value || seriesLookupFinished.value) return heroTheme.value.topImage
+  return ''
+})
+const heroPosition = computed(() => {
+  if (seasonHeroActive.value) return pageHero.objectPosition.value
+  if (seriesHeroActive.value) return seriesHero.objectPosition.value
+  return heroTheme.value.backgroundPosition
+})
+const heroAlt = computed(() => pageHero.altText.value || seriesHero.altText.value || seriesLabel.value)
+const showHeroMeta = computed(() => {
+  if (seasonHeroActive.value) return !pageHero.fullImage.value
+  if (seriesHeroActive.value) return !seriesHero.fullImage.value
+  return true
+})
 const heroOverlayStyle = computed(() => {
-  if (pageHero.configured.value && pageHero.fullImage.value) return { background: 'transparent' }
-  if (pageHero.configured.value) return { background: `rgba(0, 0, 0, ${pageHero.maskOpacity.value / 100})` }
+  if (seasonHeroActive.value) {
+    return pageHero.fullImage.value
+      ? { background: 'transparent' }
+      : { background: `rgba(0, 0, 0, ${pageHero.maskOpacity.value / 100})` }
+  }
+  if (seriesHeroActive.value) {
+    return seriesHero.fullImage.value
+      ? { background: 'transparent' }
+      : { background: `rgba(0, 0, 0, ${seriesHero.maskOpacity.value / 100})` }
+  }
   return { background: heroTheme.value.overlay }
 })
 </script>
