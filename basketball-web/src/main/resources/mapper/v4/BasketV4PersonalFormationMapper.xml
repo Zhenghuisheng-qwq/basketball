@@ -55,7 +55,7 @@
         select
             a.id as assignmentId,
             a.player_id as playerId,
-            coalesce(p.game_nickname, mp.nickname) as playerName,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) as playerName,
             a.assignment_role as assignmentRole,
             a.join_status as joinStatus,
             a.sort_order as sortOrder

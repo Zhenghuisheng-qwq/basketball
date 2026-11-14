@@ -42,6 +42,14 @@ public class CurrentPlayerNameSupport {
         }
     }
 
+    /** 账户昵称优先，没有昵称再用认证时的游戏昵称。 */
+    public String displayName(Long playerId) {
+        if (playerId == null) {
+            return null;
+        }
+        return bySourcePlayerId(List.of(playerId)).get(playerId);
+    }
+
     public void rememberSource(Map<Long, Long> eventPlayerToSource, BasketEventPlayer eventPlayer) {
         if (eventPlayer == null || eventPlayer.getId() == null || eventPlayer.getSourcePlayerId() == null) {
             return;

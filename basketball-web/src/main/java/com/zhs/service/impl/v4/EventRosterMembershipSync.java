@@ -2,6 +2,7 @@ package com.zhs.service.impl.v4;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.zhs.dao.BasketMemberProfileDao;
 import com.zhs.dao.BasketPlayerPlatformAccountDao;
 import com.zhs.dao.BasketPlayerProfileDao;
 import com.zhs.dao.BasketTeamDao;
@@ -17,6 +18,7 @@ import com.zhs.dao.v4.BasketRegistrationRosterChangeDao;
 import com.zhs.dao.v4.BasketRegistrationRosterChangePlayerDao;
 import com.zhs.dao.v4.BasketV4MatchDao;
 import com.zhs.dao.v4.BasketV4MatchPlayerStatDao;
+import com.zhs.model.BasketMemberProfile;
 import com.zhs.model.BasketPlayerPlatformAccount;
 import com.zhs.model.BasketPlayerProfile;
 import com.zhs.model.BasketTeam;
@@ -38,6 +40,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -85,6 +88,8 @@ public class EventRosterMembershipSync {
     private BasketEventPlayerDao eventPlayerDao;
     @Resource
     private BasketPlayerProfileDao playerProfileDao;
+    @Resource
+    private BasketMemberProfileDao memberProfileDao;
     @Resource
     private BasketPlayerPlatformAccountDao platformAccountDao;
     @Resource
@@ -322,7 +327,7 @@ public class EventRosterMembershipSync {
             row.setPlatformIdentityId(account.getId());
             row.setPlatformCode(GameTerminalSupport.normalize(account.getPlatform()));
             row.setGameIdSnapshot(account.getDisplayGameId());
-            row.setPlayerNameSnapshot(profile.getGameNickname());
+            row.setPlayerNameSnapshot(currentName(profile));
             row.setPosition(profile.getPositionCode());
             row.setIsCaptain(member.getPlayerId().equals(registration.getCaptainPlayerId()) ? 1 : 0);
             row.setIsStarter(1);
@@ -721,7 +726,7 @@ public class EventRosterMembershipSync {
         eventPlayer.setPlatformIdentityId(player.getPlatformIdentityId());
         eventPlayer.setPlatformCode(player.getPlatformCode());
         eventPlayer.setGameIdSnapshot(player.getGameIdSnapshot());
-        eventPlayer.setPlayerNameSnapshot(player.getPlayerNameSnapshot());
+        eventPlayer.setPlayerNameSnapshot(currentName(player));
         eventPlayer.setPosition(player.getPosition());
         eventPlayer.setJerseyNo(player.getJerseyNo());
         eventPlayer.setIsCaptain(player.getIsCaptain());
@@ -743,5 +748,27 @@ public class EventRosterMembershipSync {
         audit.setUpdateTime(now);
         audit.setIsDelete(NOT_DELETED);
         registrationAuditDao.insert(audit);
+    }
+
+    private String currentName(BasketPlayerProfile profile) {
+        if (profile == null) {
+            return null;
+        }
+        if (profile.getMemberId() != null) {
+            BasketMemberProfile member = memberProfileDao.selectOne(new LambdaQueryWrapper<BasketMemberProfile>()
+                    .eq(BasketMemberProfile::getMemberId, profile.getMemberId())
+                    .eq(BasketMemberProfile::getIsDelete, NOT_DELETED)
+                    .last("limit 1"));
+            if (member != null && StringUtils.hasText(member.getNickname())) {
+                return member.getNickname().trim();
+            }
+        }
+        return profile.getGameNickname();
+    }
+
+    private String currentName(BasketRegistrationPlayer player) {
+        BasketPlayerProfile profile = player.getPlayerId() == null ? null : playerProfileDao.selectById(player.getPlayerId());
+        String name = currentName(profile);
+        return StringUtils.hasText(name) ? name : player.getPlayerNameSnapshot();
     }
 }

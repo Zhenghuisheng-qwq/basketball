@@ -51,7 +51,7 @@
             a.id as assignment_id,
             a.personal_registration_id,
             a.player_id,
-            coalesce(p.game_nickname, mp.nickname) as player_name,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) as player_name,
             a.assignment_role,
             a.join_status,
             a.sort_order

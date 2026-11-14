@@ -53,7 +53,7 @@
             pr.assigned_draw_team_id as assignedDrawTeamId,
             pr.converted_registration_id as convertedRegistrationId,
             dt.temporary_team_name as assignedTemporaryTeamName,
-            coalesce(cp.game_nickname, mp.nickname) as assignedCaptainName,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(cp.game_nickname), '')) as assignedCaptainName,
             case when b.batch_status in ('LOCKED', 'CONVERTED') then 1 else 0 end as formationLocked
         from basket_personal_registration pr
         left join basket_season se on se.id = pr.season_id and se.is_delete = 0

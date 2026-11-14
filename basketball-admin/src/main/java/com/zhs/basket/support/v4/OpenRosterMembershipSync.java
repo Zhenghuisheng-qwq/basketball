@@ -174,7 +174,7 @@ public class OpenRosterMembershipSync {
             row.setPlatformIdentityId(account.getId());
             row.setPlatformCode(participationSupport.normalizePlatformCode(account.getPlatform()));
             row.setGameIdSnapshot(account.getDisplayGameId());
-            row.setPlayerNameSnapshot(profile.getGameNickname() != null ? profile.getGameNickname() : member.getNickname());
+            row.setPlayerNameSnapshot(participationSupport.snapshotName(profile));
             row.setPosition(profile.getPositionCode());
             row.setIsCaptain(member.getPlayerId().equals(registration.getCaptainPlayerId()) ? 1 : 0);
             row.setIsStarter(1);

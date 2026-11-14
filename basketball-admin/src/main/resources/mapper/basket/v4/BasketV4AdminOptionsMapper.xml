@@ -57,7 +57,7 @@
     <select id="selectTeamPlayerOptions" resultType="com.zhs.basket.vo.v4.BasketV4TeamPlayerOptionVo">
         select
             m.player_id as playerId,
-            coalesce(p.game_nickname, mp.nickname, concat('球员#', m.player_id)) as playerName,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), ''), concat('球员#', m.player_id)) as playerName,
             m.member_id as memberId,
             mp.nickname as memberNickname,
             (p.certification_status = 3) as certified,
@@ -83,7 +83,7 @@
     <select id="selectGrantablePlayerOptions" resultType="com.zhs.basket.vo.v4.BasketV4GrantablePlayerOptionVo">
         select
             p.id as playerId,
-            coalesce(p.game_nickname, mp.nickname, concat('球员#', p.id)) as playerName,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), ''), concat('球员#', p.id)) as playerName,
             p.member_id as memberId,
             mp.nickname as memberNickname,
             (p.certification_status = 3) as certified,

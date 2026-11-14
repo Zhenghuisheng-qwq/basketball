@@ -169,7 +169,7 @@ public class MembershipRosterApplier {
             row.setPlatformIdentityId(account.getId());
             row.setPlatformCode(participationSupport.normalizePlatformCode(account.getPlatform()));
             row.setGameIdSnapshot(account.getDisplayGameId());
-            row.setPlayerNameSnapshot(profile.getGameNickname());
+            row.setPlayerNameSnapshot(participationSupport.snapshotName(profile));
             row.setPosition(profile.getPositionCode());
             row.setIsCaptain(playerId.equals(registration.getCaptainPlayerId()) ? 1 : 0);
             row.setIsStarter(1);

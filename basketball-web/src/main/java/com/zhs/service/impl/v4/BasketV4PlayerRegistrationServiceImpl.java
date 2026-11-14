@@ -436,7 +436,9 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
                 .orderByAsc(BasketRegistrationPlayer::getSortOrder))) {
             V4RegistrationPlayerItemResp item = new V4RegistrationPlayerItemResp();
             item.setPlayerId(p.getPlayerId());
-            item.setPlayerName(p.getPlayerNameSnapshot());
+            BasketPlayerProfile profile = p.getPlayerId() == null ? null : playerProfileDao.selectById(p.getPlayerId());
+            String currentName = profile == null ? null : resolveDisplayName(profile, profile.getMemberId());
+            item.setPlayerName(StringUtils.hasText(currentName) ? currentName : p.getPlayerNameSnapshot());
             item.setIsCaptain(p.getIsCaptain());
             item.setSortOrder(p.getSortOrder());
             players.add(item);
@@ -641,7 +643,7 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
             row.setPlatformIdentityId(account.getId());
             row.setPlatformCode(normalizePlatformCode(account.getPlatform()));
             row.setGameIdSnapshot(account.getDisplayGameId());
-            row.setPlayerNameSnapshot(profile.getGameNickname());
+            row.setPlayerNameSnapshot(resolveDisplayName(profile, profile.getMemberId()));
             row.setPosition(profile.getPositionCode());
             row.setJerseyNo(null);
             row.setIsCaptain(playerId.equals(captainPlayerId) ? 1 : 0);
@@ -770,17 +772,17 @@ public class BasketV4PlayerRegistrationServiceImpl implements IBasketV4PlayerReg
     }
 
     private String resolveDisplayName(BasketPlayerProfile profile, Long memberId) {
-        if (StringUtils.hasText(profile.getGameNickname())) {
-            return profile.getGameNickname();
-        }
         if (memberId != null) {
             BasketMemberProfile memberProfile = memberProfileDao.selectOne(new LambdaQueryWrapper<BasketMemberProfile>()
                     .eq(BasketMemberProfile::getMemberId, memberId)
                     .eq(BasketMemberProfile::getIsDelete, NOT_DELETED)
                     .last("limit 1"));
             if (memberProfile != null && StringUtils.hasText(memberProfile.getNickname())) {
-                return memberProfile.getNickname();
+                return memberProfile.getNickname().trim();
             }
+        }
+        if (StringUtils.hasText(profile.getGameNickname())) {
+            return profile.getGameNickname();
         }
         return profile.getPlayerNo();
     }

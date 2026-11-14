@@ -42,6 +42,8 @@ public class PreMatchEventPlayerSync {
     @Autowired
     private BasketV4MatchPlayerStatMapper matchPlayerStatMapper;
     @Autowired
+    private CurrentPlayerNameSupport currentPlayerNameSupport;
+    @Autowired
     private BasketMatchSubmissionPlayerStatMapper submissionPlayerStatMapper;
 
     public void syncWritable(BasketRegistration registration) {
@@ -121,11 +123,16 @@ public class PreMatchEventPlayerSync {
         eventPlayer.setPlatformIdentityId(player.getPlatformIdentityId());
         eventPlayer.setPlatformCode(player.getPlatformCode());
         eventPlayer.setGameIdSnapshot(player.getGameIdSnapshot());
-        eventPlayer.setPlayerNameSnapshot(player.getPlayerNameSnapshot());
+        eventPlayer.setPlayerNameSnapshot(currentName(player));
         eventPlayer.setPosition(player.getPosition());
         eventPlayer.setJerseyNo(player.getJerseyNo());
         eventPlayer.setIsCaptain(player.getIsCaptain());
         eventPlayer.setIsStarter(player.getIsStarter());
         eventPlayer.setEventPlayerStatus(ACTIVE);
+    }
+
+    private String currentName(BasketRegistrationPlayer player) {
+        String name = currentPlayerNameSupport.displayName(player.getPlayerId());
+        return name != null && !name.isBlank() ? name : player.getPlayerNameSnapshot();
     }
 }

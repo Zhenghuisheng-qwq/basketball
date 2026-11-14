@@ -302,7 +302,7 @@ const registrationDetailRosterRows = computed(() => {
   if (detail.rosterLocked || detail.registrationStatus === 3) {
     return (detail.rosterItems || []).map((item) => ({
       key: item.teamMemberId,
-      name: item.gameNickname || item.playerNo || '-',
+      name: item.nickname || item.gameNickname || item.playerNo || '-',
       position: formatPositionCell(item.positionCode, undefined),
       platformId: '-',
       eligibility: t('accountTeam.registration.included'),
@@ -313,7 +313,7 @@ const registrationDetailRosterRows = computed(() => {
   if (selectedCandidates.length) {
     return selectedCandidates.map((candidate) => ({
       key: candidate.teamMemberId,
-      name: candidate.gameNickname || candidate.nickname || candidate.playerNo || '-',
+      name: candidate.nickname || candidate.gameNickname || candidate.playerNo || '-',
       position: formatPositionCell(candidate.positionCode, candidate.positionName),
       platformId: formatCandidatePlatformDisplay(candidate),
       eligibility: formatCandidateEligibility(candidate),
@@ -322,7 +322,7 @@ const registrationDetailRosterRows = computed(() => {
 
   return (detail.rosterItems || []).map((item) => ({
     key: item.teamMemberId,
-    name: item.gameNickname || item.playerNo || '-',
+    name: item.nickname || item.gameNickname || item.playerNo || '-',
     position: formatPositionCell(item.positionCode, undefined),
     platformId: '-',
     eligibility: t('accountTeam.registration.included'),

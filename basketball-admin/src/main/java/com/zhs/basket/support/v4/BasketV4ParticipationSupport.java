@@ -41,6 +41,8 @@ public class BasketV4ParticipationSupport {
     @Autowired
     private BasketPlayerProfileMapper playerProfileMapper;
     @Autowired
+    private CurrentPlayerNameSupport currentPlayerNameSupport;
+    @Autowired
     private BasketPlayerPlatformAccountMapper platformAccountMapper;
 
     public BasketTeam requireValidTeam(Long teamId) {
@@ -174,7 +176,7 @@ public class BasketV4ParticipationSupport {
             row.setPlatformIdentityId(account.getId());
             row.setPlatformCode(normalizePlatformCode(account.getPlatform()));
             row.setGameIdSnapshot(account.getDisplayGameId());
-            row.setPlayerNameSnapshot(profile.getGameNickname());
+            row.setPlayerNameSnapshot(snapshotName(profile));
             row.setPosition(profile.getPositionCode());
             row.setJerseyNo(null);
             row.setIsCaptain(playerId.equals(captainPlayerId) ? 1 : 0);
@@ -186,6 +188,14 @@ public class BasketV4ParticipationSupport {
             rows.add(row);
         }
         return rows;
+    }
+
+    public String snapshotName(BasketPlayerProfile profile) {
+        if (profile == null) {
+            return null;
+        }
+        String name = currentPlayerNameSupport.displayName(profile.getId());
+        return StringUtils.isNotEmpty(name) ? name : profile.getGameNickname();
     }
 
     /** @deprecated 旧 division+team 键，勿用于队长授权 */

@@ -111,7 +111,7 @@
             r.team_id,
             t.team_name,
             r.captain_player_id,
-            coalesce(p.game_nickname, mp.nickname) as captain_player_name,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) as captain_player_name,
             r.lineup_count,
             d.lineup_min_count,
             (
@@ -158,7 +158,7 @@
         <if test="registrationStatus != null and registrationStatus != ''">and r.registration_status = #{registrationStatus}</if>
         <if test="teamName != null and teamName != ''">and t.team_name like concat('%', #{teamName}, '%')</if>
         <if test="captainPlayerName != null and captainPlayerName != ''">
-            and coalesce(p.game_nickname, mp.nickname) like concat('%', #{captainPlayerName}, '%')
+            and coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) like concat('%', #{captainPlayerName}, '%')
         </if>
         order by case when r.registration_status = 'PENDING_REVIEW' then 0 else 1 end, r.submit_time desc, r.id desc
     </select>

@@ -69,7 +69,7 @@
             et.team_logo_file_id,
             et.team_short_name,
             et.captain_player_id,
-            coalesce(p.game_nickname, mp.nickname) as captain_player_name,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) as captain_player_name,
             et.event_team_no,
             et.event_team_status,
             et.create_time

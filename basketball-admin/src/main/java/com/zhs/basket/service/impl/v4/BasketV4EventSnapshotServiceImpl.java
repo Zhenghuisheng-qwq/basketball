@@ -9,10 +9,12 @@ import com.zhs.basket.mapper.BasketPlayerProfileMapper;
 import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketV4EventSnapshotService;
+import com.zhs.basket.support.v4.CurrentPlayerNameSupport;
 import com.zhs.basket.support.v4.PreMatchEventPlayerSync;
 import com.zhs.basket.support.v4.RosterEligibilityQueries;
 import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.common.exception.ServiceException;
+import com.zhs.common.utils.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -41,6 +43,8 @@ public class BasketV4EventSnapshotServiceImpl implements IBasketV4EventSnapshotS
     private BasketTeamMapper teamMapper;
     @Autowired
     private BasketPlayerProfileMapper playerProfileMapper;
+    @Autowired
+    private CurrentPlayerNameSupport currentPlayerNameSupport;
     @Autowired
     private V4PublicReadCachePublisher publicReadCachePublisher;
     @Autowired
@@ -134,7 +138,7 @@ public class BasketV4EventSnapshotServiceImpl implements IBasketV4EventSnapshotS
             eventPlayer.setPlatformIdentityId(regPlayer.getPlatformIdentityId());
             eventPlayer.setPlatformCode(regPlayer.getPlatformCode());
             eventPlayer.setGameIdSnapshot(regPlayer.getGameIdSnapshot());
-            eventPlayer.setPlayerNameSnapshot(regPlayer.getPlayerNameSnapshot());
+            eventPlayer.setPlayerNameSnapshot(currentName(regPlayer.getPlayerId(), regPlayer.getPlayerNameSnapshot()));
             eventPlayer.setAvatarFileId(avatarFileId);
             eventPlayer.setPosition(regPlayer.getPosition());
             eventPlayer.setJerseyNo(regPlayer.getJerseyNo());
@@ -210,7 +214,7 @@ public class BasketV4EventSnapshotServiceImpl implements IBasketV4EventSnapshotS
             eventPlayer.setPlatformCode(personal != null && personal.getActualPlatformCode() != null
                     ? personal.getActualPlatformCode() : division.getPlatformCode());
             eventPlayer.setGameIdSnapshot(personal != null ? personal.getGameAccountId() : null);
-            eventPlayer.setPlayerNameSnapshot(profile != null ? profile.getGameNickname() : null);
+            eventPlayer.setPlayerNameSnapshot(currentName(assignment.getPlayerId(), profile != null ? profile.getGameNickname() : null));
             eventPlayer.setAvatarFileId(avatarFileId);
             eventPlayer.setPosition(personal != null ? personal.getPreferredPosition() : null);
             eventPlayer.setIsCaptain(assignment.getPlayerId() != null && assignment.getPlayerId().equals(captainPlayerId) ? 1 : 0);
@@ -225,5 +229,10 @@ public class BasketV4EventSnapshotServiceImpl implements IBasketV4EventSnapshotS
             eventPlayerMapper.batchInsert(eventPlayers);
         }
         return eventTeam;
+    }
+
+    private String currentName(Long playerId, String fallback) {
+        String name = currentPlayerNameSupport.displayName(playerId);
+        return StringUtils.isNotEmpty(name) ? name : fallback;
     }
 }

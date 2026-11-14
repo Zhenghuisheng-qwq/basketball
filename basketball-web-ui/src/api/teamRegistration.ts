@@ -133,7 +133,7 @@ function mapMemberToCandidate(member: TeamMemberItemDto): RegistrationRosterCand
     teamMemberId: member.teamMemberId,
     playerId: member.playerId,
     playerNo: member.playerNo,
-    gameNickname: member.gameNickname || member.nickname,
+    gameNickname: member.nickname || member.gameNickname,
     nickname: member.nickname,
     positionCode: member.positionCode,
     positionName: member.positionName,

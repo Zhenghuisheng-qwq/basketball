@@ -64,7 +64,7 @@
             ep.event_team_id,
             et.team_name_snapshot,
             ep.source_player_id,
-            ep.player_name_snapshot,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), ''), ep.player_name_snapshot) as player_name_snapshot,
             ep.game_id_snapshot,
             ep.platform_code,
             ep.position,
@@ -75,12 +75,20 @@
             ep.create_time
         from basket_event_player ep
         left join basket_event_team et on et.id = ep.event_team_id and et.is_delete = 0
+        left join basket_player_profile p on p.id = ep.source_player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
         where ep.is_delete = 0
         <if test="seasonId != null">and ep.season_id = #{seasonId}</if>
         <if test="divisionId != null">and ep.division_id = #{divisionId}</if>
         <if test="eventTeamId != null">and ep.event_team_id = #{eventTeamId}</if>
         <if test="sourcePlayerId != null">and ep.source_player_id = #{sourcePlayerId}</if>
-        <if test="playerNameSnapshot != null and playerNameSnapshot != ''">and ep.player_name_snapshot like concat('%', #{playerNameSnapshot}, '%')</if>
+        <if test="playerNameSnapshot != null and playerNameSnapshot != ''">
+            and (
+                ep.player_name_snapshot like concat('%', #{playerNameSnapshot}, '%')
+                or mp.nickname like concat('%', #{playerNameSnapshot}, '%')
+                or p.game_nickname like concat('%', #{playerNameSnapshot}, '%')
+            )
+        </if>
         order by ep.event_team_id asc, ep.is_captain desc, ep.id asc
     </select>
 

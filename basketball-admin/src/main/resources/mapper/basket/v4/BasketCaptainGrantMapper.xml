@@ -74,7 +74,7 @@
             g.team_id,
             t.team_name,
             g.player_id,
-            coalesce(p.game_nickname, mp.nickname) as player_name,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) as player_name,
             g.member_id,
             mp.nickname as member_nickname,
             g.grant_status,
@@ -100,7 +100,7 @@
         <if test="playerId != null">and g.player_id = #{playerId}</if>
         <if test="grantStatus != null and grantStatus != ''">and g.grant_status = #{grantStatus}</if>
         <if test="teamName != null and teamName != ''">and t.team_name like concat('%', #{teamName}, '%')</if>
-        <if test="playerName != null and playerName != ''">and coalesce(p.game_nickname, mp.nickname) like concat('%', #{playerName}, '%')</if>
+        <if test="playerName != null and playerName != ''">and coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) like concat('%', #{playerName}, '%')</if>
         order by g.id desc
     </select>
 

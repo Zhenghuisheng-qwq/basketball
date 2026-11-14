@@ -67,7 +67,7 @@
             d.division_name,
             d.platform_code,
             pr.player_id,
-            coalesce(p.game_nickname, mp.nickname) as player_name,
+            coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) as player_name,
             pr.actual_platform_code,
             pr.preferred_position,
             pr.registration_status,
@@ -84,7 +84,7 @@
         <if test="divisionId != null">and pr.division_id = #{divisionId}</if>
         <if test="registrationStatus != null and registrationStatus != ''">and pr.registration_status = #{registrationStatus}</if>
         <if test="playerName != null and playerName != ''">
-            and coalesce(p.game_nickname, mp.nickname) like concat('%', #{playerName}, '%')
+            and coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) like concat('%', #{playerName}, '%')
         </if>
         order by case when pr.registration_status = 'PENDING_REVIEW' then 0 else 1 end, pr.submit_time desc, pr.id desc
     </select>

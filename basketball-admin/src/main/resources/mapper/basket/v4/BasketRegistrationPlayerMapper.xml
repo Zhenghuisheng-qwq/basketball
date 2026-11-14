@@ -51,10 +51,14 @@
     </select>
 
     <select id="selectVoByRegistrationId" resultMap="BasketRegistrationPlayerVoResult">
-        select rp.player_id, rp.player_name_snapshot, rp.game_id_snapshot, rp.platform_code, rp.position,
+        select rp.player_id,
+               coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), ''), rp.player_name_snapshot) as player_name_snapshot,
+               rp.game_id_snapshot, rp.platform_code, rp.position,
                rp.jersey_no, rp.is_captain, rp.is_starter, rp.is_delete,
                case when tm.id is null then 0 else 1 end as current_member
         from basket_registration_player rp
+        left join basket_player_profile p on p.id = rp.player_id and p.is_delete = 0
+        left join basket_member_profile mp on mp.member_id = p.member_id and mp.is_delete = 0
         left join basket_registration r on r.id = rp.registration_id
         left join basket_team_member tm
             on tm.team_id = r.team_id

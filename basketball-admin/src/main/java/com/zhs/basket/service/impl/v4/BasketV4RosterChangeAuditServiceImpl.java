@@ -166,7 +166,7 @@ public class BasketV4RosterChangeAuditServiceImpl {
             row.setPlatformIdentityId(account.getId());
             row.setPlatformCode(division.getPlatformCode());
             row.setGameIdSnapshot(account.getDisplayGameId());
-            row.setPlayerNameSnapshot(profile.getGameNickname());
+            row.setPlayerNameSnapshot(participationSupport.snapshotName(profile));
             row.setPosition(profile.getPositionCode());
             row.setIsCaptain(target.getIsCaptain());
             row.setIsStarter(target.getIsStarter() == null ? 1 : target.getIsStarter());

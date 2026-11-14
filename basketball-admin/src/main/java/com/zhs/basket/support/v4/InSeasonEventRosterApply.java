@@ -46,6 +46,8 @@ public class InSeasonEventRosterApply {
     private BasketMatchSubmissionPlayerStatMapper submissionPlayerStatMapper;
     @Autowired
     private BasketPlayerProfileMapper playerProfileMapper;
+    @Autowired
+    private CurrentPlayerNameSupport currentPlayerNameSupport;
 
     public void apply(BasketRegistration registration) {
         if (registration == null || registration.getDivisionId() == null || registration.getTeamId() == null) {
@@ -159,11 +161,16 @@ public class InSeasonEventRosterApply {
         eventPlayer.setPlatformIdentityId(player.getPlatformIdentityId());
         eventPlayer.setPlatformCode(player.getPlatformCode());
         eventPlayer.setGameIdSnapshot(player.getGameIdSnapshot());
-        eventPlayer.setPlayerNameSnapshot(player.getPlayerNameSnapshot());
+        eventPlayer.setPlayerNameSnapshot(currentName(player));
         eventPlayer.setPosition(player.getPosition());
         eventPlayer.setJerseyNo(player.getJerseyNo());
         eventPlayer.setIsCaptain(player.getIsCaptain());
         eventPlayer.setIsStarter(player.getIsStarter() == null ? 1 : player.getIsStarter());
         eventPlayer.setEventPlayerStatus(EventPlayerRosterTransition.ACTIVE);
+    }
+
+    private String currentName(BasketRegistrationPlayer player) {
+        String name = currentPlayerNameSupport.displayName(player.getPlayerId());
+        return name != null && !name.isBlank() ? name : player.getPlayerNameSnapshot();
     }
 }
