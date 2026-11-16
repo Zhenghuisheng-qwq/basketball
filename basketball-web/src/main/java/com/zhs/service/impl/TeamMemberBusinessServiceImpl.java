@@ -301,7 +301,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         clearPlayerCurrentTeam(membership.getPlayerId(), teamPk);
         teamMemberJoinHelper.recalculateCurrentMemberCount(teamPk);
         String rosterNote = eventRosterMembershipSync.releaseAfterVoluntaryLeave(teamPk, membership.getPlayerId());
-        BasketTeam team = teamDao.selectById(teamPk);
+        team = teamDao.selectById(teamPk);
         membershipChangeGate.recordVoluntaryLeave(team, membership, rosterNote);
         securityLogHelper.write(memberId, EVENT_TEAM_LEAVE, "离开球队",
                 null, String.valueOf(teamPk), memberId, clientIp);
