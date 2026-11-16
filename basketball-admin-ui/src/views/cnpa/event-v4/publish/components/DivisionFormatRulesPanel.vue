@@ -10,10 +10,27 @@
       <template #title>{{ snapshot.canRevisePublished ? '当前规则版本已锁定。开赛前可以预览影响后重新发布新版本，历史版本会保留。' : (snapshot.revisionBlockReason || '赛事规则已发布，当前版本不可修改。') }}</template>
     </el-alert>
 
+    <el-alert
+      v-if="snapshot?.lockable"
+      type="warning"
+      :closable="false"
+      show-icon
+      class="mb8 publish-rule-alert"
+    >
+      <template #title>
+        <div class="publish-rule-row">
+          <span>规则还在草稿，没有发布。发布后，报名和赛程才能使用这份规则。</span>
+          <el-button type="primary" :loading="publishingRule" @click="publishRule">发布规则</el-button>
+        </div>
+      </template>
+    </el-alert>
+
     <div v-if="snapshot" class="current-scheme-bar mb8">
       <span>{{ currentSchemeSummary }}</span>
-      <el-button link type="primary" @click="handleRulesSectionTabChange('advanced')">查看技术信息</el-button>
-      <el-button v-if="snapshot.superAdminRollback" link type="danger" @click="rollbackUnstarted">退回未开赛赛程</el-button>
+      <span class="scheme-bar-actions">
+        <el-button link type="primary" @click="handleRulesSectionTabChange('advanced')">查看技术信息</el-button>
+        <el-button v-if="snapshot.superAdminRollback" link type="danger" @click="rollbackUnstarted">退回未开赛赛程</el-button>
+      </span>
     </div>
 
     <el-tabs :model-value="rulesSectionTab" type="border-card" class="rules-section-tabs mb8" @tab-change="handleRulesSectionTabChange">
@@ -745,6 +762,7 @@ import {
   applyFormatPlan,
   deleteFormatStage,
   getFormatSnapshot,
+  lockFormatSnapshot,
   rollbackUnstartedSchedule,
   listV4FormatTemplates,
   rebuildFormatSnapshot,
@@ -865,6 +883,7 @@ const emit = defineEmits<{
   'update:formatTemplateId': [value?: number]
   'snapshot-change': [snapshot: BasketDivisionFormatSnapshotVo]
   change: []
+  published: []
 }>()
 
 const { proxy } = getCurrentInstance()!
@@ -879,6 +898,7 @@ const singleStageSchemes = V4_FORMAT_SCHEME_OPTIONS.filter((s) => s.category ===
 const comboStageSchemes = V4_FORMAT_SCHEME_OPTIONS.filter((s) => s.category === 'combo' || s.category === 'custom')
 
 const panelLoading = ref(false)
+const publishingRule = ref(false)
 const showDoubleElimDemo = ref(false)
 const actionBusy = ref(false)
 const rebuilding = ref(false)
@@ -1539,7 +1559,27 @@ async function handleStandardTemplateApplied(payload?: { templateCode?: string }
   emit('snapshot-change', snapshot.value!)
   emitChange()
   const name = v4StandardTemplateProductName(payload?.templateCode || snapshot.value?.sourceTemplateCode)
-  proxy!.$modal.msgSuccess(`已应用${name}标准模板`)
+  proxy!.$modal.msgSuccess(`已应用${name}标准模板。规则仍是草稿，请点页面上方的「发布规则」。`)
+}
+
+async function publishRule() {
+  if (!props.divisionId || publishingRule.value) return
+  try {
+    await proxy!.$modal.confirm('发布后，这份规则成为当前正式版本。发布前仍可继续修改。')
+  } catch {
+    return
+  }
+  publishingRule.value = true
+  try {
+    await lockFormatSnapshot(props.divisionId)
+    await loadSnapshot()
+    emit('published')
+    proxy!.$modal.msgSuccess('规则已发布')
+  } catch (e: any) {
+    proxy!.$modal.msgError(e?.msg || e?.message || '发布规则失败')
+  } finally {
+    publishingRule.value = false
+  }
 }
 
 function resolveStageBestOfOptions(stage: BasketDivisionStageVo) {
@@ -2287,6 +2327,24 @@ defineExpose({ reload: loadSnapshot, hasUnappliedStandardSelection })
   flex-wrap: wrap;
   font-size: 13px;
   color: var(--el-text-color-regular);
+}
+
+.scheme-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.publish-rule-alert :deep(.el-alert__title) {
+  width: 100%;
+}
+
+.publish-rule-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  width: 100%;
 }
 
 .bo-capability-hint {

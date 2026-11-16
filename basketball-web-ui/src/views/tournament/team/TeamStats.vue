@@ -10,7 +10,6 @@ import type {
   TeamPlayerTotalStat,
   TeamSeasonAverages,
   TeamSingleMatchPlayerStat,
-  TeamStage,
 } from '@/types/team'
 import PlayerLink from '@/components/player/PlayerLink.vue'
 import { goToPlayerDetail } from '@/utils/playerNavigate'
@@ -20,6 +19,7 @@ import {
   PUBLIC_TEAM_PAGE_KEY,
   type PublicTeamPageContext,
 } from './composables/usePublicTeamPage'
+import { useTeamEventFilters } from './composables/useTeamEventFilters'
 import { mapV4TeamStatToSeasonStat } from './utils/mapV4PublicTeam'
 import {
   mapV4MatchDetailToSingleMatchStats,
@@ -60,9 +60,8 @@ const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
 const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
+const { events, eventId, stageId, stageOptions } = useTeamEventFilters(ctx)
 
-const competitionFilter = ref('all')
-const stageFilter = ref<TeamStage>('regular')
 const playerStatsMode = ref<PlayerStatsMode>('average')
 const playoffStatsMode = ref<PlayoffStatsMode>('summary')
 
@@ -97,10 +96,20 @@ const seasonStats = computed<TeamSeasonAverages | null>(() =>
 
 const divisionId = computed(() => ctx.divisionId.value)
 
-const competitionOptions = computed(() => {
-  const name = displayText(ctx.teamView.value?.seasonName, '')
-  return name ? [name] : []
+const statTarget = computed(() => {
+  if (eventId.value !== 'all') {
+    const selected = events.value.find((item) => item.eventTeamId === eventId.value)
+    if (selected) return selected
+  }
+  return {
+    eventTeamId: teamId.value,
+    divisionId: divisionId.value,
+    seasonId: ctx.seasonId.value,
+  }
 })
+
+const viewingPageTeam = computed(() => statTarget.value.eventTeamId === teamId.value
+  && statTarget.value.divisionId === divisionId.value)
 
 const seasonCardTitle = computed(() => ({
   cn: t('publicPages.team.eventAverages'),
@@ -123,7 +132,7 @@ const seasonStatItems = computed(() => {
 })
 
 const summaryPlayerStats = computed(() => {
-  if (stageFilter.value === 'playoffs' && playoffStatsMode.value === 'single') {
+  if (matchId.value && playoffStatsMode.value === 'single') {
     return []
   }
   return playerStatsMode.value === 'average'
@@ -145,8 +154,8 @@ const singleMaxMap = computed(() => {
 })
 
 async function loadSeasonStats() {
-  const id = teamId.value
-  const divId = divisionId.value
+  const id = statTarget.value.eventTeamId
+  const divId = statTarget.value.divisionId
   const current = ++seasonReqId
   if (!id || !divId) {
     seasonStatsList.value = []
@@ -154,7 +163,7 @@ async function loadSeasonStats() {
     return
   }
 
-  if (ctx.stats.value.length) {
+  if (viewingPageTeam.value && ctx.stats.value.length) {
     seasonStatsList.value = ctx.stats.value
     seasonStatState.value = seasonStatsList.value.length ? 'success' : 'empty'
     return
@@ -168,7 +177,7 @@ async function loadSeasonStats() {
     const row = (res.data ?? []).find((item) => String(item.eventTeamId) === String(id))
     seasonStatsList.value = row
       ? [mapV4TeamStatToSeasonStat(row, {
-          seasonId: ctx.seasonId.value,
+          seasonId: statTarget.value.seasonId || ctx.seasonId.value,
           divisionId: divId,
         })]
       : []
@@ -182,8 +191,8 @@ async function loadSeasonStats() {
 }
 
 async function loadPlayerStats() {
-  const divId = divisionId.value
-  const tid = teamId.value
+  const divId = statTarget.value.divisionId
+  const tid = statTarget.value.eventTeamId
   const current = ++playerReqId
 
   if (!divId || !tid) {
@@ -205,6 +214,8 @@ async function loadPlayerStats() {
     )
     const teamName = displayText(ctx.teamView.value?.name, '')
     const records = (res.data ?? []).filter((item) => {
+      if (String(item.eventTeamId || '') === String(tid)) return true
+      if (!viewingPageTeam.value) return false
       if (rosterEventPlayerIds.has(String(item.eventPlayerId))) return true
       return displayText(item.teamName, '') === teamName
     })
@@ -248,25 +259,25 @@ async function loadSingleMatchStats() {
   }
 }
 
-watch([teamId, divisionId], () => {
+watch([() => statTarget.value.eventTeamId, () => statTarget.value.divisionId], () => {
   void loadSeasonStats()
 }, { immediate: true })
 
 watch(
   () => ctx.stats.value,
   (stats) => {
-    if (stats.length) {
+    if (viewingPageTeam.value && stats.length) {
       seasonStatsList.value = stats
       seasonStatState.value = 'success'
     }
   },
 )
 
-watch([divisionId, teamId, stageFilter, playerStatsMode, playoffStatsMode], () => {
+watch([() => statTarget.value.divisionId, () => statTarget.value.eventTeamId, playerStatsMode, playoffStatsMode], () => {
   void loadPlayerStats()
 }, { immediate: true })
 
-watch([matchId, teamId, stageFilter, playoffStatsMode], () => {
+watch([matchId, () => statTarget.value.eventTeamId, playoffStatsMode], () => {
   void loadSingleMatchStats()
 }, { immediate: true })
 
@@ -359,11 +370,11 @@ function handlePlayerDetailClick(playerId: string) {
 }
 
 function showSummaryTable() {
-  return stageFilter.value === 'regular' || playoffStatsMode.value === 'summary'
+  return !(matchId.value && playoffStatsMode.value === 'single')
 }
 
 function showSingleTable() {
-  return stageFilter.value === 'playoffs' && playoffStatsMode.value === 'single'
+  return Boolean(matchId.value) && playoffStatsMode.value === 'single'
 }
 </script>
 
@@ -376,19 +387,21 @@ function showSingleTable() {
       </div>
 
       <div class="stats-filters">
-        <label v-if="competitionOptions.length" class="filter-select">
-          <select v-model="competitionFilter">
+        <label class="filter-select">
+          <select v-model="eventId">
             <option value="all">{{ t('publicPages.team.allEvents') }}</option>
-            <option v-for="option in competitionOptions" :key="option" :value="option">
-              {{ option }}
+            <option v-for="option in events" :key="option.eventTeamId" :value="option.eventTeamId">
+              {{ option.label }}
             </option>
           </select>
         </label>
 
         <label class="filter-select">
-          <select v-model="stageFilter">
-            <option value="regular">{{ t('publicPages.team.regular') }}</option>
-            <option value="playoffs">{{ t('publicPages.team.playoffs') }}</option>
+          <select v-model="stageId">
+            <option value="all">{{ t('publicPages.team.allStages') }}</option>
+            <option v-for="option in stageOptions" :key="option.value" :value="option.value">
+              {{ option.label }}
+            </option>
           </select>
         </label>
       </div>
@@ -447,7 +460,7 @@ function showSingleTable() {
             {{ t('publicPages.team.cumulative') }}
           </button>
           <button
-            v-if="stageFilter === 'playoffs'"
+            v-if="matchId"
             type="button"
             class="mode-tab"
             :class="{ active: playoffStatsMode === 'single' }"

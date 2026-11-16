@@ -9,8 +9,8 @@
     >
       <template #default>
         <ul class="page-tip-list">
-          <li>先选择已有 Division，再配置并锁定赛事规则。</li>
-          <li>STANDARD 模板与 CUSTOM 自由阶段图都可使用。规则锁定后当前版本不可修改。</li>
+          <li>先选择已有赛区，应用模板只是保存草稿。草稿要在本页点「发布规则」后才会生效。</li>
+          <li>标准模板和自定义阶段图都可以用。规则发布后，当前版本不能直接改。</li>
           <li>队伍上限只约束报名名额，不是本届实际参赛队数。</li>
           <li>技术统计榜在赛程发布之后单独配置，不随赛程一起公开。</li>
         </ul>
@@ -54,6 +54,7 @@
         :series-name="overview?.context?.seriesName"
         @update:format-template-id="id => { if (workspaceDivision) workspaceDivision.formatTemplateId = id }"
         @snapshot-change="snap => { if (workspaceDivision && snap?.sourceTemplateId) workspaceDivision.formatTemplateId = snap.sourceTemplateId }"
+        @published="loadOverview"
       />
     </template>
 
@@ -81,7 +82,7 @@ import { listV4Series, type BasketSeriesVo } from '@/api/cnpa/event-v4/series'
 import type { DivisionSelectorItemVo } from '@/api/cnpa/event-v4/overview'
 
 const router = useRouter()
-const { divisionId: workspaceDivisionId, overview, selectDivision, clearDivision } = useDivisionWorkspace('publish')
+const { divisionId: workspaceDivisionId, overview, selectDivision, clearDivision, loadOverview } = useDivisionWorkspace('publish')
 const workspaceDivision = ref<BasketDivisionListVo>()
 const selectorRef = ref<{ reload: () => void }>()
 const wizardOpen = ref(false)

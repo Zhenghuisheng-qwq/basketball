@@ -9,17 +9,18 @@ import {
   PUBLIC_TEAM_PAGE_KEY,
   type PublicTeamPageContext,
 } from './composables/usePublicTeamPage'
+import { useTeamEventFilters } from './composables/useTeamEventFilters'
 import { formatTeamMatchWhen, mapV4MatchToTeamRecord, opponentAsTeam } from './utils/mapTeamMatch'
 import { publicContestDetailPath } from '@/utils/v4Display'
 
 type StatusFilter = 'all' | TeamMatchStatus
-type StageFilter = 'all' | TeamStage
 
 const pageSize = 8
 
 const ctx = inject(PUBLIC_TEAM_PAGE_KEY) as PublicTeamPageContext
 const router = useRouter()
 const { t } = useI18n()
+const { events, eventId, stageId, stageOptions, targets, ready } = useTeamEventFilters(ctx)
 
 const allMatches = ref<TeamMatchRecord[]>([])
 const loadState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
@@ -29,23 +30,7 @@ let reqId = 0
 const teamId = computed(() => ctx.teamId.value)
 
 const statusFilter = ref<StatusFilter>('all')
-const competitionFilter = ref('all')
-const stageFilter = ref<StageFilter>('all')
 const currentPage = ref(1)
-
-const competitionOptions = computed(() => {
-  const values = new Set<string>()
-  for (const match of allMatches.value) {
-    if (match.competition) values.add(match.competition)
-  }
-  return ['all', ...Array.from(values)]
-})
-
-const stageOptions = computed<Array<{ value: StageFilter; label: string }>>(() => [
-  { value: 'all', label: t('publicPages.team.allStages') },
-  { value: 'regular', label: t('publicPages.team.regular') },
-  { value: 'playoffs', label: t('publicPages.team.playoffs') },
-])
 
 const statusTabs = computed<Array<{ value: StatusFilter; label: string }>>(() => [
   { value: 'all', label: t('publicPages.team.all') },
@@ -64,13 +49,7 @@ const filteredMatches = computed(() => {
       if (statusFilter.value !== 'all' && match.status !== statusFilter.value) {
         return false
       }
-      if (
-        competitionFilter.value !== 'all' &&
-        match.competition !== competitionFilter.value
-      ) {
-        return false
-      }
-      if (stageFilter.value !== 'all' && match.stage !== stageFilter.value) {
+      if (stageId.value !== 'all' && String(match.stageId || '') !== stageId.value) {
         return false
       }
       return true
@@ -91,10 +70,13 @@ const paginatedMatches = computed(() => {
 const divisionId = computed(() => ctx.divisionId.value)
 
 async function loadMatches() {
-  const id = teamId.value
-  const divId = divisionId.value
   const current = ++reqId
-  if (!id || !divId) {
+  const selected = targets.value
+  if (!ready.value) {
+    loadState.value = 'loading'
+    return
+  }
+  if (!selected.length) {
     allMatches.value = []
     loadState.value = 'empty'
     return
@@ -102,10 +84,26 @@ async function loadMatches() {
   loadState.value = 'loading'
   errorMessage.value = ''
   try {
-    const res = await getV4PublicMatchList({ divisionId: divId, eventTeamId: id })
+    const lists = await Promise.allSettled(selected.map((event) => getV4PublicMatchList({
+      divisionId: event.divisionId,
+      eventTeamId: event.eventTeamId,
+    })))
     if (current !== reqId) return
-    const records = res.data ?? []
-    allMatches.value = records.map((item) => mapV4MatchToTeamRecord(item, id))
+    const rejected = lists.find((item) => item.status === 'rejected')
+    const fulfilled = lists.flatMap((item, index) => {
+      if (item.status !== 'fulfilled') return []
+      const event = selected[index]
+      return (item.value.data ?? []).map((match) => {
+        const record = mapV4MatchToTeamRecord(match, event.eventTeamId)
+        record.stageId = match.stageId ? String(match.stageId) : undefined
+        record.divisionId = event.divisionId
+        return record
+      })
+    })
+    if (!fulfilled.length && rejected && rejected.status === 'rejected') {
+      throw rejected.reason
+    }
+    allMatches.value = fulfilled
     loadState.value = allMatches.value.length ? 'success' : 'empty'
   } catch (err) {
     if (current !== reqId) return
@@ -115,11 +113,15 @@ async function loadMatches() {
   }
 }
 
-watch([teamId, divisionId], () => {
-  void loadMatches()
-}, { immediate: true })
+watch(
+  [ready, eventId, () => targets.value.map((item) => item.eventTeamId).join(',')],
+  () => {
+    void loadMatches()
+  },
+  { immediate: true },
+)
 
-watch([statusFilter, competitionFilter, stageFilter], () => {
+watch([statusFilter, eventId, stageId], () => {
   currentPage.value = 1
 })
 
@@ -156,10 +158,10 @@ function getStatusClass(match: TeamMatchRecord): string {
 
 function goMatchStats(match: TeamMatchRecord) {
   router.push({
-    path: `/tournament/team/${teamId.value}/stats`,
+    path: `/tournament/team/${match.teamId || teamId.value}/stats`,
     query: {
       matchId: match.id,
-      ...(divisionId.value ? { divisionId: divisionId.value } : {}),
+      ...((match.divisionId || divisionId.value) ? { divisionId: match.divisionId || divisionId.value } : {}),
     },
   })
 }
@@ -222,20 +224,21 @@ function goPage(page: number) {
 
         <div class="filter-selects">
           <label class="filter-select">
-            <select v-model="competitionFilter">
+            <select v-model="eventId">
               <option value="all">{{ t('publicPages.team.allEvents') }}</option>
               <option
-                v-for="option in competitionOptions.filter((item) => item !== 'all')"
-                :key="option"
-                :value="option"
+                v-for="option in events"
+                :key="option.eventTeamId"
+                :value="option.eventTeamId"
               >
-                {{ option }}
+                {{ option.label }}
               </option>
             </select>
           </label>
 
           <label class="filter-select">
-            <select v-model="stageFilter">
+            <select v-model="stageId">
+              <option value="all">{{ t('publicPages.team.allStages') }}</option>
               <option v-for="option in stageOptions" :key="option.value" :value="option.value">
                 {{ option.label }}
               </option>

@@ -119,7 +119,7 @@ public class BasketV4FormatRuleController extends BaseController {
         return success();
     }
 
-    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_LOCK + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_OPEN + "')")
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_LOCK + "') or @ss.hasPermi('" + BasketEventV4Perms.FORMAT_RULE_EDIT + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_EDIT + "') or @ss.hasPermi('" + BasketEventV4Perms.DIVISION_OPEN + "')")
     @PostMapping("/{divisionId}/format-snapshot/lock")
     public AjaxResult lock(@PathVariable Long divisionId) {
         snapshotService.lockSnapshot(divisionId, SecurityUtils.getUserId());
