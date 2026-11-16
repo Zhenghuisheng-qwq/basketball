@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-alert title="赛程结构：只处理谁和谁打，不在此页填写日期时间" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="2 结构：只排谁和谁打。没生成前可以反复预览。生成后、比赛还没开始，可以作废再来。日期去「3 日期」。" type="info" :closable="false" show-icon class="mb8" />
     <DivisionEventSelector v-if="!divisionId" entry="structure" @select="row => selectDivision(row.divisionId)" />
     <template v-else>
       <DivisionContextHeader :overview="overview" show-switch @switch="clearDivision" />
@@ -8,7 +8,7 @@
       <WorkflowBlockedState
         v-if="blocked"
         :title="blocked"
-        detail="请先完成赛事规则发布后再生成赛程结构。"
+        detail="先到「1 规则」点「发布规则」。发布前规则还能改，发布后没开赛可以退回。"
         action-text="去配置赛事规则"
         @action="goPublishRule"
       />
@@ -507,7 +507,7 @@ function rollbackUnstarted() {
   ElMessageBox.confirm('将删除本赛区尚未开赛的赛程和系列赛，并把规则退回可编辑。已开赛、已有统计或已有提交的比赛不会删除。确认退回？', '提示', { type: 'warning' }).then(() => {
     return rollbackUnstartedSchedule(Number(divisionId.value))
   }).then(() => {
-    ElMessage.success('已退回。可以修改规则，锁定后再重新抽签、生成赛程。')
+    ElMessage.success('已退回。回到「1 规则」修改，改完再点「发布规则」。')
     loadOverview()
     loadStageList()
   }).catch(() => undefined)

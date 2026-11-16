@@ -64,6 +64,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   save: [member: TeamMemberItemDto, payload: { rosterType: string }]
   remove: [member: TeamMemberItemDto]
+  transfer: [member: TeamMemberItemDto]
 }>()
 
 const router = useRouter()
@@ -106,6 +107,23 @@ function openCareerData(member: TeamMemberItemDto) {
   const extraQuery: Record<string, string> = { dataMode: 'career' }
   if (props.teamId) extraQuery.teamId = props.teamId
   goToPlayerDetail(router, member.playerId, 'data', extraQuery)
+}
+
+async function confirmTransfer(member: TeamMemberItemDto) {
+  try {
+    await ElMessageBox.confirm(
+      t('accountTeam.members.transferMessage'),
+      t('accountTeam.members.transferTitle', { name: memberName(member) }),
+      {
+        type: 'warning',
+        confirmButtonText: t('accountTeam.common.confirm'),
+        cancelButtonText: t('accountTeam.common.cancel'),
+      },
+    )
+    emit('transfer', member)
+  } catch {
+    // cancelled
+  }
 }
 
 async function confirmRemove(member: TeamMemberItemDto) {
@@ -249,6 +267,14 @@ function handleSave(member: TeamMemberItemDto) {
                 {{ t('accountTeam.members.career') }}
               </button>
               <button
+                v-if="isCaptain && !isTeamCaptainMember(member) && member.membershipStatus === 1"
+                type="button"
+                class="team-member-list__link"
+                @click="confirmTransfer(member)"
+              >
+                {{ t('accountTeam.members.transfer') }}
+              </button>
+              <button
                 v-if="isCaptain && !isTeamCaptainMember(member)"
                 type="button"
                 class="team-member-list__link team-member-list__link--danger"
@@ -331,6 +357,14 @@ function handleSave(member: TeamMemberItemDto) {
             </button>
             <button type="button" class="team-member-list__link" @click="openCareerData(member)">
               {{ t('accountTeam.members.career') }}
+            </button>
+            <button
+              v-if="isCaptain && !isTeamCaptainMember(member) && member.membershipStatus === 1"
+              type="button"
+              class="team-member-list__link"
+              @click="confirmTransfer(member)"
+            >
+              {{ t('accountTeam.members.transfer') }}
             </button>
             <button
               v-if="isCaptain && !isTeamCaptainMember(member)"

@@ -8,6 +8,7 @@ import com.zhs.basket.dto.v4.ScheduleAssignReq;
 import com.zhs.basket.dto.v4.ScheduleBatchAssignReq;
 import com.zhs.basket.dto.v4.ScheduleRecommendApplyReq;
 import com.zhs.basket.dto.v4.ScheduleRescheduleReq;
+import com.zhs.basket.enums.v4.CompetitionFormatEnum;
 import com.zhs.basket.enums.v4.PublishStatusEnum;
 import com.zhs.basket.enums.v4.ScheduleSourceEnum;
 import com.zhs.basket.enums.v4.ScheduleStatusEnum;
@@ -17,7 +18,9 @@ import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
 import com.zhs.basket.mapper.v4.BasketScheduleBatchMapper;
 import com.zhs.basket.mapper.v4.BasketStagePublishRecordMapper;
+import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.service.v4.IStageScheduleApplicationService;
+import com.zhs.basket.support.v4.V4PublicReadCacheEvictEvent;
 import com.zhs.basket.support.v4.schedule.ScheduleAdjustmentGuard;
 import com.zhs.basket.support.v4.schedule.ScheduleAssignmentValidator;
 import com.zhs.basket.support.v4.schedule.ScheduleFingerprintSupport;
@@ -38,6 +41,7 @@ import com.zhs.basket.vo.v4.StageScheduleSummaryVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -65,6 +69,10 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
     private List<ScheduleAssignmentValidator> assignmentValidators;
     @Autowired
     private BasketStagePublishRecordMapper publishRecordMapper;
+    @Autowired
+    private BasketV4MatchMapper matchMapper;
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
 
     @Override
     public StageScheduleBoardVo listScheduleUnits(Long stageId, String scheduleStatus) {
@@ -182,10 +190,10 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
         BasketScheduleBatch batch = requireActiveBatch(stageId);
         ScheduleMutableGuard.assertNotPublished(batch);
         BasketDivision division = requireDivision(stage.getDivisionId());
-        LocalDate start = requireStartDate(division);
+        LocalDate start = recommendStartDate(division, stage);
         List<ScheduleUnitView> current = scheduleUnitResolver.listUnits(batch);
         ScheduleRecommendationStrategy strategy = recommendationStrategyFactory.require(stage);
-        List<ScheduleUnitView> proposed = strategy.recommend(current, start, overwriteScheduled);
+        List<ScheduleUnitView> proposed = recommendationStrategyFactory.recommend(stage, current, start, overwriteScheduled);
         ScheduleRecommendationPreviewVo vo = new ScheduleRecommendationPreviewVo();
         vo.setRecommendationType(strategy.type().getCode());
         vo.setOverwriteScheduled(overwriteScheduled);
@@ -357,8 +365,9 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
         } catch (Exception ignored) {
             operator = 0L;
         }
-        BasketStagePublishRecord current = publishRecordMapper.selectCurrentByStageId(stage.getId());
-        int publishNo = current != null && current.getPublishNo() != null ? current.getPublishNo() : 1;
+        Integer maxAdjust = publishRecordMapper.selectMaxPublishNoByAction(
+                stage.getId(), StagePublishActionTypeEnum.SCHEDULE_ADJUST.getCode());
+        int publishNo = maxAdjust == null ? 1 : maxAdjust + 1;
         publishRecordMapper.clearCurrentByStageId(stage.getId());
 
         List<ScheduleUnitView> units = scheduleUnitResolver.listUnits(batch);
@@ -387,6 +396,12 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
         if (publishRecordMapper.insert(record) != 1) {
             throw new ServiceException("写入排期调整记录失败");
         }
+        BasketDivision division = requireDivision(stage.getDivisionId());
+        Long matchId = ScheduleUnitTypeEnum.MATCH.getCode().equals(unit.getUnitType()) ? unit.getUnitId() : null;
+        Long seriesId = ScheduleUnitTypeEnum.MATCH_SERIES.getCode().equals(unit.getUnitType()) ? unit.getUnitId() : null;
+        eventPublisher.publishEvent(new V4PublicReadCacheEvictEvent(
+                stage.getDivisionId(), matchId, division.getSeasonId(), stage.getId(),
+                unit.getHomeParticipantId(), unit.getAwayParticipantId(), seriesId));
         StagePublishRecordVo vo = new StagePublishRecordVo();
         vo.setId(record.getId());
         vo.setStageId(record.getStageId());
@@ -411,10 +426,20 @@ public class StageScheduleApplicationServiceImpl implements IStageScheduleApplic
         return ScheduleSourceEnum.fromCode(source).getCode();
     }
 
-    private LocalDate requireStartDate(BasketDivision division) {
+    private LocalDate recommendStartDate(BasketDivision division, BasketDivisionStage stage) {
         LocalDate start = ScheduleTimes.toLocalDate(division.getMatchStartTime());
         if (start == null) {
             throw new ServiceException("缺少赛事开始日期，无法生成推荐排期");
+        }
+        if (stage != null && CompetitionFormatEnum.SINGLE_ELIMINATION.getCode().equals(stage.getCompetitionFormat())) {
+            Date last = matchMapper.selectLatestScheduleTimeBeforeStage(division.getId(), stage.getId());
+            LocalDate afterPrevious = ScheduleTimes.toLocalDate(last);
+            if (afterPrevious != null) {
+                LocalDate next = afterPrevious.plusDays(1);
+                if (next.isAfter(start)) {
+                    start = next;
+                }
+            }
         }
         return start;
     }

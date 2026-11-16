@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-alert title="赛程发布：只检查并发布，不修改规则、名单或对阵" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="4 赛程：检查后公开到官网。发布后可以撤回，撤回后再去「3 日期」改时间。" type="info" :closable="false" show-icon class="mb8" />
     <DivisionEventSelector v-if="!divisionId" entry="publish-preview" @select="row => selectDivision(row.divisionId)" />
     <template v-else>
       <DivisionContextHeader :overview="overview" show-switch @switch="clearDivision" />
@@ -8,7 +8,7 @@
       <WorkflowBlockedState
         v-if="blocked"
         :title="blocked"
-        detail="请先完成赛事规则发布后再进入发布中心。"
+        detail="先到「1 规则」点「发布规则」。规则发布后，再完成结构和日期，最后在这里公开赛程。"
         action-text="去配置赛事规则"
         @action="goPublishRule"
       />

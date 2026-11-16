@@ -5,6 +5,7 @@ import com.zhs.basket.query.v4.BasketV4MatchQuery;
 import com.zhs.basket.vo.v4.BasketV4MatchListVo;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Date;
 import java.util.List;
 
 public interface BasketV4MatchMapper {
@@ -58,6 +59,9 @@ public interface BasketV4MatchMapper {
     List<BasketV4Match> selectByStageAndRound(@Param("stageId") Long stageId, @Param("roundNo") Integer roundNo);
 
     int countFinishedByStageId(@Param("stageId") Long stageId);
+
+    Date selectLatestScheduleTimeBeforeStage(@Param("divisionId") Long divisionId,
+                                             @Param("stageId") Long stageId);
 
     int countPendingByStageId(@Param("stageId") Long stageId);
 

@@ -35,6 +35,15 @@ public class RoundRobinScheduleRecommendationStrategy implements ScheduleRecomme
 
     @Override
     public List<ScheduleUnitView> recommend(List<ScheduleUnitView> units, LocalDate startDate, boolean overwriteScheduled) {
+        return recommend(units, startDate, overwriteScheduled, 2);
+    }
+
+    /**
+     * @param roundsPerMatchDay 同一比赛日最多排几轮。淘汰赛必须为 1，避免上一轮和下一轮排在同一晚。
+     */
+    public List<ScheduleUnitView> recommend(List<ScheduleUnitView> units, LocalDate startDate,
+                                            boolean overwriteScheduled, int roundsPerMatchDay) {
+        int perDay = roundsPerMatchDay <= 1 ? 1 : 2;
         List<ScheduleUnitView> sorted = units.stream()
                 .filter(ScheduleUnitView::isRequired)
                 .sorted(Comparator.comparing(ScheduleUnitView::getRoundNo, Comparator.nullsLast(Integer::compareTo))
@@ -70,7 +79,7 @@ public class RoundRobinScheduleRecommendationStrategy implements ScheduleRecomme
                 proposed.add(next);
             }
             slot++;
-            if (slot == 2) {
+            if (slot >= perDay) {
                 slot = 0;
                 cursor = cursor.plusDays(1);
             }

@@ -46,6 +46,7 @@ import com.zhs.model.v4.BasketPersonalDrawTeam;
 import com.zhs.model.v4.BasketRegistration;
 import com.zhs.model.v4.BasketSeason;
 import com.zhs.model.v4.BasketSeries;
+import com.zhs.service.team.TeamCaptainSeat;
 import com.zhs.model.BasketFileAsset;
 import com.zhs.model.BasketHonorRecord;
 import com.zhs.model.BasketPlayerPlatformAccount;
@@ -120,6 +121,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     private TeamMembershipSupport teamMembershipSupport;
     @Resource
     private CaptainGrantSupport captainGrantSupport;
+    @Resource
+    private TeamCaptainSeat teamCaptainSeat;
     @Resource
     private TeamWritableSupport teamWritableSupport;
     @Resource
@@ -726,8 +729,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
                 membership == null || membership.getDivisionId() == null
                         ? Collections.emptySet() : Set.of(membership.getDivisionId()));
         boolean isCurrent = isCurrentTeamForUser(team, membership, ctx);
-        boolean isCaptain = membership != null
-                && TeamMemberRoleEnum.CAPTAIN.getCode().equals(membership.getRoleType());
+        boolean isCaptain = seatCaptain(team, membership);
         TeamDetailResp resp = toDetailResp(team, membership, resolveLogoUrl(team.getLogoFileId()), isCaptain);
         enrichTeamDetail(resp, team, membership, memberId, ctx,
                 registrationStatus(loadRegistrationStatusMap(Collections.singletonList(team)), team.getId(),
@@ -1280,6 +1282,25 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         return respPage;
     }
 
+    private boolean seatCaptain(BasketTeam team, BasketTeamMember membership) {
+        return teamCaptainSeat.holds(team, membership);
+    }
+
+    private String displayedRole(BasketTeam team, BasketTeamMember membership, boolean seat) {
+        if (membership == null || membership.getRoleType() == null) {
+            return null;
+        }
+        if (seat) {
+            return TeamMemberRoleEnum.CAPTAIN.getCode();
+        }
+        boolean current = Objects.equals(membership.getIsCurrent(), IS_CURRENT)
+                && Objects.equals(membership.getMembershipStatus(), TeamMembershipStatusEnum.ACTIVE.getCode());
+        if (current && TeamMemberRoleEnum.CAPTAIN.getCode().equals(membership.getRoleType())) {
+            return TeamMemberRoleEnum.MEMBER.getCode();
+        }
+        return membership.getRoleType();
+    }
+
     private TeamSummaryResp toSummaryResp(BasketTeam team, BasketTeamMember membership, String logoUrl) {
         TeamSummaryResp resp = new TeamSummaryResp();
         resp.setTeamId(toStringId(team.getId()));
@@ -1299,8 +1320,9 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         resp.setPublicStatus(team.getPublicStatus());
         resp.setCreateTime(team.getCreateTime());
         if (membership != null) {
-            resp.setMyRole(membership.getRoleType());
-            resp.setIsCaptain(TeamMemberRoleEnum.CAPTAIN.getCode().equals(membership.getRoleType()));
+            boolean seat = seatCaptain(team, membership);
+            resp.setMyRole(displayedRole(team, membership, seat));
+            resp.setIsCaptain(seat);
             resp.setMembershipStatus(membership.getMembershipStatus());
             resp.setLeaveReason(membership.getLeaveReason());
         } else {
@@ -1336,7 +1358,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         resp.setEstablishedDate(team.getEstablishedDate());
         resp.setCreateTime(team.getCreateTime());
         resp.setIsCaptain(isCaptain);
-        resp.setMyRole(membership == null ? null : membership.getRoleType());
+        resp.setMyRole(displayedRole(team, membership, isCaptain));
         if (membership != null) {
             resp.setMembershipStatus(membership.getMembershipStatus());
             resp.setLeaveReason(membership.getLeaveReason());

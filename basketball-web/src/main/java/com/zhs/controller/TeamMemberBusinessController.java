@@ -1,7 +1,10 @@
 package com.zhs.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.zhs.request.team.TeamCaptainTransferReq;
+import com.zhs.request.team.TeamDissolveApplyReq;
 import com.zhs.request.team.TeamMemberUpdateReq;
+import com.zhs.service.team.TeamCaptainSuccessionService;
 import com.zhs.response.team.CandidatePlayerItemResp;
 import com.zhs.response.team.CandidatePlayerPageResp;
 import com.zhs.response.team.TeamMemberDetailResp;
@@ -32,6 +35,8 @@ public class TeamMemberBusinessController {
 
     @Resource
     private ITeamMemberBusinessService teamMemberBusinessService;
+    @Resource
+    private TeamCaptainSuccessionService teamCaptainSuccessionService;
     @Resource
     private ClientIpResolver clientIpResolver;
 
@@ -66,6 +71,20 @@ public class TeamMemberBusinessController {
                                 HttpServletRequest request) {
         boolean awaitingAudit = teamMemberBusinessService.removeMember(teamId, teamMemberId, clientIpResolver.resolve(request));
         return R.ok(null, awaitingAudit ? "已提交管理员审核，通过前不改变参赛名单" : "成员移除成功");
+    }
+
+    @ApiOperation("把队长席位和本赛事授权交给当前队员")
+    @PostMapping("/{teamId}/captain/transfer")
+    public R<Void> transferCaptain(@PathVariable String teamId, @RequestBody TeamCaptainTransferReq req) {
+        teamCaptainSuccessionService.transfer(teamId, req == null ? null : req.getTeamMemberId());
+        return R.ok(null, "队长已移交，你仍在队里");
+    }
+
+    @ApiOperation("申请解散球队，管理员审核通过后才生效")
+    @PostMapping("/{teamId}/dissolve-application")
+    public R<Void> applyDissolve(@PathVariable String teamId, @RequestBody(required = false) TeamDissolveApplyReq req) {
+        teamCaptainSuccessionService.applyDissolve(teamId, req == null ? null : req.getReason());
+        return R.ok(null, "解散申请已提交，审核通过前成员关系不变");
     }
 
     @ApiOperation("主动离队")

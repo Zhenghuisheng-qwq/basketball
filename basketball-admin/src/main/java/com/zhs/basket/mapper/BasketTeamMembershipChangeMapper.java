@@ -37,4 +37,8 @@ public interface BasketTeamMembershipChangeMapper {
                      @Param("auditTime") Date auditTime);
 
     int updateInvitationStatus(@Param("id") Long id, @Param("status") Integer status);
+
+    int insert(BasketTeamMembershipChange entity);
+
+    int cancelOpenByTeamExcept(@Param("teamId") Long teamId, @Param("keepId") Long keepId);
 }

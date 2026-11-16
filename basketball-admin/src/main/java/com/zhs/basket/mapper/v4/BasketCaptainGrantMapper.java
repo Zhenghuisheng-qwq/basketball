@@ -59,5 +59,9 @@ public interface BasketCaptainGrantMapper {
 
     int revokeById(@Param("id") Long id);
 
+    java.util.List<BasketCaptainGrant> selectActiveByTeamId(@Param("teamId") Long teamId);
+
+    int revokeActiveByTeamId(@Param("teamId") Long teamId);
+
     int softDelete(@Param("id") Long id);
 }

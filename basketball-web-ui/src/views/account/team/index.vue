@@ -229,6 +229,7 @@ const showLeaveTeam = computed(() =>
   hasSelectedTeam.value
   && !viewingHistory.value
   && !canManageCurrentTeam.value
+  && !isCaptainMember.value
   && !isHistoricalCaptain.value,
 )
 const canCreateTeam = computed(() => teamStore.canCreateTeam)
@@ -853,6 +854,32 @@ async function saveMember(
     })
     ElMessage.success(t('accountTeam.members.updated'))
   } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.members.updateFailed'))
+  }
+}
+
+async function transferCaptain(member: TeamMemberItemDto) {
+  if (!teamId.value) return
+  try {
+    await teamStore.transferCaptainAction(teamId.value, member.teamMemberId)
+    ElMessage.success(t('accountTeam.members.transferDone'))
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : t('accountTeam.members.updateFailed'))
+  }
+}
+
+async function handleDissolve() {
+  if (!teamId.value) return
+  try {
+    await ElMessageBox.confirm(t('accountTeam.overview.dissolveConfirm'), t('accountTeam.overview.dissolveTitle'), {
+      type: 'warning',
+      confirmButtonText: t('accountTeam.common.confirm'),
+      cancelButtonText: t('accountTeam.common.cancel'),
+    })
+    await teamStore.applyDissolveAction(teamId.value)
+    ElMessage.success(t('accountTeam.overview.dissolveDone'))
+  } catch (error) {
+    if (error === 'cancel' || error === 'close') return
     ElMessage.error(error instanceof Error ? error.message : t('accountTeam.members.updateFailed'))
   }
 }
@@ -1742,8 +1769,9 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             <div class="account-field-row"><dt>{{ t('accountTeam.overview.intro') }}</dt><dd>{{ teamDetail.description || t('accountTeam.common.empty') }}</dd></div>
           </dl>
           <AccountEmptyState v-else :message="t('accountTeam.overview.loading')" />
-          <div v-if="showLeaveTeam" class="team-manage-actions">
-            <button type="button" class="account-btn-secondary" @click="handleLeaveTeam">{{ t('accountTeam.overview.leave') }}</button>
+          <div v-if="showLeaveTeam || canManageCurrentTeam" class="team-manage-actions">
+            <button v-if="showLeaveTeam" type="button" class="account-btn-secondary" @click="handleLeaveTeam">{{ t('accountTeam.overview.leave') }}</button>
+            <button v-if="canManageCurrentTeam" type="button" class="account-btn-secondary" @click="handleDissolve">{{ t('accountTeam.overview.dissolve') }}</button>
           </div>
         </AccountPanel>
       </template>
@@ -1768,6 +1796,7 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             :team-id="teamId"
             @save="saveMember"
             @remove="removeMember"
+            @transfer="transferCaptain"
           />
         </AccountPanel>
       </template>

@@ -34,6 +34,8 @@ public class TeamMembershipChangeGate {
     public static final String APPLY_JOIN = "APPLY_JOIN";
     public static final String CAPTAIN_REMOVE = "CAPTAIN_REMOVE";
     public static final String VOLUNTARY_LEAVE = "VOLUNTARY_LEAVE";
+    public static final String TEAM_DISSOLVE = "TEAM_DISSOLVE";
+    public static final String CAPTAIN_TRANSFER = "CAPTAIN_TRANSFER";
 
     public static final String PENDING_USER = "PENDING_USER";
     public static final String PENDING_CAPTAIN = "PENDING_CAPTAIN";
@@ -47,6 +49,7 @@ public class TeamMembershipChangeGate {
     public static final String SOURCE_INVITATION = "INVITATION";
     public static final String SOURCE_JOIN = "JOIN_APPLICATION";
     public static final String SOURCE_MEMBER = "TEAM_MEMBER";
+    public static final String SOURCE_TEAM = "TEAM";
     public static final String STAGE_UNCONTROLLED = "UNCONTROLLED";
 
     private static final Integer NOT_DELETED = 0;
@@ -61,6 +64,39 @@ public class TeamMembershipChangeGate {
     private BasketRegistrationRosterChangeDao rosterChangeDao;
     @Resource
     private EventRosterMembershipSync eventRosterMembershipSync;
+
+    public void submitDissolve(BasketTeam team, Long captainMemberId, Long captainPlayerId, String reason) {
+        if (team == null || team.getId() == null) {
+            throw new ServiceException("球队不存在");
+        }
+        Long pending = changeDao.selectCount(new LambdaQueryWrapper<BasketTeamMembershipChange>()
+                .eq(BasketTeamMembershipChange::getTeamId, team.getId())
+                .eq(BasketTeamMembershipChange::getChangeType, TEAM_DISSOLVE)
+                .eq(BasketTeamMembershipChange::getChangeStatus, PENDING_ADMIN)
+                .eq(BasketTeamMembershipChange::getIsDelete, NOT_DELETED));
+        if (pending != null && pending > 0) {
+            throw new ServiceException("已有待审核的解散申请");
+        }
+        String why = reason == null || reason.isBlank() ? "队长申请解散球队" : reason.trim();
+        insert(base(team, captainPlayerId, captainMemberId, captainMemberId, ROLE_CAPTAIN,
+                TEAM_DISSOLVE, SOURCE_TEAM, team.getId())
+                .status(PENDING_ADMIN)
+                .before("球队有效，成员仍在队")
+                .after("待管理员审核后解散：" + why)
+                .impact("审核通过前不改变成员关系。通过后全队成员关系结束，这些球员才能被其他队伍邀请。")
+                .stage(shouldHold(team) ? null : STAGE_UNCONTROLLED));
+    }
+
+    public void recordCaptainTransfer(BasketTeam team, Long fromMemberId, Long toPlayerId, Long toMemberId, String summary) {
+        insert(base(team, toPlayerId, toMemberId, fromMemberId, ROLE_CAPTAIN,
+                CAPTAIN_TRANSFER, SOURCE_TEAM, team.getId())
+                .status(EFFECTIVE)
+                .before("原队长在队")
+                .after(summary)
+                .impact("席位和队长授权已交给接手人。原队长仍在队，不能被其他队伍邀请。")
+                .stage(STAGE_UNCONTROLLED)
+                .effectiveNow());
+    }
 
     public boolean shouldHold(BasketTeam team) {
         return !liveRegistrations(team).isEmpty();

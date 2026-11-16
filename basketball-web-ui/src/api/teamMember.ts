@@ -44,6 +44,14 @@ export function leaveTeam(teamId: string) {
   return request.post<any, ApiResult<null>>(`/basket/team/${teamId}/leave`)
 }
 
+export function transferTeamCaptain(teamId: string, teamMemberId: string) {
+  return request.post<any, ApiResult<null>>(`/basket/team/${teamId}/captain/transfer`, { teamMemberId })
+}
+
+export function applyTeamDissolve(teamId: string, reason?: string) {
+  return request.post<any, ApiResult<null>>(`/basket/team/${teamId}/dissolve-application`, { reason })
+}
+
 export function getHistoricalTeammateList(teamId: string) {
   return request.get<any, ApiResult<CandidatePlayerItemDto[]>>(
     `/basket/team/${teamId}/historical-teammate/list`,

@@ -102,7 +102,7 @@
         />
         <el-form-item>
           <el-button v-if="canApply" type="primary" :loading="applying" :disabled="applying || !selectedCode" @click="apply">应用此标准模板</el-button>
-          <el-button v-else-if="canRevise" type="primary" :loading="applying" :disabled="applying || !selectedCode" @click="revise">预览并重新发布</el-button>
+          <el-button v-else-if="canRevise" type="primary" :loading="applying" :disabled="applying || !selectedCode" @click="revise">按这个修改重新发布</el-button>
           <el-button v-else type="primary" disabled>应用此标准模板</el-button>
           <span v-if="selectedCode && selectedCode !== appliedCode" class="el-form-item__tip">当前卡片尚未写入规则。未点击应用或重新发布前，已保存方案不会改变。</span>
         </el-form-item>

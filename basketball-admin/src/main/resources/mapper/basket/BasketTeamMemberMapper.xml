@@ -110,6 +110,32 @@
             #{membershipStatus}, #{isCurrent}, #{joinTime}, #{activeMemberSlot}, #{isDelete}, #{createTime}, #{updateTime}
         )
     </insert>
+    <select id="selectCurrentByTeamId" resultMap="BasketTeamMemberResult">
+        select id, membership_no, team_id, division_id, member_id, player_id, role_type, roster_type, jersey_no,
+               join_source, membership_status, is_current, join_time, leave_time, leave_reason, remark,
+               create_time, update_time, is_delete
+        from basket_team_member
+        where team_id = #{teamId}
+          and is_current = 1
+          and membership_status = 1
+          and is_delete = 0
+        order by join_time asc, id asc
+    </select>
+    <update id="updateRole">
+        update basket_team_member
+        set role_type = #{roleType}, update_time = now()
+        where id = #{id} and is_current = 1 and membership_status = 1 and is_delete = 0
+    </update>
+    <update id="demoteOtherCaptains">
+        update basket_team_member
+        set role_type = 'MEMBER', update_time = now()
+        where team_id = #{teamId}
+          and is_current = 1
+          and membership_status = 1
+          and is_delete = 0
+          and role_type = 'CAPTAIN'
+          and id != #{keepMemberRowId}
+    </update>
     <update id="endCurrent">
         update basket_team_member
         set membership_status = #{status},

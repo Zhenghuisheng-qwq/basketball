@@ -26,8 +26,7 @@ const hasPublish = computed(() => stages.value.some(s => s.publishStatus === 'PU
 const ruleText = computed(() => {
   const no = props.overview?.rule?.ruleVersionNo
   if (ruleLocked.value) return no != null ? `已发布 V${no}` : '已发布'
-  if (no != null) return `待发布 V${no}`
-  return '尚未发布'
+  return '草稿，可修改'
 })
 const rosterText = computed(() => {
   const no = props.overview?.roster?.currentRosterVersionNo

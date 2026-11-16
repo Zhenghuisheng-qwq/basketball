@@ -35,6 +35,7 @@ import com.zhs.support.TeamMembershipSupport;
 import com.zhs.service.ICaptainPermissionService;
 import com.zhs.service.ITeamMemberBusinessService;
 import com.zhs.service.support.BasketPublicSupport;
+import com.zhs.service.team.TeamCaptainSeat;
 import com.zhs.service.team.TeamMemberJoinHelper;
 import com.zhs.service.team.TeamMembershipChangeGate;
 import com.zhs.support.PlayerPositionSupport;
@@ -100,6 +101,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     private EventRosterMembershipSync eventRosterMembershipSync;
     @Resource
     private TeamMembershipChangeGate membershipChangeGate;
+    @Resource
+    private TeamCaptainSeat teamCaptainSeat;
 
     @Override
     public IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize) {
@@ -138,7 +141,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         IPage<BasketTeamMember> memberPage = teamMemberDao.selectPage(page, wrapper);
 
         Page<TeamMemberItemResp> respPage = new Page<>(memberPage.getCurrent(), memberPage.getSize(), memberPage.getTotal());
-        respPage.setRecords(toMemberItems(memberPage.getRecords()));
+        respPage.setRecords(toMemberItems(memberPage.getRecords(), teamCaptainSeat.memberId(team)));
         return respPage;
     }
 
@@ -163,7 +166,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
                 accounts = loadAllPlatformAccounts(Collections.singletonList(profile)).get(target.getPlayerId());
             }
         }
-        TeamMemberItemResp item = toMemberItem(target, maps, accounts, loadPlayerAvatarMap(maps));
+        TeamMemberItemResp item = toMemberItem(target, maps, accounts, loadPlayerAvatarMap(maps), teamCaptainSeat.memberId(team));
 
         TeamMemberDetailResp detail = new TeamMemberDetailResp();
         detail.setTeamMemberId(item.getTeamMemberId());
@@ -187,7 +190,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         detail.setGameIdSummary(item.getGameIdSummary());
         detail.setTeamId(toStringId(team.getId()));
         detail.setTeamName(team.getTeamName());
-        detail.setIsCaptain(TeamMemberRoleEnum.CAPTAIN.getCode().equals(target.getRoleType()));
+        detail.setIsCaptain(TeamMemberRoleEnum.CAPTAIN.getCode().equals(item.getRoleType()));
         detail.setCanManage(captainPermissionService.canManageTeam(viewerId, teamPk));
         detail.setCurrentRosterStatus(firstNonBlank(item.getRosterTypeText(), item.getMembershipStatusText(), "-"));
         detail.setSourceType(target.getJoinSource());
@@ -221,7 +224,10 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         }
         target.setRemark(trimToNull(req.getRemark()));
         teamMemberDao.updateById(target);
-        return toMemberItem(target, loadProfileMaps(Collections.singletonList(target)));
+        BasketTeam team = teamDao.selectById(teamPk);
+        ProfileMaps maps = loadProfileMaps(Collections.singletonList(target));
+        return toMemberItem(target, maps, null, loadPlayerAvatarMap(maps),
+                team == null ? null : teamCaptainSeat.memberId(team));
     }
 
     private void validateJerseyNo(BasketTeamMember target, String jerseyNo, Long teamPk) {
@@ -256,10 +262,10 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         if (memberId.equals(target.getMemberId())) {
             throw new ServiceException("不能移除自己，请使用离队功能");
         }
-        if (TeamMemberRoleEnum.CAPTAIN.getCode().equals(target.getRoleType())) {
-            throw new ServiceException("不能移除队长");
-        }
         BasketTeam team = teamDao.selectById(teamPk);
+        if (isSeatCaptain(team, target)) {
+            throw new ServiceException("不能移除队长。请先移交队长，或申请解散并等待审核");
+        }
         if (membershipChangeGate.deferCaptainRemove(team, target, memberId)) {
             return true;
         }
@@ -280,12 +286,12 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Long teamPk = parseLongId(teamId, "球队主键");
         Long memberId = UserContext.getRequiredUserId();
         BasketTeamMember membership = captainPermissionService.requireTeamMember(memberId, teamPk);
-        if (TeamMemberRoleEnum.CAPTAIN.getCode().equals(membership.getRoleType())) {
-            throw new ServiceException("队长不能直接离队");
+        BasketTeam team = teamDao.selectById(teamPk);
+        if (isSeatCaptain(team, membership)) {
+            throw new ServiceException("队长不能直接离队。请先移交队长，或申请解散并等待审核");
         }
         Long divisionId = membership.getDivisionId();
         if (divisionId == null) {
-            BasketTeam team = teamDao.selectById(teamPk);
             divisionId = team == null ? null : team.getDivisionId();
         }
         eventRosterMembershipSync.lockDivision(divisionId);
@@ -829,7 +835,11 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         return null;
     }
 
-    private List<TeamMemberItemResp> toMemberItems(List<BasketTeamMember> members) {
+    private boolean isSeatCaptain(BasketTeam team, BasketTeamMember member) {
+        return teamCaptainSeat.holds(team, member);
+    }
+
+    private List<TeamMemberItemResp> toMemberItems(List<BasketTeamMember> members, Long seatMemberId) {
         if (CollectionUtils.isEmpty(members)) {
             return Collections.emptyList();
         }
@@ -839,7 +849,7 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Map<Long, List<BasketPlayerPlatformAccount>> platformAccountsMap = loadAllPlatformAccounts(profiles);
         List<TeamMemberItemResp> items = new ArrayList<>(members.size());
         for (BasketTeamMember member : members) {
-            items.add(toMemberItem(member, maps, platformAccountsMap.get(member.getPlayerId()), playerAvatarMap));
+            items.add(toMemberItem(member, maps, platformAccountsMap.get(member.getPlayerId()), playerAvatarMap, seatMemberId));
         }
         return items;
     }
@@ -851,24 +861,23 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         return publicSupport.loadPlayerAvatarUrlMap(maps.playerMap().values());
     }
 
-    private TeamMemberItemResp toMemberItem(BasketTeamMember member, ProfileMaps maps) {
-        return toMemberItem(member, maps, null, loadPlayerAvatarMap(maps));
-    }
-
-    private TeamMemberItemResp toMemberItem(BasketTeamMember member, ProfileMaps maps,
-                                            List<BasketPlayerPlatformAccount> platformAccounts) {
-        return toMemberItem(member, maps, platformAccounts, loadPlayerAvatarMap(maps));
-    }
-
     private TeamMemberItemResp toMemberItem(BasketTeamMember member, ProfileMaps maps,
                                             List<BasketPlayerPlatformAccount> platformAccounts,
-                                            Map<Long, String> playerAvatarMap) {
+                                            Map<Long, String> playerAvatarMap,
+                                            Long seatMemberId) {
         TeamMemberItemResp resp = new TeamMemberItemResp();
         resp.setTeamMemberId(toStringId(member.getId()));
         resp.setMemberId(toStringId(member.getMemberId()));
         resp.setUserId(toStringId(member.getMemberId()));
         resp.setPlayerId(toStringId(member.getPlayerId()));
-        resp.setRoleType(member.getRoleType());
+        boolean current = Objects.equals(member.getIsCurrent(), IS_CURRENT)
+                && Objects.equals(member.getMembershipStatus(), TeamMembershipStatusEnum.ACTIVE.getCode());
+        boolean seat = seatMemberId != null && seatMemberId.equals(member.getMemberId());
+        if (current && seatMemberId != null && TeamMemberRoleEnum.CAPTAIN.getCode().equals(member.getRoleType()) && !seat) {
+            resp.setRoleType(TeamMemberRoleEnum.MEMBER.getCode());
+        } else {
+            resp.setRoleType(member.getRoleType());
+        }
         resp.setRosterType(member.getRosterType());
         resp.setJerseyNo(member.getJerseyNo());
         resp.setMembershipStatus(member.getMembershipStatus());

@@ -23,6 +23,30 @@ export function approveTeamMembershipChange(id: number | string, data?: { auditR
   })
 }
 
+export function getCaptainDesk(teamNo: string) {
+  return request({
+    url: '/basket/teamMembershipChange/desk',
+    method: 'get',
+    params: { teamNo }
+  })
+}
+
+export function transferTeamCaptain(data: { teamId: number | string; teamMemberId: number | string }) {
+  return request({
+    url: '/basket/teamMembershipChange/transfer',
+    method: 'post',
+    data
+  })
+}
+
+export function submitTeamDissolve(data: { teamId: number | string; reason?: string }) {
+  return request({
+    url: '/basket/teamMembershipChange/dissolve',
+    method: 'post',
+    data
+  })
+}
+
 export function rejectTeamMembershipChange(id: number | string, data: { rejectReason: string }) {
   return request({
     url: '/basket/teamMembershipChange/' + id + '/reject',

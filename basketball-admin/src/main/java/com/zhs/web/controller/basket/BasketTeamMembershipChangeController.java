@@ -1,6 +1,8 @@
 package com.zhs.web.controller.basket;
 
 import com.zhs.basket.query.TeamMembershipChangeQuery;
+import com.zhs.basket.req.TeamCaptainTransferReq;
+import com.zhs.basket.req.TeamDissolveSubmitReq;
 import com.zhs.basket.req.TeamMembershipChangeRejectReq;
 import com.zhs.basket.service.IBasketTeamMembershipChangeService;
 import com.zhs.common.annotation.Log;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -32,7 +35,7 @@ public class BasketTeamMembershipChangeController extends BaseController {
     }
 
     @PreAuthorize("@ss.hasPermi('basket:teamMembershipChange:query')")
-    @GetMapping("/{id}")
+    @GetMapping("/{id:\\d+}")
     public AjaxResult getInfo(@PathVariable Long id) {
         return success(membershipChangeService.selectDetail(id));
     }
@@ -43,6 +46,28 @@ public class BasketTeamMembershipChangeController extends BaseController {
     public AjaxResult approve(@PathVariable Long id, @RequestBody(required = false) java.util.Map<String, String> body) {
         String remark = body == null ? null : body.get("auditRemark");
         membershipChangeService.approve(id, remark);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:teamMembershipChange:audit')")
+    @GetMapping("/desk")
+    public AjaxResult desk(@RequestParam String teamNo) {
+        return success(membershipChangeService.loadDesk(teamNo));
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:teamMembershipChange:audit')")
+    @Log(title = "队长移交", businessType = BusinessType.UPDATE)
+    @PostMapping("/transfer")
+    public AjaxResult transfer(@RequestBody TeamCaptainTransferReq req) {
+        membershipChangeService.transferCaptain(req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('basket:teamMembershipChange:audit')")
+    @Log(title = "解散球队申请", businessType = BusinessType.INSERT)
+    @PostMapping("/dissolve")
+    public AjaxResult dissolve(@RequestBody TeamDissolveSubmitReq req) {
+        membershipChangeService.submitDissolve(req);
         return success();
     }
 

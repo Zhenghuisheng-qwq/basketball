@@ -33,4 +33,12 @@ public interface BasketTeamMapper {
                                   @Param("fromStatus") Integer fromStatus,
                                   @Param("toStatus") Integer toStatus,
                                   @Param("finishTime") java.util.Date finishTime);
+
+    BasketTeam selectByTeamNo(@Param("teamNo") String teamNo);
+
+    int updateCaptain(@Param("id") Long id,
+                      @Param("captainMemberId") Long captainMemberId,
+                      @Param("captainPlayerId") Long captainPlayerId);
+
+    int markDissolved(@Param("id") Long id, @Param("dissolvedTime") java.util.Date dissolvedTime);
 }

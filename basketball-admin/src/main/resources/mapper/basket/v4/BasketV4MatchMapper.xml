@@ -325,6 +325,32 @@
         order by bracket_slot asc, match_time asc, id asc
     </select>
 
+    <select id="selectLatestScheduleTimeBeforeStage" resultType="java.util.Date">
+        select max(ts) from (
+            select m.match_time as ts
+            from basket_match m
+            inner join basket_division_stage s on s.id = m.stage_id and s.is_delete = 0
+            inner join basket_division d on d.id = m.division_id
+                and d.format_snapshot_id = s.snapshot_id and d.is_delete = 0
+            inner join basket_division_stage cur on cur.id = #{stageId} and cur.is_delete = 0
+            where m.division_id = #{divisionId}
+              and m.is_delete = 0
+              and m.match_time is not null
+              and s.stage_order &lt; cur.stage_order
+            union all
+            select timestamp(ms.scheduled_date, coalesce(ms.scheduled_start_time, '00:00:00')) as ts
+            from basket_match_series ms
+            inner join basket_division_stage s on s.id = ms.stage_id and s.is_delete = 0
+            inner join basket_division d on d.id = ms.division_id
+                and d.format_snapshot_id = s.snapshot_id and d.is_delete = 0
+            inner join basket_division_stage cur on cur.id = #{stageId} and cur.is_delete = 0
+            where ms.division_id = #{divisionId}
+              and ms.is_delete = 0
+              and ms.scheduled_date is not null
+              and s.stage_order &lt; cur.stage_order
+        ) earlier
+    </select>
+
     <select id="countFinishedByStageId" resultType="int">
         select count(1) from basket_match
         where stage_id = #{stageId}

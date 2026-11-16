@@ -18,8 +18,10 @@ import {
   getCandidatePlayerPage,
   getHistoricalTeammateList,
   getTeamMemberPage,
+  applyTeamDissolve,
   leaveTeam,
   removeTeamMember,
+  transferTeamCaptain,
   updateTeamMember,
 } from '@/api/teamMember'
 import {
@@ -427,6 +429,38 @@ export const useTeamStore = defineStore('team', () => {
     try {
       await removeTeamMember(teamId, teamMemberId)
       members.value = members.value.filter((item) => item.teamMemberId !== teamMemberId)
+    } catch (error) {
+      setError(error)
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  async function transferCaptainAction(teamId: string, teamMemberId: string) {
+    actionLoading.value = true
+    lastError.value = ''
+    try {
+      await transferTeamCaptain(teamId, teamMemberId)
+      await Promise.all([
+        loadQualification().catch(() => undefined),
+        loadTeamDetail(teamId).catch(() => undefined),
+        loadMembers(teamId).catch(() => undefined),
+        loadCurrentTeams().catch(() => undefined),
+      ])
+    } catch (error) {
+      setError(error)
+      throw error
+    } finally {
+      actionLoading.value = false
+    }
+  }
+
+  async function applyDissolveAction(teamId: string, reason?: string) {
+    actionLoading.value = true
+    lastError.value = ''
+    try {
+      await applyTeamDissolve(teamId, reason)
     } catch (error) {
       setError(error)
       throw error
@@ -1123,6 +1157,8 @@ export const useTeamStore = defineStore('team', () => {
     loadMembers,
     updateMemberAction,
     removeMemberAction,
+    transferCaptainAction,
+    applyDissolveAction,
     leaveTeamAction,
     loadMyInvitations,
     loadTeamInvitations,

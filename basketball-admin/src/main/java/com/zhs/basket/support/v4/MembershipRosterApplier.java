@@ -133,6 +133,61 @@ public class MembershipRosterApplier {
         return effect;
     }
 
+    /**
+     * 解散审核通过后清空当前合法名单。不套用单人离队的队长保留和人数下限。
+     * 已被比赛统计引用的参赛球员改为退役，不删除、不改写历史统计。
+     */
+    public MembershipRosterEffect releaseTeam(Long teamId) {
+        MembershipRosterEffect effect = new MembershipRosterEffect();
+        effect.setStage("UNCONTROLLED");
+        StringBuilder impact = new StringBuilder();
+        boolean any = false;
+        boolean inSeason = false;
+        BasketTeam team = teamMapper.selectById(teamId);
+        Long currentDivisionId = team == null ? null : team.getDivisionId();
+        List<BasketRegistration> registrations = registrationMapper.selectApprovedByTeamId(teamId);
+        for (BasketRegistration registration : registrations) {
+            if (currentDivisionId == null || !currentDivisionId.equals(registration.getDivisionId())) {
+                continue;
+            }
+            BasketDivision division = divisionMapper.selectById(registration.getDivisionId());
+            if (division == null || finished(division)) {
+                continue;
+            }
+            any = true;
+            if (!rosterChangeMapper.selectPendingIdsByRegistrationId(registration.getId()).isEmpty()) {
+                throw new ServiceException("已有待审核的名单变更，请先处理后再审核解散");
+            }
+            List<BasketRegistrationPlayer> existing = registrationPlayerMapper.selectByRegistrationId(registration.getId());
+            for (BasketRegistrationPlayer player : existing) {
+                if (registrationPlayerMapper.softDelete(player.getId()) != 1) {
+                    throw new ServiceException("报名名单已变化，请刷新后重试");
+                }
+            }
+            if (!existing.isEmpty()) {
+                int expected = registration.getLineupVersion() == null ? 0 : registration.getLineupVersion();
+                if (registrationMapper.bumpLineupVersion(registration.getId(), 0, expected) != 1) {
+                    throw new ServiceException("原名单已变化，请刷新后重试");
+                }
+            }
+            BasketRegistration fresh = registrationMapper.selectById(registration.getId());
+            if (eligibilityQueries.frozen(division.getId())) {
+                inSeason = true;
+            }
+            inSeasonEventRosterApply.apply(fresh);
+            currentDisplayCacheEvictor.afterSourceTeam(division.getId(), teamId, registration.getSeasonId());
+            writeAudit(registration, "球队解散审核通过，当前合法名单已清空，已赛记录保留");
+            impact.append("报名").append(registration.getId()).append("当前名单已清空，后续不能再代表该队出场；");
+        }
+        if (!any) {
+            effect.setImpact("没有进行中的已通过报名");
+            return effect;
+        }
+        effect.setStage(inSeason ? IN_SEASON : LOCKED_ROSTER);
+        effect.setImpact(impact.toString());
+        return effect;
+    }
+
     private boolean delta(BasketRegistration registration, BasketDivision division, Long playerId, boolean adding) {
         List<BasketRegistrationPlayer> existing = registrationPlayerMapper.selectByRegistrationId(registration.getId());
         BasketRegistrationPlayer current = null;

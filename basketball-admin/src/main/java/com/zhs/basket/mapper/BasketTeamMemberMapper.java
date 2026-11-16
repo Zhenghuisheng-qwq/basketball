@@ -18,6 +18,12 @@ public interface BasketTeamMemberMapper {
 
     BasketTeamMember selectCurrentByTeamAndPlayer(@Param("teamId") Long teamId, @Param("playerId") Long playerId);
 
+    java.util.List<BasketTeamMember> selectCurrentByTeamId(@Param("teamId") Long teamId);
+
+    int updateRole(@Param("id") Long id, @Param("roleType") String roleType);
+
+    int demoteOtherCaptains(@Param("teamId") Long teamId, @Param("keepMemberRowId") Long keepMemberRowId);
+
     int insertActive(BasketTeamMember member);
 
     int endCurrent(@Param("id") Long id,

@@ -1,13 +1,18 @@
 <template>
   <div v-loading="panelLoading" class="format-rules-panel">
     <el-alert
-      v-if="snapshot && !snapshot.mutable"
+      v-if="snapshot?.locked"
       type="warning"
       :closable="false"
       show-icon
-      class="mb8"
+      class="mb8 publish-rule-alert"
     >
-      <template #title>{{ snapshot.canRevisePublished ? '当前规则版本已锁定。开赛前可以预览影响后重新发布新版本，历史版本会保留。' : (snapshot.revisionBlockReason || '赛事规则已发布，当前版本不可修改。') }}</template>
+      <template #title>
+        <div class="publish-rule-row">
+          <span>{{ snapshot.canRevisePublished ? '规则已发布。要改内容，直接改下面的参数，再点「按这个修改重新发布」。' : (snapshot.revisionBlockReason || '规则已发布。比赛已经开始，不能再退回整份规则。') }}</span>
+          <el-button v-if="snapshot.superAdminRollback" type="danger" plain :loading="publishingRule" @click="rollbackUnstarted">退回修改</el-button>
+        </div>
+      </template>
     </el-alert>
 
     <el-alert
@@ -19,7 +24,7 @@
     >
       <template #title>
         <div class="publish-rule-row">
-          <span>规则还在草稿，没有发布。发布后，报名和赛程才能使用这份规则。</span>
+          <span>{{ snapshot?.mutable ? '规则还在草稿，下面可以直接改。改完点「发布规则」，报名和赛程才能用。' : '规则还在草稿，可以发布。已有报名、参赛球队或赛程时，不能再改模板内容。' }}</span>
           <el-button type="primary" :loading="publishingRule" @click="publishRule">发布规则</el-button>
         </div>
       </template>
@@ -29,7 +34,6 @@
       <span>{{ currentSchemeSummary }}</span>
       <span class="scheme-bar-actions">
         <el-button link type="primary" @click="handleRulesSectionTabChange('advanced')">查看技术信息</el-button>
-        <el-button v-if="snapshot.superAdminRollback" link type="danger" @click="rollbackUnstarted">退回未开赛赛程</el-button>
       </span>
     </div>
 
@@ -1685,12 +1689,22 @@ async function loadFormatTemplates() {
 }
 
 function rollbackUnstarted() {
-  proxy.$modal.confirm('将删除本赛区尚未开赛的赛程和系列赛，并把规则退回可编辑。已开赛、已有统计或已有提交的比赛不会删除。确认退回？').then(() => {
+  proxy.$modal.confirm('退回后可以再改规则。还没开赛的结构、日期和赛程会清掉，已经开赛的比赛不动。确认退回？').then(() => {
+    publishingRule.value = true
     return rollbackUnstartedSchedule(props.divisionId)
   }).then(() => {
-    proxy.$modal.msgSuccess('已退回。可以修改规则，锁定后再重新抽签、生成赛程。')
+    proxy.$modal.msgSuccess('已退回。现在可以直接改规则，改完再点「发布规则」。')
+    emit('published')
     return loadSnapshot()
-  }).catch(() => undefined)
+  }).catch((error: unknown) => {
+    if (error === 'cancel' || error === 'close') return
+    const message = error && typeof error === 'object' && 'msg' in error
+      ? String((error as { msg?: string }).msg || '')
+      : error instanceof Error ? error.message : ''
+    proxy.$modal.msgError(message || '退回失败')
+  }).finally(() => {
+    publishingRule.value = false
+  })
 }
 
 async function loadSnapshot() {

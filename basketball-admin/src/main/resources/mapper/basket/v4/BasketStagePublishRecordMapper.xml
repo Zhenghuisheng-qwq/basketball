@@ -56,6 +56,11 @@
           and action_type in ('PUBLISH', 'REPUBLISH')
     </select>
 
+    <select id="selectMaxPublishNoByAction" resultType="java.lang.Integer">
+        select max(publish_no) from basket_stage_publish_record
+        where stage_id = #{stageId} and action_type = #{actionType} and is_delete = 0
+    </select>
+
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         insert into basket_stage_publish_record (
             division_id, stage_id, structure_batch_id, structure_execution_version,

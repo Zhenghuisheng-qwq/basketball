@@ -253,6 +253,15 @@
           and d.match_end_time is null
     </select>
 
+    <select id="selectActiveByTeamId" resultMap="BasketCaptainGrantResult">
+        select <include refid="BaseColumns" /> from basket_captain_grant
+        where team_id = #{teamId} and grant_status = 'ACTIVE' and is_delete = 0
+    </select>
+    <update id="revokeActiveByTeamId">
+        update basket_captain_grant
+        set grant_status = 'REVOKED', active_unique_key = null, update_time = now()
+        where team_id = #{teamId} and grant_status = 'ACTIVE' and is_delete = 0
+    </update>
     <update id="revokeById">
         update basket_captain_grant
         set grant_status = 'REVOKED', active_unique_key = null, update_time = now()

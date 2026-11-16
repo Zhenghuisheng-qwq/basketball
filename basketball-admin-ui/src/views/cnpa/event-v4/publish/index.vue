@@ -1,7 +1,7 @@
 <template>
   <div class="app-container">
     <el-alert
-      title="赛事规则：决定怎么比。实际参赛单位来自报名与参赛名单，不在此页填写本届实际队数。"
+      title="确定之前，规则、结构、日期、赛程都能改。发布只是让当前这一步生效，没开赛时可以退回再改。"
       type="info"
       :closable="false"
       show-icon
@@ -9,10 +9,10 @@
     >
       <template #default>
         <ul class="page-tip-list">
-          <li>先选择已有赛区，应用模板只是保存草稿。草稿要在本页点「发布规则」后才会生效。</li>
-          <li>标准模板和自定义阶段图都可以用。规则发布后，当前版本不能直接改。</li>
-          <li>队伍上限只约束报名名额，不是本届实际参赛队数。</li>
-          <li>技术统计榜在赛程发布之后单独配置，不随赛程一起公开。</li>
+          <li>1 规则：本页。没点「发布规则」之前直接改。已发布后，点「退回修改」。</li>
+          <li>2 结构：谁和谁打。在「2 结构」生成，没开赛可以作废重来。</li>
+          <li>3 日期：什么时候打。在「3 日期」改。赛程撤回后也能改。</li>
+          <li>4 赛程：公开给官网。在「4 赛程」发布，也可以撤回后再改日期。</li>
         </ul>
       </template>
     </el-alert>
@@ -34,14 +34,6 @@
     <template v-else>
       <DivisionContextHeader :overview="overview" show-switch @switch="clearDivision" />
       <DivisionWorkspaceNav />
-      <el-alert
-        v-if="overview?.rule?.locked"
-        type="warning"
-        :closable="false"
-        show-icon
-        class="mb8"
-        title="赛事规则已发布，当前版本不可修改。"
-      />
       <DivisionFormatRulesPanel
         v-if="workspaceDivision"
         :key="workspaceDivisionId"

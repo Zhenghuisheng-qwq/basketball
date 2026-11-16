@@ -312,6 +312,30 @@
         where id = #{id} and change_status = 'PENDING_ADMIN' and is_delete = 0
     </update>
 
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        insert into basket_team_membership_change (
+            change_no, team_id, division_id, registration_id, change_type,
+            subject_player_id, subject_member_id, initiator_member_id, initiator_role,
+            source_biz_type, source_biz_id, before_summary, after_summary, change_status,
+            effect_stage, impact_summary, effective_time, create_time, update_time, is_delete
+        ) values (
+            #{changeNo}, #{teamId}, #{divisionId}, #{registrationId}, #{changeType},
+            #{subjectPlayerId}, #{subjectMemberId}, #{initiatorMemberId}, #{initiatorRole},
+            #{sourceBizType}, #{sourceBizId}, #{beforeSummary}, #{afterSummary}, #{changeStatus},
+            #{effectStage}, #{impactSummary}, #{effectiveTime}, #{createTime}, #{updateTime}, #{isDelete}
+        )
+    </insert>
+    <update id="cancelOpenByTeamExcept">
+        update basket_team_membership_change
+        set change_status = 'CANCELLED',
+            after_summary = '球队已解散，未完成的成员变更取消',
+            impact_summary = '不影响已结束的比赛记录',
+            update_time = now()
+        where team_id = #{teamId}
+          and id != #{keepId}
+          and change_status in ('PENDING_USER', 'PENDING_CAPTAIN', 'PENDING_ADMIN')
+          and is_delete = 0
+    </update>
     <update id="updateInvitationStatus">
         update basket_team_invitation
         set invitation_status = #{status}, update_time = now()

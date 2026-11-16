@@ -15,6 +15,8 @@ public interface BasketStagePublishRecordMapper {
 
     Integer selectMaxPublishNo(@Param("stageId") Long stageId);
 
+    Integer selectMaxPublishNoByAction(@Param("stageId") Long stageId, @Param("actionType") String actionType);
+
     int insert(BasketStagePublishRecord entity);
 
     int clearCurrentByStageId(@Param("stageId") Long stageId);

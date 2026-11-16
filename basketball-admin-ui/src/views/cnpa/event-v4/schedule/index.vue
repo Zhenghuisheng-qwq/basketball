@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-alert title="日期与时间排期：只处理什么时候打，不在此页改对阵或抽签" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="3 日期：只改什么时候打。赛程还没发布，或已经撤回时，这里可以直接改。" type="info" :closable="false" show-icon class="mb8" />
     <DivisionEventSelector v-if="!divisionId" entry="schedule" @select="row => selectDivision(row.divisionId)" />
     <template v-else>
       <DivisionContextHeader :overview="overview" show-switch @switch="clearDivision" />
@@ -8,7 +8,7 @@
       <WorkflowBlockedState
         v-if="blocked"
         :title="blocked"
-        detail="请先完成赛事规则发布后再排期。"
+        detail="先到「1 规则」点「发布规则」，再到「2 结构」生成对阵，然后回到这里排日期。"
         action-text="去配置赛事规则"
         @action="goPublishRule"
       />

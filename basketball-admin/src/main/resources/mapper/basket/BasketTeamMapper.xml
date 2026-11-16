@@ -104,4 +104,27 @@
     <select id="lockById" resultType="long">
         select id from basket_team where id = #{id} and is_delete = 0 for update
     </select>
+    <select id="selectByTeamNo" resultMap="BasketTeamResult">
+        select * from basket_team
+        where team_no = #{teamNo} and is_delete = 0
+        order by id desc
+        limit 1
+    </select>
+    <update id="updateCaptain">
+        update basket_team
+        set captain_member_id = #{captainMemberId},
+            captain_player_id = #{captainPlayerId},
+            update_time = now()
+        where id = #{id} and is_delete = 0
+    </update>
+    <update id="markDissolved">
+        update basket_team
+        set team_status = 2,
+            dissolved_time = #{dissolvedTime},
+            current_member_count = 0,
+            captain_member_id = null,
+            captain_player_id = null,
+            update_time = #{dissolvedTime}
+        where id = #{id} and is_delete = 0 and team_status = 1
+    </update>
 </mapper>
