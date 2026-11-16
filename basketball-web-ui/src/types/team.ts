@@ -90,6 +90,8 @@ export interface TeamMatchRecord {
   result?: TeamMatchResult
   status: TeamMatchStatus
   stage: TeamStage
+  stageId?: string
+  divisionId?: string
   competition: string
   stageHeadline?: string
   stageMeta?: string

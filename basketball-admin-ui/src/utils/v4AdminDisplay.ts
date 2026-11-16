@@ -1023,7 +1023,9 @@ export const V4_CUSTOM_COMPETITION_FORMAT_OPTIONS = [
 
 export const V4_CUSTOM_ELIMINATION_PAIRING_OPTIONS = [
   { label: '高排名对低排名', value: 'HIGH_VS_LOW' },
-  { label: '随机抽签', value: 'RANDOM_DRAW' }
+  { label: '随机抽签', value: 'RANDOM_DRAW' },
+  { label: '小组交叉站位', value: 'GROUP_CROSS' },
+  { label: '人工落位', value: 'MANUAL' }
 ] as const
 
 export const V4_BEST_OF_OPTIONS = [
@@ -1069,7 +1071,8 @@ export function buildV4PlayoffBracketPreviewLines(teamCount: number): string[] {
 
 export function normalizeV4EliminationPairingRule(rule?: string | null): string {
   const code = (rule || '').trim().toUpperCase()
-  if (code === 'HIGH_VS_LOW' || code === 'RANDOM_DRAW' || code === 'PLAYOFF_BRACKET') return code
+  if (code === 'HIGH_VS_LOW' || code === 'RANDOM_DRAW' || code === 'PLAYOFF_BRACKET'
+    || code === 'GROUP_CROSS' || code === 'MANUAL') return code
   // 历史 UI 曾写 RANDOM；统一映射到 RANDOM_DRAW。其余缺省回落高排名对低排名
   if (code === 'RANDOM') return 'RANDOM_DRAW'
   return 'HIGH_VS_LOW'
@@ -2333,7 +2336,10 @@ export function formatV4StageCardSummary(
     const pairing = normalizeV4EliminationPairingRule(stage.pairingRule)
     const pairingLabel = pairing === 'PLAYOFF_BRACKET'
       ? '固定路径晋级'
-      : pairing === 'RANDOM_DRAW' ? '随机抽签' : '高排名对低排名'
+      : pairing === 'RANDOM_DRAW' ? '随机抽签'
+        : pairing === 'GROUP_CROSS' ? '小组交叉站位'
+          : pairing === 'MANUAL' ? '人工落位'
+            : '高排名对低排名'
     const kind = pairing === 'PLAYOFF_BRACKET' ? '季后赛' : '单败淘汰'
     if (isFinal) return `${kind} · ${bo} · ${pairingLabel} · 最终阶段`
     return `${kind} · ${bo} · ${pairingLabel} · 胜者晋级`

@@ -96,10 +96,33 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
         Map<Long, BasketSeason> seasonMap = publicSupport.loadSeasonMap(seasonIds);
         Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seasonMap.values().stream()
                 .map(BasketSeason::getSeriesId).filter(Objects::nonNull).collect(Collectors.toSet()));
+        Set<Long> publishedSeasonIds = loadPublishedV4SeasonIds();
+        Set<Long> divisionIds = eventTeams.stream().map(BasketEventTeam::getDivisionId).filter(Objects::nonNull).collect(Collectors.toSet());
+        Map<Long, BasketDivision> divisionMap = new HashMap<>();
+        if (!divisionIds.isEmpty()) {
+            List<BasketDivision> divisions = divisionDao.selectBatchIds(divisionIds);
+            if (!CollectionUtils.isEmpty(divisions)) {
+                for (BasketDivision division : divisions) {
+                    if (division != null && division.getId() != null) {
+                        divisionMap.put(division.getId(), division);
+                    }
+                }
+            }
+        }
         List<PublicTeamSeasonHistoryVo> vos = new ArrayList<>();
         for (BasketEventTeam eventTeam : eventTeams) {
+            if (eventTeam.getSeasonId() == null || !publishedSeasonIds.contains(eventTeam.getSeasonId())) {
+                continue;
+            }
+            if ("INACTIVE".equalsIgnoreCase(eventTeam.getEventTeamStatus())) {
+                continue;
+            }
             BasketSeason season = seasonMap.get(eventTeam.getSeasonId());
             if (season == null) {
+                continue;
+            }
+            BasketDivision division = divisionMap.get(eventTeam.getDivisionId());
+            if (division == null || !Objects.equals(division.getIsDelete(), BasketPublicConstants.NOT_DELETED)) {
                 continue;
             }
             BasketSeries series = seriesMap.get(season.getSeriesId());
@@ -108,6 +131,9 @@ public class BasketPublicTeamServiceImpl implements IBasketPublicTeamService {
             vo.setSeasonName(season.getDisplayTitle() != null ? season.getDisplayTitle() : season.getSeasonName());
             vo.setTournamentId(season.getSeriesId());
             vo.setTournamentName(series == null ? null : series.getSeriesName());
+            vo.setDivisionId(division.getId());
+            vo.setDivisionName(division.getDivisionName());
+            vo.setEventTeamId(eventTeam.getId());
             vo.setDisplayName(eventTeam.getTeamNameSnapshot());
             vos.add(vo);
         }

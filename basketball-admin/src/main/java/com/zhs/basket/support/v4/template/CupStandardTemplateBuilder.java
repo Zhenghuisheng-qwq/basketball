@@ -53,7 +53,7 @@ public class CupStandardTemplateBuilder implements StandardFormatTemplateBuilder
             throw new ServiceException("Cup groupingMode is not allowed");
         }
         if (!PLACEMENTS.contains(resolved.getEliminationPlacement())) {
-            throw new ServiceException("Cup eliminationPlacement is not allowed");
+            throw new ServiceException("杯赛淘汰落位只支持小组交叉站位或人工落位");
         }
         if (resolved.getRegularBestOf() == null || !com.zhs.basket.support.v4.BestOfValues.isLegal(resolved.getRegularBestOf())) {
             throw new ServiceException("Cup group stage BO only allows 1/3/5/7");

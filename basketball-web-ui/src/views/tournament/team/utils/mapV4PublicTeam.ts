@@ -58,6 +58,7 @@ export function mapV4TeamDetailToPublic(
     seasonName: extras?.seasonTitle || detail.seasonName,
     seriesName: extras?.seriesName || detail.seriesName,
     seriesCode: extras?.seriesCode || detail.seriesCode,
+    sourceTeamId: detail.sourceTeamId ? String(detail.sourceTeamId) : undefined,
     gameMode: detail.gameMode,
     eventTeamStatus: detail.eventTeamStatus,
     disqualified: Boolean(detail.disqualified),

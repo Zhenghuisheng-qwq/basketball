@@ -39,6 +39,7 @@ import com.zhs.basket.vo.v4.*;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -111,6 +112,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     private DisciplineStandingAdjustmentResolver disciplineStandingAdjustmentResolver;
     @Autowired
     private V4PublicReadCachePublisher publicReadCachePublisher;
+    @Autowired
+    @Lazy
+    private IDivisionStageExecutionApplicationService self;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -135,7 +139,10 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Transactional(rollbackFor = Exception.class)
     public BasketStageTeamSyncResultVo initializeStageTeams(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
-        BasketDivision division = requireDivision(stage.getDivisionId());
+        BasketDivision division = divisionMapper.selectByIdForUpdate(stage.getDivisionId());
+        if (division == null) {
+            throw new ServiceException("Division 不存在");
+        }
         Date now = new Date();
 
         List<BasketDivisionStageTeam> existingStageTeams = stageTeamMapper.selectByStageId(stageId);
@@ -299,6 +306,14 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Override
     public StageSchedulePreviewVo previewSchedule(Long stageId) {
         BasketDivisionStage stage = requireStage(stageId);
+        if (isFirstStage(stage)) {
+            List<BasketDivisionStageTeam> existing = stageTeamMapper.selectByStageId(stageId);
+            if (existing == null || existing.size() < 2) {
+                // 走代理，初始化单独提交。后面的分组/抽签校验失败不能把刚写入的参赛队回滚掉。
+                self.initializeStageTeams(stageId);
+                stage = requireStage(stageId);
+            }
+        }
         StageExecutionContext context = buildExecutionContext(stage);
         DivisionStageScheduleStrategy strategy = scheduleStrategyFactory.resolve(stage);
         return strategy.preview(context);

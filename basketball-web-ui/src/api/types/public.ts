@@ -563,6 +563,7 @@ export interface PublicTeamDetailVo {
   seriesId?: string | null
   seriesName?: string | null
   seriesCode?: string | null
+  sourceTeamId?: string | null
   eventTeamStatus?: string | null
   disqualified?: boolean | null
   activeDisciplineSummary?: import('./v4Public').PublicActiveDisciplineSummary[] | null
@@ -589,6 +590,9 @@ export interface PublicTeamSeasonHistoryVo {
   seasonName?: string | null
   tournamentId?: string | null
   tournamentName?: string | null
+  divisionId?: string | null
+  divisionName?: string | null
+  eventTeamId?: string | null
   displayName?: string | null
   finalRank?: number | null
   seasonStatus?: number | null

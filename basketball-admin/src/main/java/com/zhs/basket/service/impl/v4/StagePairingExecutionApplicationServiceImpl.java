@@ -845,6 +845,10 @@ public class StagePairingExecutionApplicationServiceImpl implements IStagePairin
     }
 
     private void applyFormalRosterCapacity(StagePairingExecutionVo vo, BasketDivisionStage stage) {
+        if (findPreviousStage(stage) != null) {
+            vo.setParticipantCount(0);
+            return;
+        }
         try {
             int formalCount = teamRosterSupport.selectFormalEventTeams(stage.getDivisionId()).size();
             if (formalCount >= 2) {

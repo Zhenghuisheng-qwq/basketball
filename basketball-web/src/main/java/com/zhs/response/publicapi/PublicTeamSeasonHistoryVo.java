@@ -18,6 +18,11 @@ public class PublicTeamSeasonHistoryVo implements Serializable {
     @JsonSerialize(using = ToStringSerializer.class)
     private Long tournamentId;
     private String tournamentName;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long divisionId;
+    private String divisionName;
+    @JsonSerialize(using = ToStringSerializer.class)
+    private Long eventTeamId;
     private String displayName;
     private Integer finalRank;
     private Integer seasonStatus;

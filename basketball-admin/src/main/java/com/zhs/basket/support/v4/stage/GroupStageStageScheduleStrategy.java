@@ -53,7 +53,9 @@ public class GroupStageStageScheduleStrategy extends AbstractStageScheduleStrate
 
         BasketDivisionGroupingBatch batch = context.getGroupingBatch();
         if (batch == null) {
-            throw new ServiceException("小组赛阶段需先完成分组并锁定分组批次");
+            int teamCount = context.getStageTeams() == null ? 0 : context.getStageTeams().size();
+            throw new ServiceException("小组赛已有 " + teamCount
+                    + " 支参赛队，请先把这些球队分进小组并锁定分组后再生成赛程");
         }
         if (!GroupingStatusEnum.LOCKED.getCode().equals(batch.getGroupingStatus())) {
             throw new ServiceException("分组批次未锁定，无法生成小组赛赛程");

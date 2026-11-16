@@ -14,7 +14,8 @@ import java.util.Set;
 
 /**
  * GROUP_CROSS placement only. Does not read Standing / Qualification / Registration.
- * Mirrored groups + in-group rank cross. Odd groupCount or advancePerGroup &gt; 2 require MANUAL.
+ * Mirrored groups + in-group rank cross. Two advancers from one group are placed in opposite halves.
+ * Odd groupCount or advancePerGroup &gt; 2 require MANUAL.
  */
 @Component
 public class GroupCrossPlacementStrategy {
@@ -99,14 +100,18 @@ public class GroupCrossPlacementStrategy {
         return groups;
     }
 
+    /**
+     * 高名次对交叉组低名次。每组晋级 2 人时，先排全部第 1 名的交叉场，再排第 2 名的交叉场，
+     * 使同组两支球队落在上下半区，无轮空时只能在决赛相遇。
+     */
     private static List<SourcePair> mirroredPairs(List<GroupLayout> groups, int advancePerGroup, Long sourceStageId) {
         List<SourcePair> pairs = new ArrayList<>();
         int groupCount = groups.size();
-        for (int i = 0; i < groupCount / 2; i++) {
-            GroupLayout left = groups.get(i);
-            GroupLayout right = groups.get(groupCount - 1 - i);
-            for (int rank = 1; rank <= advancePerGroup; rank++) {
-                int crossRank = advancePerGroup + 1 - rank;
+        for (int rank = 1; rank <= advancePerGroup; rank++) {
+            int crossRank = advancePerGroup + 1 - rank;
+            for (int i = 0; i < groupCount / 2; i++) {
+                GroupLayout left = groups.get(i);
+                GroupLayout right = groups.get(groupCount - 1 - i);
                 pairs.add(new SourcePair(
                         GroupRankSource.of(sourceStageId, left, rank),
                         GroupRankSource.of(sourceStageId, right, crossRank)));

@@ -58,7 +58,7 @@ public class SingleEliminationStageScheduleStrategy extends AbstractStageSchedul
     @Override
     public void validate(StageExecutionContext context) {
         requireContext(context);
-        validateTeamsPresent(context);
+        validatePairingRule(context.getStage());
         BestOfValues.requireLegal(context.getStage().getBestOf());
         if (context.getStage().getSemifinalBestOf() != null) {
             BestOfValues.requireLegal(context.getStage().getSemifinalBestOf());
@@ -66,14 +66,15 @@ public class SingleEliminationStageScheduleStrategy extends AbstractStageSchedul
         if (context.getStage().getFinalBestOf() != null) {
             BestOfValues.requireLegal(context.getStage().getFinalBestOf());
         }
-        validatePairingRule(context.getStage());
 
         if (EliminationStageSupport.isSingleRoundNonFinalStage(context.getStage())) {
+            validateTeamsPresent(context);
             return;
         }
         if (requiresConfirmedDraw(context.getStage()) && context.getBracketSlotPlan() == null) {
             throw new ServiceException("当前抽签尚未确认，无法生成结构");
         }
+        validateTeamsPresent(context);
         if (materializer != null) {
             int n = context.getBracketSlotPlan() != null && context.getBracketSlotPlan().getCapacity() != null
                     ? context.getBracketSlotPlan().getCapacity().getParticipantCount()

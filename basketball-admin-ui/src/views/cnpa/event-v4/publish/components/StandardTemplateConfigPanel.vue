@@ -284,6 +284,7 @@ function hydrateForm() {
   overlaySnapshot(current.templateCode)
   const draft = formDrafts.get(draftKey(current.templateCode))
   if (draft) Object.assign(form, draft)
+  sanitizeFormToAllowedOptions()
 }
 
 function overlaySnapshot(templateCode?: string) {
@@ -322,6 +323,18 @@ function coerce(value: string | undefined, inputType?: string) {
   return value
 }
 
+function sanitizeFormToAllowedOptions() {
+  for (const opt of displayOptions.value) {
+    if (!opt.key || !(opt.allowedValues || []).length) continue
+    const current = form[opt.key]
+    if (current == null || current === '') continue
+    const allowed = (opt.allowedValues || []).map((value) => String(value))
+    if (!allowed.includes(String(current))) {
+      form[opt.key] = coerce(opt.defaultValue, opt.inputType)
+    }
+  }
+}
+
 function selectTemplate(code?: string) {
   if (!code || code === selectedCode.value) return
   persistDraft()
@@ -338,6 +351,7 @@ function setOption(key: string | undefined, value: string | number | null) {
 onBeforeUnmount(() => persistDraft())
 
 function buildApplyPayload(): StandardTemplateApplyReq {
+  sanitizeFormToAllowedOptions()
   return {
     templateCode: selectedCode.value,
     registrationMode: String(form.registrationMode || ''),
