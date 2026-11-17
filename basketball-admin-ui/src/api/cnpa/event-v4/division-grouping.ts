@@ -93,6 +93,10 @@ export function lockV4DivisionGroupingBatch(groupingBatchId: number): Promise<Aj
   return request({ url: `/basket/v4/admin/division-grouping-batches/${groupingBatchId}/lock`, method: 'post' })
 }
 
+export function unlockV4DivisionGroupingBatch(groupingBatchId: number): Promise<AjaxResult> {
+  return request({ url: `/basket/v4/admin/division-grouping-batches/${groupingBatchId}/unlock`, method: 'post' })
+}
+
 export function cancelV4DivisionGroupingBatch(groupingBatchId: number): Promise<AjaxResult> {
   return request({ url: `/basket/v4/admin/division-grouping-batches/${groupingBatchId}/cancel`, method: 'post' })
 }

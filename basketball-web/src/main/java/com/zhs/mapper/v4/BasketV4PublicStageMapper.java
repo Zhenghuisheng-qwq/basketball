@@ -1,5 +1,6 @@
 package com.zhs.mapper.v4;
 
+import com.zhs.response.v4.publicapi.V4PublicGroupSeedRow;
 import com.zhs.response.v4.publicapi.V4PublicStageItemResp;
 import com.zhs.response.v4.publicapi.V4PublicStandingItemResp;
 import org.apache.ibatis.annotations.Mapper;
@@ -23,4 +24,6 @@ public interface BasketV4PublicStageMapper {
                                                                  @Param("groupScopeKey") Long groupScopeKey);
 
     List<Long> selectGroupScopeKeysByStageId(@Param("stageId") Long stageId);
+
+    List<V4PublicGroupSeedRow> selectLockedGroupSeeds(@Param("stageId") Long stageId);
 }

@@ -669,7 +669,56 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             scope.setRows(rows);
             scopes.add(scope);
         }
-        return scopes;
+        if (!scopes.isEmpty()) {
+            return scopes;
+        }
+        return loadLockedGroupSeedStandings(stageId, qualifyCount);
+    }
+
+    private List<V4PublicStageStandingScopeResp> loadLockedGroupSeedStandings(Long stageId, Integer stageQualifyCount) {
+        List<V4PublicGroupSeedRow> seeds = publicStageMapper.selectLockedGroupSeeds(stageId);
+        if (CollectionUtils.isEmpty(seeds)) {
+            return Collections.emptyList();
+        }
+        Map<Long, V4PublicStageStandingScopeResp> byGroup = new LinkedHashMap<>();
+        for (V4PublicGroupSeedRow seed : seeds) {
+            if (seed.getGroupId() == null || seed.getEventTeamId() == null) {
+                continue;
+            }
+            V4PublicStageStandingScopeResp scope = byGroup.computeIfAbsent(seed.getGroupId(), id -> {
+                V4PublicStageStandingScopeResp created = new V4PublicStageStandingScopeResp();
+                created.setGroupScopeKey(id);
+                created.setGroupId(id);
+                created.setGroupCode(seed.getGroupCode());
+                created.setGroupName(seed.getGroupName());
+                created.setQualifyCount(seed.getQualifyCount() != null ? seed.getQualifyCount() : stageQualifyCount);
+                created.setRows(new ArrayList<>());
+                return created;
+            });
+            V4PublicStandingItemResp row = new V4PublicStandingItemResp();
+            row.setRankNo(scope.getRows().size() + 1);
+            row.setEventTeamId(seed.getEventTeamId());
+            row.setTeamName(seed.getTeamName());
+            row.setTeamLogoFileId(seed.getTeamLogoFileId());
+            row.setWinCount(0);
+            row.setLoseCount(0);
+            row.setPointFor(0);
+            row.setPointAgainst(0);
+            row.setPointDiff(0);
+            row.setStandingPoints(0);
+            row.setStageId(stageId);
+            row.setGroupId(seed.getGroupId());
+            row.setDisqualified(false);
+            scope.getRows().add(row);
+        }
+        List<V4PublicStageStandingScopeResp> result = new ArrayList<>();
+        for (V4PublicStageStandingScopeResp scope : byGroup.values()) {
+            if (!scope.getRows().isEmpty()) {
+                enrichStandingTeamInfo(scope.getRows());
+                result.add(scope);
+            }
+        }
+        return result;
     }
 
     private Integer resolveStageQualifyCount(V4PublicStageItemResp stage) {

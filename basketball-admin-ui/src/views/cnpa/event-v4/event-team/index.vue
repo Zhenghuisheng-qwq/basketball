@@ -108,6 +108,13 @@
         </el-form>
 
         <el-alert v-if="formatSnapshot" :title="`赛制快照：${formatSnapshot.sourceTemplateName || '-'} v${formatSnapshot.snapshotVersion || '-'}（${formatSnapshot.snapshotStatusName || formatSnapshot.snapshotStatus}）`" type="info" :closable="false" class="mb8" />
+        <el-alert
+          v-if="groupingQuery.stageId && !groupingLoading && groupingTotal === 0"
+          title="当前这一版赛制的小组赛还没有分组，选中阶段后可以直接新建。之前测试锁定的分组属于旧赛制，不会占住这一版。"
+          type="warning"
+          :closable="false"
+          class="mb8"
+        />
 
         <el-table v-loading="groupingLoading" :data="groupingList" border>
           <el-table-column label="批次ID" prop="groupingBatchId" width="80" />
@@ -130,9 +137,10 @@
           <el-table-column label="确认时间" width="160">
             <template #default="scope">{{ parseTime(scope.row.confirmedTime) }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="200" fixed="right">
+          <el-table-column label="操作" width="260" fixed="right">
             <template #default="scope">
               <el-button link type="primary" @click="openGroupingDetail(scope.row)" v-hasPermi="['basket:v4Grouping:list']">详情</el-button>
+              <el-button link type="warning" @click="handleUnlockGroupingBatch(scope.row)" v-hasPermi="['basket:v4Grouping:lock']" v-if="scope.row.groupingStatus === 'LOCKED'">撤销锁定</el-button>
               <el-button link type="danger" @click="handleCancelGroupingBatch(scope.row)" v-hasPermi="['basket:v4Grouping:edit']" v-if="scope.row.groupingStatus === 'DRAFT'">取消</el-button>
             </template>
           </el-table-column>
@@ -157,8 +165,9 @@
           <el-descriptions-item label="小组数">{{ groupingDetail.groupCount }}</el-descriptions-item>
         </el-descriptions>
 
-        <div class="drawer-toolbar mb8" v-if="groupingDetail.groupingStatus === 'DRAFT'">
-          <el-button type="success" @click="handleLockGroupingBatch" v-hasPermi="['basket:v4Grouping:lock']">锁定分组</el-button>
+        <div class="drawer-toolbar mb8" v-if="groupingDetail.groupingStatus === 'DRAFT' || groupingDetail.groupingStatus === 'LOCKED'">
+          <el-button type="success" @click="handleLockGroupingBatch" v-hasPermi="['basket:v4Grouping:lock']" v-if="groupingDetail.groupingStatus === 'DRAFT'">锁定分组</el-button>
+          <el-button type="warning" @click="handleUnlockGroupingBatch(groupingDetail)" v-hasPermi="['basket:v4Grouping:lock']" v-if="groupingDetail.groupingStatus === 'LOCKED'">撤销锁定</el-button>
         </div>
 
         <el-row :gutter="16">
@@ -278,6 +287,7 @@ import {
   getV4DivisionGroupingBatchDetail,
   listV4DivisionGroupingBatch,
   lockV4DivisionGroupingBatch,
+  unlockV4DivisionGroupingBatch,
   removeV4DivisionGroupAssignment,
   type BasketDivisionGroupVo,
   type BasketDivisionGroupingBatchDetailVo,
@@ -458,6 +468,9 @@ async function onGroupingDivisionChange(divisionId?: number) {
   stageOptions.value = (formatSnapshot.value?.stages || []).filter(
     s => s.groupingMode && s.groupingMode !== 'NONE' && (s.groupCount ?? 0) > 0
   )
+  const currentGroupStage = stageOptions.value.find(s => s.stageCode === 'GROUP') || stageOptions.value[0]
+  groupingQuery.stageId = currentGroupStage?.id
+  loadGroupingBatches()
 }
 
 function onGroupingStageChange() {
@@ -526,6 +539,18 @@ function handleCancelGroupingBatch(row: BasketDivisionGroupingBatchListVo) {
   ).then(() => {
     proxy.$modal.msgSuccess('已取消')
     loadGroupingBatches()
+  }).catch(() => {})
+}
+
+function handleUnlockGroupingBatch(row: BasketDivisionGroupingBatchListVo | BasketDivisionGroupingBatchDetailVo) {
+  const batchId = row.groupingBatchId
+  if (!batchId) return
+  proxy.$modal.confirm('撤销后分组回到草稿，可以重新分配球队。赛程已发布时会拒绝。已经生成、但还没发布的对阵不会自动改，改完小组后需要重新生成赛程。').then(() =>
+    unlockV4DivisionGroupingBatch(batchId)
+  ).then(() => {
+    proxy.$modal.msgSuccess('已撤销锁定')
+    if (groupingDetailOpen.value) refreshGroupingDetail()
+    else loadGroupingBatches()
   }).catch(() => {})
 }
 

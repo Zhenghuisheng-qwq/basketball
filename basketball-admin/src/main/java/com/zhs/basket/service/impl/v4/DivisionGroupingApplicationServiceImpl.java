@@ -92,6 +92,10 @@ public class DivisionGroupingApplicationServiceImpl implements IDivisionGrouping
 
     @Autowired
 
+    private BasketScheduleBatchMapper scheduleBatchMapper;
+
+    @Autowired
+
     private BasketDivisionStageTeamMapper stageTeamMapper;
 
     @Autowired
@@ -486,6 +490,25 @@ public class DivisionGroupingApplicationServiceImpl implements IDivisionGrouping
 
         }
 
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void unlockBatch(Long groupingBatchId) {
+        BasketDivisionGroupingBatch batch = requireBatch(groupingBatchId);
+        if (!GroupingStatusEnum.LOCKED.getCode().equals(batch.getGroupingStatus())) {
+            throw new ServiceException("只有已锁定的分组可以撤销");
+        }
+        BasketDivisionStage stage = requireStage(batch.getStageId());
+        if (scheduleBatchMapper.selectPublishedByStageId(stage.getId()) != null) {
+            throw new ServiceException("赛程已发布，请先到赛程页撤回发布，再撤销分组锁定");
+        }
+        if (matchMapper.countFinishedByStageId(stage.getId()) > 0) {
+            throw new ServiceException("该阶段已产生正式比赛结果，不能撤销分组锁定");
+        }
+        if (groupingBatchMapper.unlockById(batch.getId(), SecurityUtils.getUserId()) != 1) {
+            throw new ServiceException("撤销分组锁定失败");
+        }
     }
 
 
