@@ -122,8 +122,6 @@
         set team_status = 2,
             dissolved_time = #{dissolvedTime},
             current_member_count = 0,
-            captain_member_id = null,
-            captain_player_id = null,
             update_time = #{dissolvedTime}
         where id = #{id} and is_delete = 0 and team_status = 1
     </update>

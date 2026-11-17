@@ -86,13 +86,6 @@ public class ExcludedRosterRelease {
                 .set(BasketTeamMember::getLeaveReason, "未进入正式名单后离队")
                 .set(BasketTeamMember::getUpdateTime, now));
         teamMembershipSupport.clearActiveMemberSlot(membership);
-        if (Objects.equals(team.getCaptainMemberId(), memberId)) {
-            teamDao.update(null, new LambdaUpdateWrapper<BasketTeam>()
-                    .eq(BasketTeam::getId, team.getId())
-                    .set(BasketTeam::getCaptainMemberId, null)
-                    .set(BasketTeam::getCaptainPlayerId, null)
-                    .set(BasketTeam::getUpdateTime, now));
-        }
         unbindGrant(memberId, divisionId, team.getId(), grantToRefresh);
         Long remain = teamMemberDao.selectCount(new LambdaQueryWrapper<BasketTeamMember>()
                 .eq(BasketTeamMember::getTeamId, team.getId())
