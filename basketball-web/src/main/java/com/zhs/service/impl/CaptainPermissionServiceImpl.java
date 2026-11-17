@@ -55,6 +55,8 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
     @Resource
     private TeamMembershipSupport teamMembershipSupport;
     @Resource
+    private com.zhs.support.ExcludedRosterSupport excludedRosterSupport;
+    @Resource
     private CaptainGrantSupport captainGrantSupport;
     @Resource
     private TeamWritableSupport teamWritableSupport;
@@ -147,10 +149,12 @@ public class CaptainPermissionServiceImpl implements ICaptainPermissionService {
         boolean runtimeValid = invalidReason == null;
         resp.setRuntimeValid(runtimeValid);
         resp.setGrantRevoked(!runtimeValid && CaptainGrantStatusEnum.REVOKED.getCode().equals(grant.getGrantStatus()));
+        boolean boundToExcludedTeam = grant.getTeamId() != null
+                && excludedRosterSupport.isExcluded(grant.getTeamId(), grant.getDivisionId());
         boolean canCreateByGrant = runtimeValid
-                && grant.getTeamId() == null
+                && (grant.getTeamId() == null || boundToExcludedTeam)
                 && grant.getDivisionId() != null
-                && !teamMembershipSupport.hasActiveTeamMembership(accountId, grant.getDivisionId());
+                && !teamMembershipSupport.occupiesDivision(accountId, grant.getDivisionId());
         resp.setCanCreateTeam(canCreateByGrant);
         // 历史球队复活已废弃
         resp.setCanInheritTeam(false);

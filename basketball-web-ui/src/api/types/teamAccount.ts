@@ -14,6 +14,7 @@ export interface TeamSummaryDto {
   canManage?: boolean
   isHistorical?: boolean
   displayStatusText?: string
+  rosterExcluded?: boolean
   registrationStatus?: string
   teamNo?: string
   teamName: string
@@ -57,6 +58,7 @@ export interface TeamDetailDto {
   canManage?: boolean
   isHistorical?: boolean
   displayStatusText?: string
+  rosterExcluded?: boolean
   registrationStatus?: string
   teamNo?: string
   teamName: string

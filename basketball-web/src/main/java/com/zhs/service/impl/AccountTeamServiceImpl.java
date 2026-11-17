@@ -153,6 +153,10 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
     private BasketRegistrationDao registrationDao;
     @Resource
     private BasketEventTeamDao eventTeamDao;
+    @Resource
+    private com.zhs.support.ExcludedRosterSupport excludedRosterSupport;
+    @Resource
+    private com.zhs.service.team.ExcludedRosterRelease excludedRosterRelease;
 
     @Override
     public IPage<TeamSummaryResp> pageMine(Integer currentPage, Integer pageSize) {
@@ -570,6 +574,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         BasketPlayerProfile playerProfile = captainPermissionService.requireCertifiedPlayer(memberId);
         BasketCaptainGrant grant = captainPermissionService.requireValidQualificationForDivision(
                 memberId, null, division.getId());
+        excludedRosterRelease.releaseIfExcluded(memberId, division.getId(), null, grant);
         captainGrantSupport.assertGrantUnbound(grant);
         if (!Objects.equals(grant.getDivisionId(), division.getId())) {
             throw new ServiceException(CaptainGrantSupport.GRANT_DIVISION_MISMATCH_MESSAGE, 403);
@@ -650,6 +655,7 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         Long divisionId = req.getDivisionId();
         BasketDivision division = teamWritableSupport.requireDivisionForTeamCreate(divisionId);
         BasketPlayerProfile playerProfile = captainPermissionService.requireCertifiedPlayer(memberId);
+        excludedRosterRelease.releaseIfExcluded(memberId, division.getId(), null, null);
         teamMembershipSupport.assertEligibleToJoinTeam(memberId, division.getId());
         assertTeamNameUnique(division.getId(), req.getTeamName().trim(), null);
 
@@ -1378,8 +1384,10 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         resp.setRegistrationStatus(registrationStatus);
         resp.setIsHistorical(historical);
         resp.setCanManage(!historical && captainPermissionService.canManageTeam(memberId, team.getId()));
+        boolean rosterExcluded = !historical && excludedRosterSupport.isExcluded(team.getId(), divisionId);
+        resp.setRosterExcluded(rosterExcluded);
         resp.setDisplayStatusText(resolveDisplayStatusText(team, membership, ctx.divisionMap.get(divisionId),
-                registrationStatus, historical, ctx.eventTeamSourceIds.contains(team.getId())));
+                registrationStatus, historical, ctx.eventTeamSourceIds.contains(team.getId()), rosterExcluded));
     }
 
     private void enrichTeamDetail(TeamDetailResp resp,
@@ -1419,8 +1427,10 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
         resp.setRegistrationStatus(registrationStatus);
         resp.setIsHistorical(historical);
         resp.setCanManage(!historical && captainPermissionService.canManageTeam(memberId, team.getId()));
+        boolean rosterExcluded = !historical && excludedRosterSupport.isExcluded(team.getId(), divisionId);
+        resp.setRosterExcluded(rosterExcluded);
         resp.setDisplayStatusText(resolveDisplayStatusText(team, membership, division,
-                registrationStatus, historical, ctx.eventTeamSourceIds.contains(team.getId())));
+                registrationStatus, historical, ctx.eventTeamSourceIds.contains(team.getId()), rosterExcluded));
     }
 
     private void fillEventContext(TeamSummaryResp resp, BasketTeam team, EventContextMaps ctx) {
@@ -1615,7 +1625,8 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
                                             BasketDivision division,
                                             String registrationStatus,
                                             boolean historical,
-                                            boolean hasEventTeam) {
+                                            boolean hasEventTeam,
+                                            boolean rosterExcluded) {
         if (historical) {
             if (team.getDivisionId() == null) {
                 return "历史球队";
@@ -1643,6 +1654,9 @@ public class AccountTeamServiceImpl implements IAccountTeamService {
                 return "已离队";
             }
             return "历史球队";
+        }
+        if (rosterExcluded) {
+            return "未进入正式名单";
         }
         if (division != null && DivisionStatusEnum.PLAYING.getCode().equals(division.getDivisionStatus()) && hasEventTeam) {
             return "赛事进行中";

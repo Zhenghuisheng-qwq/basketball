@@ -50,6 +50,12 @@ public class TeamCaptainSuccessionService {
     private CaptainGrantSupport captainGrantSupport;
     @Resource
     private TeamMembershipChangeGate membershipChangeGate;
+    @Resource
+    private TeamCaptainSeat teamCaptainSeat;
+    @Resource
+    private com.zhs.support.ExcludedRosterSupport excludedRosterSupport;
+    @Resource
+    private com.zhs.support.TeamWritableSupport teamWritableSupport;
 
     @Transactional(rollbackFor = Exception.class)
     public void transfer(String teamId, String targetTeamMemberId) {
@@ -109,6 +115,19 @@ public class TeamCaptainSuccessionService {
     public void applyDissolve(String teamId, String reason) {
         Long teamPk = parseId(teamId, "球队主键");
         Long operatorId = UserContext.getRequiredUserId();
+        BasketTeam loaded = teamDao.selectById(teamPk);
+        if (loaded != null && excludedRosterSupport.isExcluded(loaded.getId(), loaded.getDivisionId())) {
+            teamWritableSupport.assertTeamWritable(loaded);
+            BasketTeamMember seat = requireCurrentByMember(teamPk, operatorId);
+            if (!teamCaptainSeat.holds(loaded, seat)) {
+                throw new ServiceException("只有队长可以申请解散");
+            }
+            if (seat.getPlayerId() == null) {
+                throw new ServiceException("队长球员资料不存在，不能提交解散");
+            }
+            membershipChangeGate.submitDissolve(loaded, operatorId, seat.getPlayerId(), reason);
+            return;
+        }
         BasketTeam team = captainPermissionService.requireTeamCaptain(operatorId, teamPk);
         BasketTeamMember seat = requireCurrentByMember(teamPk, operatorId);
         if (seat.getPlayerId() == null) {

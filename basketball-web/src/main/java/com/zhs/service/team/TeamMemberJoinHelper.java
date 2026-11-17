@@ -60,6 +60,8 @@ public class TeamMemberJoinHelper {
     private EventRosterMembershipSync eventRosterMembershipSync;
     @Resource
     private TeamMembershipChangeGate membershipChangeGate;
+    @Resource
+    private ExcludedRosterRelease excludedRosterRelease;
 
     @Transactional(rollbackFor = Exception.class)
     public BasketTeamMember addMember(BasketTeam team, Long memberId, Long playerId, TeamJoinSourceEnum joinSource) {
@@ -80,6 +82,7 @@ public class TeamMemberJoinHelper {
         }
         assertTeamHasCapacity(team);
         captainPermissionService.requireCertifiedPlayer(memberId);
+        excludedRosterRelease.releaseIfExcluded(memberId, team.getDivisionId(), team.getId(), null);
         teamMembershipSupport.assertEligibleToJoinTeam(memberId, team.getDivisionId());
         eventRosterMembershipSync.retireStaleBeforeRejoin(team.getId(), playerId);
 

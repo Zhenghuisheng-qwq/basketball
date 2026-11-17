@@ -32,6 +32,8 @@ public class TeamMembershipSupport {
     private BasketTeamMemberDao teamMemberDao;
     @Resource
     private BasketTeamJoinApplicationDao joinApplicationDao;
+    @Resource
+    private ExcludedRosterSupport excludedRosterSupport;
 
     /** 兼容旧调用：取任意一条 ACTIVE（不保证 Division）。新业务请用 division 重载。 */
     public BasketTeamMember findActiveMembership(Long memberId) {
@@ -90,7 +92,7 @@ public class TeamMembershipSupport {
             return TeamWritableSupport.LEGACY_TEAM_READONLY_MESSAGE;
         }
         BasketTeamMember membership = findActiveMembership(memberId, divisionId);
-        if (membership != null) {
+        if (membership != null && !excludedFromRoster(membership, divisionId)) {
             return "当前账号已在该赛事加入球队，不能重复加入";
         }
         return null;
@@ -127,10 +129,24 @@ public class TeamMembershipSupport {
         if (targetTeamId != null && targetTeamId.equals(membership.getTeamId())) {
             return BusinessReason.ALREADY_ON_THIS_TEAM;
         }
+        if (excludedFromRoster(membership, divisionId)) {
+            return null;
+        }
         if (TeamMemberRoleEnum.CAPTAIN.getCode().equalsIgnoreCase(membership.getRoleType())) {
             return BusinessReason.EVENT_CAPTAIN_CONFLICT;
         }
         return BusinessReason.EVENT_TEAM_CONFLICT;
+    }
+
+    /** 最终名单没有这支球队时，这条成员关系不再占本届名额。 */
+    public boolean occupiesDivision(Long memberId, Long divisionId) {
+        BasketTeamMember membership = findActiveMembership(memberId, divisionId);
+        return membership != null && !excludedFromRoster(membership, divisionId);
+    }
+
+    private boolean excludedFromRoster(BasketTeamMember membership, Long divisionId) {
+        Long teamDivisionId = membership.getDivisionId() != null ? membership.getDivisionId() : divisionId;
+        return excludedRosterSupport.isExcluded(membership.getTeamId(), teamDivisionId);
     }
 
     private ServiceException joinBlocked(String reason) {

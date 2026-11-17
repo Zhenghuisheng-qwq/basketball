@@ -97,6 +97,8 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
     private TeamWritableSupport teamWritableSupport;
     @Resource
     private TeamMembershipChangeGate membershipChangeGate;
+    @Resource
+    private com.zhs.service.team.ExcludedRosterRelease excludedRosterRelease;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -275,6 +277,7 @@ public class TeamInvitationBusinessServiceImpl implements ITeamInvitationBusines
                 throw new ServiceException("这条邀请绑定的不是球队当前赛事，不能接受。请让队长在当前赛事重新邀请",
                         403, BusinessReason.INVITATION_INVALID.code());
             }
+            excludedRosterRelease.releaseIfExcluded(memberId, boundDivisionId, team.getId(), null);
             BusinessReason block = teamMembershipSupport.resolveEventJoinBlock(memberId, boundDivisionId, team.getId());
             if (block != null) {
                 throw block.exception(403);

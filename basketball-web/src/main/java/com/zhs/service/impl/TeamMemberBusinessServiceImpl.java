@@ -103,6 +103,8 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
     private TeamMembershipChangeGate membershipChangeGate;
     @Resource
     private TeamCaptainSeat teamCaptainSeat;
+    @Resource
+    private com.zhs.service.team.ExcludedRosterRelease excludedRosterRelease;
 
     @Override
     public IPage<TeamMemberItemResp> pageMembers(String teamId, Integer currentPage, Integer pageSize) {
@@ -287,12 +289,17 @@ public class TeamMemberBusinessServiceImpl implements ITeamMemberBusinessService
         Long memberId = UserContext.getRequiredUserId();
         BasketTeamMember membership = captainPermissionService.requireTeamMember(memberId, teamPk);
         BasketTeam team = teamDao.selectById(teamPk);
-        if (isSeatCaptain(team, membership)) {
-            throw new ServiceException("队长不能直接离队。请先移交队长，或申请解散并等待审核");
-        }
         Long divisionId = membership.getDivisionId();
         if (divisionId == null) {
             divisionId = team == null ? null : team.getDivisionId();
+        }
+        if (excludedRosterRelease.releaseIfExcluded(memberId, divisionId, null, null)) {
+            securityLogHelper.write(memberId, EVENT_TEAM_LEAVE, "离开球队",
+                    null, String.valueOf(teamPk), memberId, clientIp);
+            return;
+        }
+        if (isSeatCaptain(team, membership)) {
+            throw new ServiceException("队长不能直接离队。请先移交队长，或申请解散并等待审核");
         }
         eventRosterMembershipSync.lockDivision(divisionId);
         markMemberLeft(membership, "主动离队");

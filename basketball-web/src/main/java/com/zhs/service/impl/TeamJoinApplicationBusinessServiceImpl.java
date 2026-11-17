@@ -92,6 +92,8 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
     private BasketSeriesDao seriesDao;
     @Resource
     private TeamMembershipChangeGate membershipChangeGate;
+    @Resource
+    private com.zhs.service.team.ExcludedRosterRelease excludedRosterRelease;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -255,6 +257,7 @@ public class TeamJoinApplicationBusinessServiceImpl implements ITeamJoinApplicat
             if (boundDivisionId == null || !boundDivisionId.equals(team.getDivisionId())) {
                 throw new ServiceException("这条申请绑定的不是球队当前赛事，不能通过。请在当前赛事重新申请");
             }
+            excludedRosterRelease.releaseIfExcluded(application.getApplicantMemberId(), team.getDivisionId(), team.getId(), null);
             teamMembershipSupport.assertEligibleToJoinTeam(application.getApplicantMemberId(), team.getDivisionId());
             if (membershipChangeGate.shouldHold(team)) {
                 membershipChangeGate.markJoinPendingAdmin(application, team, memberId);

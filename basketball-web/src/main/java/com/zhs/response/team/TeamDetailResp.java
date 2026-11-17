@@ -58,6 +58,9 @@ public class TeamDetailResp implements Serializable {
     @ApiModelProperty("展示用业务状态文案")
     private String displayStatusText;
 
+    @ApiModelProperty("最终名单已锁定且本队未进入正式名单")
+    private Boolean rosterExcluded;
+
     @ApiModelProperty("报名状态（如有）")
     private String registrationStatus;
 

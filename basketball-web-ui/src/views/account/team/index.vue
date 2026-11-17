@@ -224,13 +224,23 @@ const isHistoricalCaptain = computed(() =>
   viewingHistory.value
   && Boolean(teamStore.teamDetail?.isCaptain || teamStore.myTeamSummary?.isCaptain),
 )
-/** 退出球队只给当前赛季里的普通队员。历史队长和已结束赛事不提供退出。 */
+/** 没进最终名单的球队，队长也可以离队或申请解散。 */
+const rosterExcluded = computed(() => {
+  if (teamStore.teamDetail?.rosterExcluded || selectedTeam.value?.rosterExcluded) return true
+  const card = currentTeams.value.find((item) => item.teamId === selectedTeam.value?.teamId)
+  return Boolean(card?.rosterExcluded)
+})
+/** 退出球队给当前赛季的普通队员，以及未进入正式名单的队长。 */
 const showLeaveTeam = computed(() =>
   hasSelectedTeam.value
   && !viewingHistory.value
-  && !canManageCurrentTeam.value
-  && !isCaptainMember.value
-  && !isHistoricalCaptain.value,
+  && !isHistoricalCaptain.value
+  && (rosterExcluded.value || (!canManageCurrentTeam.value && !isCaptainMember.value)),
+)
+const showDissolveTeam = computed(() =>
+  !viewingHistory.value
+  && hasSelectedTeam.value
+  && (canManageCurrentTeam.value || (rosterExcluded.value && isCaptainMember.value)),
 )
 const canCreateTeam = computed(() => teamStore.canCreateTeam)
 const allGrants = computed(() => teamStore.captainQualifications)
@@ -303,7 +313,7 @@ const registrationDetailRosterRows = computed(() => {
   if (detail.rosterLocked || detail.registrationStatus === 3) {
     return (detail.rosterItems || []).map((item) => ({
       key: item.teamMemberId,
-      name: item.nickname || item.gameNickname || item.playerNo || '-',
+      name: item.realName || item.gameNickname || item.playerNo || '-',
       position: formatPositionCell(item.positionCode, undefined),
       platformId: '-',
       eligibility: t('accountTeam.registration.included'),
@@ -323,7 +333,7 @@ const registrationDetailRosterRows = computed(() => {
 
   return (detail.rosterItems || []).map((item) => ({
     key: item.teamMemberId,
-    name: item.nickname || item.gameNickname || item.playerNo || '-',
+    name: item.realName || item.gameNickname || item.playerNo || '-',
     position: formatPositionCell(item.positionCode, undefined),
     platformId: '-',
     eligibility: t('accountTeam.registration.included'),
@@ -871,11 +881,15 @@ async function transferCaptain(member: TeamMemberItemDto) {
 async function handleDissolve() {
   if (!teamId.value) return
   try {
-    await ElMessageBox.confirm(t('accountTeam.overview.dissolveConfirm'), t('accountTeam.overview.dissolveTitle'), {
-      type: 'warning',
-      confirmButtonText: t('accountTeam.common.confirm'),
-      cancelButtonText: t('accountTeam.common.cancel'),
-    })
+    await ElMessageBox.confirm(
+      rosterExcluded.value ? t('accountTeam.overview.dissolveExcludedConfirm') : t('accountTeam.overview.dissolveConfirm'),
+      t('accountTeam.overview.dissolveTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('accountTeam.common.confirm'),
+        cancelButtonText: t('accountTeam.common.cancel'),
+      },
+    )
     await teamStore.applyDissolveAction(teamId.value)
     ElMessage.success(t('accountTeam.overview.dissolveDone'))
   } catch (error) {
@@ -897,11 +911,15 @@ async function removeMember(member: TeamMemberItemDto) {
 async function handleLeaveTeam() {
   if (!teamId.value) return
   try {
-    await ElMessageBox.confirm(t('accountTeam.overview.leaveConfirm'), t('accountTeam.overview.leaveTitle'), {
-      type: 'warning',
-      confirmButtonText: t('accountTeam.common.confirm'),
-      cancelButtonText: t('accountTeam.common.cancel'),
-    })
+    await ElMessageBox.confirm(
+      rosterExcluded.value ? t('accountTeam.overview.leaveExcludedConfirm') : t('accountTeam.overview.leaveConfirm'),
+      t('accountTeam.overview.leaveTitle'),
+      {
+        type: 'warning',
+        confirmButtonText: t('accountTeam.common.confirm'),
+        cancelButtonText: t('accountTeam.common.cancel'),
+      },
+    )
     await teamStore.leaveTeamAction(teamId.value)
     ElMessage.success(t('accountTeam.overview.left'))
     await bootstrap()
@@ -1359,6 +1377,7 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
                 {{ t('accountTeam.list.myRole', { role: roleLabel(team.myRole, team.isCaptain) }) }}
                 · {{ team.displayStatusText || t('accountTeam.list.currentFallback') }}
               </p>
+              <p v-if="team.rosterExcluded" class="team-tip">{{ t('accountTeam.list.excludedHint') }}</p>
             </div>
             <div class="team-manage-actions">
               <button type="button" class="account-btn-secondary" @click="openTeamCard(team)">
@@ -1769,9 +1788,10 @@ const tabLabels = computed<Record<TeamTab, string>>(() => ({
             <div class="account-field-row"><dt>{{ t('accountTeam.overview.intro') }}</dt><dd>{{ teamDetail.description || t('accountTeam.common.empty') }}</dd></div>
           </dl>
           <AccountEmptyState v-else :message="t('accountTeam.overview.loading')" />
-          <div v-if="showLeaveTeam || canManageCurrentTeam" class="team-manage-actions">
+          <p v-if="rosterExcluded && !viewingHistory" class="team-tip">{{ t('accountTeam.overview.excludedHint') }}</p>
+          <div v-if="showLeaveTeam || showDissolveTeam" class="team-manage-actions">
             <button v-if="showLeaveTeam" type="button" class="account-btn-secondary" @click="handleLeaveTeam">{{ t('accountTeam.overview.leave') }}</button>
-            <button v-if="canManageCurrentTeam" type="button" class="account-btn-secondary" @click="handleDissolve">{{ t('accountTeam.overview.dissolve') }}</button>
+            <button v-if="showDissolveTeam" type="button" class="account-btn-secondary" @click="handleDissolve">{{ t('accountTeam.overview.dissolve') }}</button>
           </div>
         </AccountPanel>
       </template>
