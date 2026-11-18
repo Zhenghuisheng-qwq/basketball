@@ -180,7 +180,7 @@ function roundText(item: V4PublicScheduleItem): string {
           target="_blank"
           rel="noopener noreferrer"
         >
-          {{ t('eventsPage.schedule.watchReplay') }}
+          {{ t('eventsPage.schedule.replay') }}
         </a>
       </div>
     </article>
@@ -197,7 +197,7 @@ function roundText(item: V4PublicScheduleItem): string {
     minmax(88px, 1.15fr)
     minmax(48px, 0.65fr)
     minmax(60px, 0.75fr)
-    minmax(88px, 1.1fr);
+    minmax(220px, 1.45fr);
   margin-top: 8px;
   border: 1px solid #e8e6e3;
   background: #fff;
@@ -247,10 +247,13 @@ function roundText(item: V4PublicScheduleItem): string {
     background: #fafafa;
   }
 
-  > :deep(*) {
-    min-width: 0;
+  > * {
     padding: 8px;
     box-sizing: border-box;
+  }
+
+  > :not(.action-cell) {
+    min-width: 0;
   }
 }
 
@@ -267,8 +270,11 @@ function roundText(item: V4PublicScheduleItem): string {
 }
 
 .action-cell {
+  position: relative;
+  z-index: 2;
   gap: 8px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  min-width: max-content;
 }
 
 .stage-cell {
@@ -440,6 +446,9 @@ function roundText(item: V4PublicScheduleItem): string {
 }
 
 .match-action-btn {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
   width: auto;
   min-width: 88px;
   height: 30px;
@@ -501,6 +510,8 @@ function roundText(item: V4PublicScheduleItem): string {
   .action-cell {
     grid-area: action;
     justify-content: flex-start;
+    min-width: 0;
+    flex-wrap: wrap;
     padding-top: 0;
   }
 

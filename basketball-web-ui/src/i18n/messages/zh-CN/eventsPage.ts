@@ -237,6 +237,7 @@ export default {
     loadFailed: '加载失败',
     periodScore: '单节比分',
     seriesProgress: '系列赛进程',
+    gameReplay: 'G{no} 比赛录像',
     notNeeded: '无需进行',
     won: '{name} 胜',
     noPlayerStats: '暂无已确认的球员技术统计',

@@ -3,6 +3,7 @@ import { useI18n } from 'vue-i18n'
 import type { Team } from '@/views/events/types/events'
 import type { V4PublicMatchSeriesGame } from '@/api/types/v4Public'
 import { businessDateTime } from '@/utils/businessDateTime'
+import { isSafeHttpUrl } from '../utils/scheduleRowDisplay'
 import { formatExactScore, isPresent } from './matchDetailDisplay'
 
 const props = defineProps<{
@@ -76,6 +77,11 @@ function onSelect(game: V4PublicMatchSeriesGame) {
   if (!canSelect(game) || !game.matchId) return
   emit('select', String(game.matchId))
 }
+
+function replayHref(game: V4PublicMatchSeriesGame): string {
+  const raw = String(game.replayUrl || game.videoUrl || '').trim()
+  return isSafeHttpUrl(raw) ? raw : ''
+}
 </script>
 
 <template>
@@ -85,9 +91,12 @@ function onSelect(game: V4PublicMatchSeriesGame) {
       <span>SERIES GAMES</span>
     </div>
     <div class="series-progress__track">
-      <button
+      <div
         v-for="game in games"
         :key="game.matchId || `g-${game.seriesGameNo}`"
+        class="series-progress__item"
+      >
+      <button
         type="button"
         class="series-progress__node"
         :class="[
@@ -116,6 +125,16 @@ function onSelect(game: V4PublicMatchSeriesGame) {
         </p>
         <p v-if="gameDate(game.scheduledTime)" class="series-progress__date">{{ gameDate(game.scheduledTime) }}</p>
       </button>
+      <a
+        v-if="replayHref(game)"
+        class="series-progress__replay"
+        :href="replayHref(game)"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {{ t('eventsPage.schedule.replay') }}
+      </a>
+      </div>
     </div>
   </section>
 </template>
@@ -150,6 +169,13 @@ function onSelect(game: V4PublicMatchSeriesGame) {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
   gap: 8px;
+}
+
+.series-progress__item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
 }
 
 .series-progress__node {
@@ -239,6 +265,24 @@ function onSelect(game: V4PublicMatchSeriesGame) {
   font-weight: 600;
 }
 
+.series-progress__replay {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: #fff;
+  color: #111;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+
+  &:hover {
+    border-color: var(--cnpa-red, #e51422);
+    color: var(--cnpa-red, #e51422);
+  }
+}
+
 @media (max-width: 720px) {
   .series-progress__track {
     display: flex;
@@ -246,6 +290,7 @@ function onSelect(game: V4PublicMatchSeriesGame) {
     padding-bottom: 4px;
   }
 
+  .series-progress__item,
   .series-progress__node {
     flex: 0 0 112px;
   }

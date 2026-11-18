@@ -237,6 +237,7 @@ export default {
     loadFailed: 'Could not load',
     periodScore: 'Quarter scores',
     seriesProgress: 'Series progress',
+    gameReplay: 'G{no} replay',
     notNeeded: 'Not played',
     won: '{name} won',
     noPlayerStats: 'No confirmed player stats',

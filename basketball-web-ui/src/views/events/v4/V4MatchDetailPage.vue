@@ -21,6 +21,7 @@ import SeriesProgress from '../match-detail/SeriesProgress.vue'
 import SeriesGameTabs from '../match-detail/SeriesGameTabs.vue'
 import PeriodScoreBoard from '../match-detail/PeriodScoreBoard.vue'
 import BoxScorePanel from '../match-detail/BoxScorePanel.vue'
+import { isSafeHttpUrl } from '../utils/scheduleRowDisplay'
 import { iconAssets } from '@/constants/iconAssets'
 import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 import {
@@ -200,6 +201,29 @@ const parentSeriesPath = computed(() => {
 })
 
 const showSeriesTabs = computed(() => seriesMode.value && seriesTabs.value.length > 0)
+
+function replayHrefOf(value?: string | null): string {
+  const raw = String(value || '').trim()
+  return isSafeHttpUrl(raw) ? raw : ''
+}
+
+const replayLinks = computed(() => {
+  if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) {
+    return visibleGames.value.flatMap((game) => {
+      const href = replayHrefOf(game.replayUrl || game.videoUrl)
+      if (!href) return []
+      const no = game.seriesGameNo
+      return [{
+        key: String(game.matchId || no || href),
+        href,
+        label: no ? t('eventsPage.match.gameReplay', { no }) : t('eventsPage.schedule.replay'),
+      }]
+    })
+  }
+  const href = replayHrefOf(match.value?.replayUrl || match.value?.videoUrl)
+  if (!href) return []
+  return [{ key: 'match', href, label: t('eventsPage.schedule.replay') }]
+})
 
 const showPeriodBoard = computed(() => {
   if (seriesMode.value && activeTab.value === SERIES_TOTAL_TAB) return false
@@ -452,6 +476,18 @@ watch([seriesId, matchId, () => route.name], () => {
             :caption="caption"
             :advance-label="advanceLabel"
           />
+          <div v-if="replayLinks.length" class="match-detail-replays">
+            <a
+              v-for="link in replayLinks"
+              :key="link.key"
+              class="match-detail-replay"
+              :href="link.href"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {{ link.label }}
+            </a>
+          </div>
           <SeriesProgress
             v-if="seriesMode && progressGames.length"
             :games="progressGames"
@@ -599,6 +635,38 @@ watch([seriesId, matchId, () => route.name], () => {
 
 .match-detail-state.is-error {
   color: #ff8a8a;
+}
+
+.match-detail-replays {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.match-detail-replay {
+  position: relative;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 112px;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: #fff;
+  color: #111;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--cnpa-red, #e51422);
+    color: var(--cnpa-red, #e51422);
+  }
 }
 
 .match-detail-reason {
