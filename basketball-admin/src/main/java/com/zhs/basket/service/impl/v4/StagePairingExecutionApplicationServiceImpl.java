@@ -336,6 +336,29 @@ public class StagePairingExecutionApplicationServiceImpl implements IStagePairin
         if (!PairingRuleEnum.GROUP_CROSS.getCode().equals(stage.getPairingRule())) {
             throw new ServiceException("当前阶段 pairing_rule 不是 GROUP_CROSS");
         }
+        BracketSlotPlan plan = buildGroupCrossPlan(stage);
+        BasketDivisionStage previous = findPreviousStage(stage);
+        BasketStagePairingExecution execution = requireDraftExecution(stage);
+        execution.setPlacementRule(PairingRuleEnum.GROUP_CROSS.getCode());
+        execution.setSourceStageId(previous.getId());
+        execution.setResolutionStatus(ParticipantResolutionStatusEnum.PENDING.getCode());
+        replaceEntries(execution, plan);
+        execution.setGeneratedTime(new Date());
+        execution.setOperatorId(operatorId());
+        executionMapper.updateById(execution);
+        audit("GROUP_CROSS_GENERATE", stage, execution, "生成 GROUP_CROSS 淘汰占位");
+        return getCurrent(stageId);
+    }
+
+    @Override
+    public BracketSlotPlan describeGroupCross(Long stageId) {
+        return buildGroupCrossPlan(requireStage(stageId));
+    }
+
+    private BracketSlotPlan buildGroupCrossPlan(BasketDivisionStage stage) {
+        if (!PairingRuleEnum.GROUP_CROSS.getCode().equals(stage.getPairingRule())) {
+            throw new ServiceException("当前阶段 pairing_rule 不是 GROUP_CROSS");
+        }
         BasketDivisionStage previous = findPreviousStage(stage);
         if (!GroupRankPlacementSupport.usesGroupRankPlacement(stage, previous)) {
             throw new ServiceException("GROUP_CROSS 需要上一阶段为分组循环赛");
@@ -351,21 +374,11 @@ public class StagePairingExecutionApplicationServiceImpl implements IStagePairin
         for (BasketDivisionGroup group : groups) {
             layouts.add(new GroupLayout(group.getId(), group.getGroupCode(), group.getGroupOrder()));
         }
-        BracketSlotPlan plan = groupCrossPlacementStrategy.place(GroupCrossPlacementRequest.builder()
+        return groupCrossPlacementStrategy.place(GroupCrossPlacementRequest.builder()
                 .sourceStageId(previous.getId())
                 .advancePerGroup(advance)
                 .groups(layouts)
                 .build());
-        BasketStagePairingExecution execution = requireDraftExecution(stage);
-        execution.setPlacementRule(PairingRuleEnum.GROUP_CROSS.getCode());
-        execution.setSourceStageId(previous.getId());
-        execution.setResolutionStatus(ParticipantResolutionStatusEnum.PENDING.getCode());
-        replaceEntries(execution, plan);
-        execution.setGeneratedTime(new Date());
-        execution.setOperatorId(operatorId());
-        executionMapper.updateById(execution);
-        audit("GROUP_CROSS_GENERATE", stage, execution, "生成 GROUP_CROSS 淘汰占位");
-        return getCurrent(stageId);
     }
 
     @Override

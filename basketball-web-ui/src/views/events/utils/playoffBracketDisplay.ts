@@ -57,7 +57,10 @@ function teamName(name?: string | null, sourceType?: string | null, sourceDispla
   const type = String(sourceType || '').toUpperCase()
   if (type === 'BYE') return translate('match.bye')
   if (type === 'WINNER_OF_SERIES') return translate('match.winnerOfPrevious')
-  if (type === 'GROUP_RANK') return translate('match.groupRankPending')
+  if (type === 'GROUP_RANK') {
+    const rankLabel = String(sourceDisplay || '').trim()
+    return rankLabel || translate('match.groupRankPending')
+  }
   const display = String(sourceDisplay || '').trim()
   if (display) return display
   return translate('match.tbd')

@@ -169,6 +169,22 @@ function groupRightRows(group: StandingGroup): Standing[] {
   return splitRightRows(group.rows, groupSplitAt(group))
 }
 
+const cupGroupBoard = computed(() => {
+  if (!props.grouped) return false
+  const code = String(
+    ctx.seasonDetail.value?.seriesCode
+    || ctx.divisionDetail.value?.seriesCode
+    || ctx.currentTournament.value?.tournamentNo
+    || '',
+  ).toUpperCase()
+  return code === 'CUP'
+})
+
+function cupRowQualifies(group: StandingGroup, row: Standing): boolean {
+  const cutoff = groupQualifyCount(group)
+  return cutoff > 0 && row.rank <= cutoff && !row.disqualified
+}
+
 async function load() {
   const current = ++reqId
   const divisionId = ctx.divisionId.value
@@ -260,10 +276,46 @@ watch(
     <p v-else-if="state === 'error'" class="standings-note">{{ errorMessage || t('eventsPage.standings.loadFailed') }}</p>
     <p v-else-if="state === 'empty'" class="standings-note">{{ emptyText || t('eventsPage.standings.empty') }}</p>
 
-    <div v-else class="standings-groups">
+    <div v-else class="standings-groups" :class="{ 'standings-groups--board': cupGroupBoard }">
       <div v-for="group in displayGroups" :key="group.key" class="standings-group">
-        <h3 v-if="groups.length > 1 || grouped" class="standings-group__title">{{ group.title }}</h3>
+        <h3 v-if="!cupGroupBoard && (groups.length > 1 || grouped)" class="standings-group__title">{{ group.title }}</h3>
+        <div v-if="cupGroupBoard" class="standings-panel standings-panel--cup">
+          <div class="standings-panel__head standings-panel__head--cup">
+            <h3>{{ group.title }}</h3>
+          </div>
+          <div class="table-wrap table-wrap--compact">
+            <div class="table-head">
+              <span>{{ t('eventsPage.standings.rank') }}</span>
+              <span>{{ t('eventsPage.standings.team') }}</span>
+              <span>{{ t('eventsPage.standings.win') }}</span>
+              <span>{{ t('eventsPage.standings.loss') }}</span>
+              <span class="points-head">{{ t('eventsPage.standings.points') }}</span>
+            </div>
+            <div
+              v-for="row in group.rows"
+              :key="`${group.key}-${row.teamId}`"
+              class="table-row"
+              :class="cupRowQualifies(group, row) ? 'table-row--qualify' : 'table-row--rest'"
+            >
+              <span class="rank" :class="cupRowQualifies(group, row) ? 'rank-playoff' : 'rank-regular'">{{ row.rank }}</span>
+              <TeamEntryLink
+                v-if="getTeamById(row.teamId)"
+                :team="getTeamById(row.teamId)!"
+                class="team"
+              >
+                <TeamLogo :team="getTeamById(row.teamId)!" size="sm" />
+                <span class="team-name">{{ getTeamById(row.teamId)!.name }}</span>
+                <em v-if="row.disqualified" class="dq-tag">{{ t('eventsPage.standings.disqualified') }}</em>
+              </TeamEntryLink>
+              <span v-else class="team"><span class="team-name">{{ row.teamName }}</span></span>
+              <span class="num">{{ row.wins }}</span>
+              <span class="num">{{ row.losses }}</span>
+              <span class="num points">{{ row.standingPoints }}</span>
+            </div>
+          </div>
+        </div>
         <div
+          v-else
           class="standings-grid"
           :class="groupRightRows(group).length ? 'standings-grid--dual' : 'standings-grid--single'"
         >
@@ -382,6 +434,13 @@ watch(
   gap: 24px;
 }
 
+.standings-groups--board {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
 .standings-group__title {
   margin: 0 0 10px;
   color: #111;
@@ -472,6 +531,44 @@ watch(
 
 .standings-panel--rest .standings-panel__head h3 {
   color: rgba(17, 17, 17, 0.78);
+}
+
+.standings-panel__head--cup {
+  min-height: 0;
+  padding: 10px 12px 8px;
+
+  h3 {
+    color: #111;
+    font-size: 16px;
+    font-weight: 900;
+  }
+}
+
+.table-wrap--compact .table-head,
+.table-wrap--compact .table-row {
+  grid-template-columns: 28px minmax(0, 1fr) 22px 22px 28px;
+  min-width: 0;
+  column-gap: 6px;
+  padding: 0 8px;
+}
+
+.table-wrap--compact .table-row {
+  min-height: 44px;
+}
+
+.points-head,
+.table-wrap--compact .points {
+  text-align: right;
+}
+
+.table-row--qualify .team-name,
+.table-row--qualify .points {
+  color: var(--cnpa-red, #e10613);
+}
+
+.table-row--rest .team-name,
+.table-row--rest .points {
+  color: #8d8d8d;
 }
 
 .table-wrap {
@@ -654,6 +751,10 @@ watch(
   .standings-grid--dual {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .standings-groups--board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 640px) {
@@ -662,6 +763,12 @@ watch(
     min-width: 420px;
     column-gap: 6px;
     padding: 0 10px 0 8px;
+  }
+
+  .table-wrap--compact .table-head,
+  .table-wrap--compact .table-row {
+    min-width: 0;
+    padding: 0 8px;
   }
 
   .table-wrap--form .table-head,

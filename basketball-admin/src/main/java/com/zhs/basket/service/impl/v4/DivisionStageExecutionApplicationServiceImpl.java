@@ -329,6 +329,7 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         }
         BestOfCapabilityGate.assertCanGenerateSchedule(stage);
         DoubleEliminationCapabilityGate.assertCanGenerateSchedule(stage);
+        ensureGroupCrossPlaceholders(stage);
         if (structureGenerationPrerequisiteValidator.isVersioned(division.getId())) {
             structureGenerationPrerequisiteValidator.assertCanGenerate(division, stage);
         } else {
@@ -1034,12 +1035,19 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
         context.setVersionContext(structureVersionService.resolveForGenerate(division.getId()));
         if (SingleEliminationStageScheduleStrategy.requiresConfirmedDraw(stage)
                 || GroupRankPlacementSupport.usesGroupRankPlacement(stage, findPreviousStage(stage))) {
-            var plan = pairingExecutionApplicationService.loadConfirmedPlan(stage);
-            context.setBracketSlotPlan(plan);
             var vo = pairingExecutionApplicationService.getCurrent(stage.getId());
-            context.setPairingExecutionId(vo.getExecutionId());
-            if (context.getVersionContext() != null) {
-                context.getVersionContext().setPairingExecutionId(vo.getExecutionId());
+            boolean confirmed = vo.getExecutionId() != null && "CONFIRMED".equals(vo.getStatus());
+            if (confirmed) {
+                context.setBracketSlotPlan(pairingExecutionApplicationService.loadConfirmedPlan(stage));
+                context.setPairingExecutionId(vo.getExecutionId());
+                if (context.getVersionContext() != null) {
+                    context.getVersionContext().setPairingExecutionId(vo.getExecutionId());
+                }
+            } else if (PairingRuleEnum.GROUP_CROSS.getCode().equals(stage.getPairingRule())
+                    && GroupRankPlacementSupport.usesGroupRankPlacement(stage, findPreviousStage(stage))) {
+                context.setBracketSlotPlan(pairingExecutionApplicationService.describeGroupCross(stage.getId()));
+            } else {
+                context.setBracketSlotPlan(pairingExecutionApplicationService.loadConfirmedPlan(stage));
             }
         }
 
@@ -1054,6 +1062,26 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
             }
         }
         return context;
+    }
+
+    /**
+     * Cup 小组+淘汰是同一套模板：小组分配锁定后，生成淘汰赛时直接按组名次落占位并确认。
+     * MANUAL 仍要运营自己确认签位。
+     */
+    private void ensureGroupCrossPlaceholders(BasketDivisionStage stage) {
+        if (!PairingRuleEnum.GROUP_CROSS.getCode().equals(stage.getPairingRule())) {
+            return;
+        }
+        BasketDivisionStage previous = findPreviousStage(stage);
+        if (!GroupRankPlacementSupport.usesGroupRankPlacement(stage, previous)) {
+            return;
+        }
+        var pairing = pairingExecutionApplicationService.getCurrent(stage.getId());
+        if (pairing.getExecutionId() != null && "CONFIRMED".equals(pairing.getStatus())) {
+            return;
+        }
+        pairingExecutionApplicationService.generateGroupCross(stage.getId());
+        pairingExecutionApplicationService.confirm(stage.getId());
     }
 
     /**

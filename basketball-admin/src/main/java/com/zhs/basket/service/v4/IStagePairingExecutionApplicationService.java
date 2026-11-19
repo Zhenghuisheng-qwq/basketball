@@ -26,6 +26,11 @@ public interface IStagePairingExecutionApplicationService {
 
     StagePairingExecutionVo generateGroupCross(Long stageId);
 
+    /**
+     * 按已锁定小组布局计算 GROUP_CROSS 占位，不落库。
+     */
+    BracketSlotPlan describeGroupCross(Long stageId);
+
     StagePairingExecutionVo resolvePlaceholders(Long stageId);
 
     StagePairingExecutionVo redraw(Long stageId);

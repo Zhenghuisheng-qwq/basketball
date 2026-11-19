@@ -26,4 +26,6 @@ public interface BasketV4PublicStageMapper {
     List<Long> selectGroupScopeKeysByStageId(@Param("stageId") Long stageId);
 
     List<V4PublicGroupSeedRow> selectLockedGroupSeeds(@Param("stageId") Long stageId);
+
+    List<V4PublicGroupSeedRow> selectLockedGroupHeaders(@Param("stageId") Long stageId);
 }

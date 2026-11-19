@@ -111,4 +111,20 @@
         order by g.group_order asc, gt.seed_no asc, gt.id asc
     </select>
 
+    <select id="selectLockedGroupHeaders" resultType="com.zhs.response.v4.publicapi.V4PublicGroupSeedRow">
+        select
+            g.id as groupId,
+            g.group_code as groupCode,
+            g.group_name as groupName,
+            g.group_order as groupOrder,
+            g.qualify_count as qualifyCount
+        from basket_division_group g
+        join basket_division_grouping_batch b on b.id = g.grouping_batch_id and b.is_delete = 0
+        where b.stage_id = #{stageId}
+          and b.grouping_status = 'LOCKED'
+          and b.active_unique_key is not null
+          and g.is_delete = 0
+        order by g.group_order asc, g.id asc
+    </select>
+
 </mapper>

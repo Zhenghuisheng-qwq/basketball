@@ -662,14 +662,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             V4PublicStageStandingScopeResp scope = new V4PublicStageStandingScopeResp();
             scope.setGroupScopeKey(scopeKey);
             scope.setGroupId(scopeKey != null && scopeKey > 0 ? scopeKey : null);
-            if (scopeKey != null && scopeKey > 0) {
-                // group name via first row's groupId lookup omitted for brevity; frontend can show code
-            }
             scope.setQualifyCount(qualifyCount);
             scope.setRows(rows);
             scopes.add(scope);
         }
         if (!scopes.isEmpty()) {
+            attachLockedGroupHeaders(stageId, scopes);
             return scopes;
         }
         return loadLockedGroupSeedStandings(stageId, qualifyCount);
@@ -719,6 +717,38 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
             }
         }
         return result;
+    }
+
+    private void attachLockedGroupHeaders(Long stageId, List<V4PublicStageStandingScopeResp> scopes) {
+        List<V4PublicGroupSeedRow> headers = publicStageMapper.selectLockedGroupHeaders(stageId);
+        Map<Long, V4PublicGroupSeedRow> byId = new HashMap<>();
+        if (headers != null) {
+            for (V4PublicGroupSeedRow header : headers) {
+                if (header.getGroupId() != null) {
+                    byId.put(header.getGroupId(), header);
+                }
+            }
+        }
+        for (V4PublicStageStandingScopeResp scope : scopes) {
+            Long groupId = scope.getGroupId() != null ? scope.getGroupId() : scope.getGroupScopeKey();
+            V4PublicGroupSeedRow header = groupId == null ? null : byId.get(groupId);
+            if (header == null) {
+                continue;
+            }
+            scope.setGroupId(header.getGroupId());
+            scope.setGroupCode(header.getGroupCode());
+            scope.setGroupName(header.getGroupName());
+            if (header.getQualifyCount() != null && header.getQualifyCount() > 0) {
+                scope.setQualifyCount(header.getQualifyCount());
+            }
+        }
+        scopes.sort(Comparator
+                .comparingInt((V4PublicStageStandingScopeResp scope) -> {
+                    Long groupId = scope.getGroupId() != null ? scope.getGroupId() : scope.getGroupScopeKey();
+                    V4PublicGroupSeedRow header = groupId == null ? null : byId.get(groupId);
+                    return header == null || header.getGroupOrder() == null ? Integer.MAX_VALUE : header.getGroupOrder();
+                })
+                .thenComparing(scope -> scope.getGroupScopeKey() == null ? Long.MAX_VALUE : scope.getGroupScopeKey()));
     }
 
     private Integer resolveStageQualifyCount(V4PublicStageItemResp stage) {

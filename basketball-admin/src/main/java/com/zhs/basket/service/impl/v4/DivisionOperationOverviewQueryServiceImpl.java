@@ -2,6 +2,7 @@ package com.zhs.basket.service.impl.v4;
 
 import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketDivisionFormatSnapshot;
+import com.zhs.basket.domain.v4.BasketDivisionGroupingBatch;
 import com.zhs.basket.domain.v4.BasketDivisionRosterVersion;
 import com.zhs.basket.domain.v4.BasketDivisionStage;
 import com.zhs.basket.domain.v4.BasketScheduleBatch;
@@ -9,10 +10,13 @@ import com.zhs.basket.domain.v4.BasketSeason;
 import com.zhs.basket.domain.v4.BasketSeries;
 import com.zhs.basket.domain.v4.BasketStagePublishRecord;
 import com.zhs.basket.enums.v4.CompetitionFormatEnum;
+import com.zhs.basket.enums.v4.GroupingStatusEnum;
+import com.zhs.basket.enums.v4.PairingRuleEnum;
 import com.zhs.basket.enums.v4.PublishStatusEnum;
 import com.zhs.basket.enums.v4.StageExecutionStatusEnum;
 import com.zhs.basket.enums.v4.StructureStatusEnum;
 import com.zhs.basket.mapper.v4.BasketDivisionFormatSnapshotMapper;
+import com.zhs.basket.mapper.v4.BasketDivisionGroupingBatchMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionRosterVersionMapper;
 import com.zhs.basket.mapper.v4.BasketDivisionStageMapper;
@@ -27,6 +31,7 @@ import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
 import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
 import com.zhs.basket.service.v4.IStageScheduleApplicationService;
 import com.zhs.basket.support.v4.DivisionOperationCapabilitySupport;
+import com.zhs.basket.support.v4.bracket.GroupRankPlacementSupport;
 import com.zhs.basket.support.v4.stage.StructureGenerationPrerequisiteValidator;
 import com.zhs.basket.support.v4.DivisionRuleMutableSpecification;
 import com.zhs.basket.support.v4.DoubleEliminationCapabilityGate;
@@ -75,6 +80,8 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
     private BasketScheduleBatchMapper scheduleBatchMapper;
     @Autowired
     private BasketDivisionStageMapper stageMapper;
+    @Autowired
+    private BasketDivisionGroupingBatchMapper groupingBatchMapper;
     @Autowired
     private BasketStagePublishRecordMapper publishRecordMapper;
     @Autowired
@@ -320,6 +327,23 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
                 : null;
         boolean pairingOk = pairingBlock == null;
         boolean qualificationReady = qualificationReady(row, allStages);
+        BasketDivisionStage currentStage = findStage(row.getStageId(), allStages);
+        BasketDivisionStage previousStage = previousStage(currentStage, allStages);
+        boolean groupCrossPlaceholder = isGroupCrossPlaceholder(currentStage, previousStage);
+        if (groupCrossPlaceholder) {
+            qualificationReady = true;
+            if (!groupingLocked(previousStage)) {
+                pairingBlock = "请先锁定小组分配，再生成淘汰占位结构";
+                pairingOk = false;
+            } else if (pairing == null || !"CONFIRMED".equals(pairing.getStatus())) {
+                if (pairingBlock == null
+                        || StructureGenerationPrerequisiteValidator.MSG_SLOT_NOT_CONFIRMED.equals(pairingBlock)
+                        || StructureGenerationPrerequisiteValidator.MSG_DRAW_NOT_CONFIRMED.equals(pairingBlock)) {
+                    pairingBlock = null;
+                    pairingOk = true;
+                }
+            }
+        }
         StageOperationCapabilities sc = DivisionOperationCapabilitySupport.stageCapabilities(
                 ruleLocked,
                 rosterReady,
@@ -349,6 +373,10 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
         String pairingStatus = pairingRequired ? (pairing == null ? "PENDING" : pairing.getStatus()) : "NOT_REQUIRED";
         vo.setPairingStatus(pairingStatus);
         vo.setPairingStatusName(V4AdminDisplaySupport.pairingStatusLabel(pairingStatus));
+        if (groupCrossPlaceholder && groupingLocked(previousStage)
+                && (pairing == null || !"CONFIRMED".equals(pairing.getStatus()))) {
+            vo.setPairingStatusName("按小组名次占位");
+        }
         vo.setQualificationStatus(row.getExecutionStatus());
         vo.setQualificationStatusName(qualificationLabel(row));
         vo.setScheduledUnits(schedule.getScheduledUnits());
@@ -363,7 +391,11 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
         vo.setResultTotal(schedule.getTotalUnits());
         vo.setCapabilities(sc);
         if ("待生成".equals(sc.getBlockReason()) && sc.isCanGenerateStructure()) {
-            vo.setWorkflowHint("抽签已确认，可以生成结构");
+            if (groupCrossPlaceholder && (pairing == null || !"CONFIRMED".equals(pairing.getStatus()))) {
+                vo.setWorkflowHint("小组已锁定，可以按组名次生成淘汰占位");
+            } else {
+                vo.setWorkflowHint("抽签已确认，可以生成结构");
+            }
         } else {
             vo.setWorkflowHint(sc.getBlockReason() == null ? resolveStageHint(vo) : sc.getBlockReason());
         }
@@ -380,6 +412,38 @@ public class DivisionOperationOverviewQueryServiceImpl implements IDivisionOpera
         return "RANDOM_CONFIRM".equals(draw) || "MANUAL_SLOT".equals(draw)
                 || "ADMIN_SEED".equals(seed) || "EXTERNAL_RANKING".equals(seed)
                 || "GROUP_CROSS".equals(pairing) || "MANUAL".equals(pairing);
+    }
+
+    private boolean isGroupCrossPlaceholder(BasketDivisionStage current, BasketDivisionStage previous) {
+        return current != null
+                && PairingRuleEnum.GROUP_CROSS.getCode().equals(current.getPairingRule())
+                && GroupRankPlacementSupport.usesGroupRankPlacement(current, previous);
+    }
+
+    private boolean groupingLocked(BasketDivisionStage groupStage) {
+        if (groupStage == null || groupStage.getDivisionId() == null || groupStage.getId() == null) {
+            return false;
+        }
+        BasketDivisionGroupingBatch batch = groupingBatchMapper.selectActiveByDivisionAndStage(
+                groupStage.getDivisionId(), groupStage.getId());
+        return batch != null && GroupingStatusEnum.LOCKED.getCode().equals(batch.getGroupingStatus());
+    }
+
+    private BasketDivisionStage findStage(Long stageId, List<BasketDivisionStage> allStages) {
+        return allStages.stream()
+                .filter(stage -> Objects.equals(stage.getId(), stageId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private BasketDivisionStage previousStage(BasketDivisionStage current, List<BasketDivisionStage> allStages) {
+        if (current == null || current.getStageOrder() == null) {
+            return null;
+        }
+        return allStages.stream()
+                .filter(stage -> stage.getStageOrder() != null && stage.getStageOrder() < current.getStageOrder())
+                .max((a, b) -> Integer.compare(a.getStageOrder(), b.getStageOrder()))
+                .orElse(null);
     }
 
     private boolean qualificationReady(BasketDivisionStageExecutionListVo row, List<BasketDivisionStage> allStages) {
