@@ -12,8 +12,7 @@ import {
   getPublicPlayerHonorPage,
   getPublicPlayerSeasonStat,
 } from '@/api/publicPlayer'
-import { getV4PublicMatchDetail, getV4PublicMatchList } from '@/api/v4Public'
-import { mapV4MatchToTeamRecord } from '@/views/tournament/team/utils/mapTeamMatch'
+import type { PublicHonorItemResp, PublicPlayerDetailVo, PublicPlayerSeasonStatVo } from '@/api/types/public'
 import PlayerHero from './components/PlayerHero.vue'
 import PlayerTabs from './components/PlayerTabs.vue'
 import PlayerOverview from './components/PlayerOverview.vue'
@@ -22,16 +21,16 @@ import PlayerData from './components/PlayerData.vue'
 import PlayerHonors from './components/PlayerHonors.vue'
 import PlayerCareer from './components/PlayerCareer.vue'
 import {
-  applyPlayerBoxScore,
   buildEmptyPlayerDetail,
+  buildPlayerEventOptions,
   buildPlayerNameHistory,
   buildPlayerTeamHistory,
-  findPlayerBoxScore,
   mapPublicPlayerHonors,
   mapPublicPlayerProfile,
   mapPublicPlayerSeasonStats,
-  mapSeasonStageOptions,
+  resolvePlayerEventDivision,
 } from './mapPlayerDetail'
+import { fetchPlayerMatchesForEvents, hydratePlayerMatches } from './playerMatchLoader'
 import type { PlayerDetailData, PlayerMatchRecord, PlayerProfile } from './types'
 import { normalizePlayerTab, resolvePlayerId, type PlayerDetailTab } from '@/utils/playerNavigate'
 
@@ -49,7 +48,11 @@ const queryDivisionId = computed(() => String(route.query.divisionId || '').trim
 const playerDetail = ref<PlayerDetailData | null>(null)
 const loadState = ref<'loading' | 'success' | 'empty' | 'error'>('loading')
 const loadError = ref('')
+const rawDetail = ref<PublicPlayerDetailVo | null>(null)
+const seasonRows = ref<PublicPlayerSeasonStatVo[]>([])
+const honorRows = ref<PublicHonorItemResp[]>([])
 let reqId = 0
+let matchReq = 0
 
 const activeTab = computed<PlayerDetailTab>(() => normalizePlayerTab(route.query.tab))
 
@@ -68,10 +71,62 @@ const tabComponent = computed(() => {
   }
 })
 
+function composeDetail(divisionQuery: string): PlayerDetailData | null {
+  const source = rawDetail.value
+  if (!source) return null
+  const options = buildPlayerEventOptions(source.currentTeams, seasonRows.value)
+  const divisionId = resolvePlayerEventDivision(divisionQuery, options)
+  const option = options.find((item) => item.id === divisionId)
+  const profile = mapPublicPlayerProfile(source, { divisionId })
+  const selectedStat = seasonRows.value.find((row) => String(row.divisionId || '') === divisionId)
+  if (selectedStat) {
+    profile.eventPlayerId = String(selectedStat.eventPlayerId || '')
+    profile.divisionId = String(selectedStat.divisionId || divisionId)
+    profile.seasonId = selectedStat.seasonId ? String(selectedStat.seasonId) : profile.seasonId
+    profile.seasonName = selectedStat.seasonName || profile.seasonName
+    profile.divisionName = selectedStat.divisionName || profile.divisionName
+    profile.seriesName = selectedStat.seriesName || profile.seriesName
+    if (selectedStat.teamName) profile.currentTeamName = selectedStat.teamName
+    if (selectedStat.eventTeamId) {
+      profile.eventTeamId = String(selectedStat.eventTeamId)
+      profile.currentTeamId = String(selectedStat.eventTeamId)
+    }
+  } else if (option) {
+    profile.divisionId = option.id
+    profile.seasonId = option.seasonId || profile.seasonId
+    profile.seasonName = option.seasonName || profile.seasonName
+    profile.divisionName = option.divisionName || profile.divisionName
+    profile.seriesName = option.seriesName || profile.seriesName
+    profile.eventPlayerId = option.eventPlayerId || ''
+    if (option.teamName) profile.currentTeamName = option.teamName
+    if (option.eventTeamId) {
+      profile.eventTeamId = option.eventTeamId
+      profile.currentTeamId = option.eventTeamId
+    }
+    if (option.teamLogoUrl) profile.currentTeamLogoUrl = option.teamLogoUrl
+  }
+  const detail = buildEmptyPlayerDetail(profile)
+  detail.profile = profile
+  detail.careerStats = mapPublicPlayerSeasonStats(seasonRows.value)
+  detail.seasonStageOptions = options
+  detail.teamHistory = buildPlayerTeamHistory(profile, seasonRows.value)
+  detail.nameHistory = buildPlayerNameHistory(profile, seasonRows.value)
+  detail.honors = mapPublicPlayerHonors(honorRows.value)
+  return detail
+}
+
+function publishDetail(divisionQuery: string) {
+  const detail = composeDetail(divisionQuery)
+  playerDetail.value = detail
+  return detail
+}
+
 async function loadPlayer() {
   const id = playerId.value
   const current = ++reqId
+  matchReq += 1
   if (!id) {
+    rawDetail.value = null
     playerDetail.value = null
     loadState.value = 'empty'
     return
@@ -91,50 +146,21 @@ async function loadPlayer() {
           getPublicPlayerHonorPage(id, { currentPage: 1, pageSize: 200 }),
         ])
     if (current !== reqId) return
-    const rawDetail = detailRes.data
-    if (!rawDetail) {
+    if (!detailRes.data) {
+      rawDetail.value = null
       playerDetail.value = null
       loadState.value = 'empty'
       return
     }
-    const seasonRows = statRes.data ?? []
-    const preferredDivision = queryDivisionId.value || String(seasonRows[0]?.divisionId || '')
-    const profile = mapPublicPlayerProfile(rawDetail, { divisionId: preferredDivision })
-    const scopedStats = seasonRows.filter((row) =>
-      preferredDivision ? String(row.divisionId || '') === preferredDivision : true,
-    )
-    const selectedStat = scopedStats[0] || seasonRows[0]
-    const eventPlayerId = String(selectedStat?.eventPlayerId || '').trim()
-    if (eventPlayerId) {
-      profile.eventPlayerId = eventPlayerId
-    }
-    if (selectedStat) {
-      profile.divisionId = String(selectedStat.divisionId || preferredDivision)
-      profile.seasonId = selectedStat.seasonId ? String(selectedStat.seasonId) : profile.seasonId
-      profile.seasonName = selectedStat.seasonName || profile.seasonName
-      profile.divisionName = selectedStat.divisionName || profile.divisionName
-      profile.seriesName = selectedStat.seriesName || profile.seriesName
-      if (selectedStat.teamName) {
-        profile.currentTeamName = selectedStat.teamName
-      }
-      if (selectedStat.eventTeamId) {
-        profile.eventTeamId = String(selectedStat.eventTeamId)
-        profile.currentTeamId = String(selectedStat.eventTeamId)
-      }
-    }
-    const detail = buildEmptyPlayerDetail(profile)
-    detail.profile = profile
-    detail.careerStats = mapPublicPlayerSeasonStats(seasonRows)
-    detail.seasonStageOptions = mapSeasonStageOptions(seasonRows)
-    detail.teamHistory = buildPlayerTeamHistory(profile, seasonRows)
-    detail.nameHistory = buildPlayerNameHistory(profile, seasonRows)
-    detail.honors = mapPublicPlayerHonors(honorRes.data?.records ?? [])
-    playerDetail.value = detail
+    rawDetail.value = detailRes.data
+    seasonRows.value = statRes.data ?? []
+    honorRows.value = honorRes.data?.records ?? []
+    const detail = publishDetail(queryDivisionId.value)
     loadState.value = 'success'
-    if (!props.sourcePlayerId) {
-      document.title = t('common.documentTitle', { page: profile.displayName })
+    if (!props.sourcePlayerId && detail) {
+      document.title = t('common.documentTitle', { page: detail.profile.displayName })
     }
-    void loadPlayerMatches(current, profile)
+    if (detail) void loadPlayerMatches(detail)
   } catch (err) {
     if (current !== reqId) return
     playerDetail.value = null
@@ -143,91 +169,38 @@ async function loadPlayer() {
   }
 }
 
-async function loadPlayerMatches(current: number, profile: PlayerProfile) {
-  const contextDivisionId = queryDivisionId.value || profile.divisionId
-  if (!contextDivisionId || !profile.eventTeamId) return
+async function loadPlayerMatches(detail: PlayerDetailData) {
+  const current = ++matchReq
+  const profile = detail.profile
+  const option = detail.seasonStageOptions.find((item) => item.id === String(profile.divisionId || ''))
+  if (!option?.eventTeamId) {
+    applyPlayerMatches([], profile)
+    return
+  }
   try {
-    const v4Res = await getV4PublicMatchList({
-      divisionId: contextDivisionId,
-      eventTeamId: profile.eventTeamId,
-    })
-    if (current !== reqId) return
-    const finishedMatchIds = new Set<string>()
-    let inPlayoffs = false
-    let hasLiveMatch = false
-    const sourceMatches = v4Res.data ?? []
-    const matches = sourceMatches.flatMap((item) => {
-      const status = String(item.matchStatus || '').toUpperCase()
-      const seriesStatus = String(item.seriesStatus || '').toUpperCase()
-      const played = status === 'FINISHED' || status === 'FORFEITED' || status === 'FORFEIT'
-      const seriesSkipped = Boolean(item.matchSeriesId) && seriesStatus === 'COMPLETED' && !played
-      const mapped = mapV4MatchToTeamRecord(item, profile.eventTeamId || profile.currentTeamId)
-      if (mapped.stage === 'playoffs') inPlayoffs = true
-      if (!played && !seriesSkipped) hasLiveMatch = true
-      if (!played || seriesSkipped) return []
-      finishedMatchIds.add(String(item.matchId))
-      return [{
-        id: mapped.id,
-        matchId: mapped.id,
-        date: mapped.date,
-        tournamentName: profile.seriesName || profile.seasonName || t('publicPages.player.publicEvent'),
-        stageName: [
-          mapped.stage === 'playoffs' && mapped.stageHeadline && mapped.stageHeadline !== t('publicPages.team.playoffs')
-            ? mapped.stageHeadline
-            : '',
-          mapped.playoffGame || '',
-        ].filter(Boolean).join(' · ')
-          || mapped.stageHeadline
-          || mapped.competition
-          || '--',
-        teamName: profile.currentTeamName,
-        teamId: profile.eventTeamId || profile.currentTeamId,
-        teamLogoUrl: profile.currentTeamLogoUrl,
-        opponentName: mapped.opponentName || t('publicPages.player.opponent'),
-        opponentId: mapped.opponentId,
-        opponentLogoUrl: mapped.opponentLogoUrl || '',
-        result: mapped.result === 'win' ? 'WIN' : mapped.result === 'loss' ? 'LOSS' : 'UNDECIDED',
-        resultLabel: mapped.resultType === 'EVENT_DISQUALIFICATION'
-          ? (mapped.result === 'win' ? t('publicPages.player.opponentDqLoss') : t('publicPages.player.teamDqLoss'))
-          : mapped.resultLabel,
-        teamScore: mapped.teamScore ?? 0,
-        opponentScore: mapped.opponentScore ?? 0,
-        originalTeamScore: mapped.originalTeamScore,
-        originalOpponentScore: mapped.originalOpponentScore,
-        seriesScoreText: mapped.seriesScoreText,
-        matchSeriesId: mapped.matchSeriesId,
-        minutes: 0,
-        points: 0,
-        rebounds: 0,
-        assists: 0,
-        steals: 0,
-        blocks: 0,
-        turnovers: 0,
-        fouls: 0,
-        fieldGoalsMade: null,
-        fieldGoalsAttempted: null,
-        threePointsMade: null,
-        threePointsAttempted: null,
-        freeThrowsMade: null,
-        freeThrowsAttempted: null,
-      } satisfies PlayerMatchRecord]
-    })
-    matches.sort((a, b) => (b.date || '').localeCompare(a.date || ''))
-    if (sourceMatches.length > 0 && !hasLiveMatch) {
-      profile.currentStage = ''
-    } else if (inPlayoffs) {
-      profile.currentStage = t('publicPages.player.playoffs')
-    }
-    applyPlayerMatches(matches, profile)
-    void hydrateMatchStatsInBackground(current, matches, profile, finishedMatchIds)
+    const matches = await fetchPlayerMatchesForEvents([option])
+    if (current !== matchReq) return
+    const hasUpcoming = matches.some((row) => row.status === 'scheduled')
+    const inPlayoffs = matches.some((row) => row.stageName.includes(t('publicPages.player.playoffs')))
+    if (matches.length > 0 && !hasUpcoming) profile.currentStage = ''
+    else if (inPlayoffs) profile.currentStage = t('publicPages.player.playoffs')
+    const ordered = [...matches].sort((a, b) => (b.sortDate || '').localeCompare(a.sortDate || ''))
+    applyPlayerMatches(ordered, profile)
+    const recent = ordered.slice(0, 5)
+    void hydratePlayerMatches(
+      recent,
+      profile,
+      () => current === matchReq,
+      patchMatchRow,
+    )
   } catch {
-    if (current !== reqId) return
+    if (current !== matchReq) return
     applyPlayerMatches([], profile)
   }
 }
 
 function applyPlayerMatches(matches: PlayerMatchRecord[], profile: PlayerProfile) {
-  if (!playerDetail.value) return
+  if (!playerDetail.value || playerDetail.value.profile.id !== profile.id) return
   playerDetail.value = {
     ...playerDetail.value,
     profile,
@@ -242,41 +215,13 @@ function patchMatchRow(matchId: string, nextRow: PlayerMatchRecord) {
   const allMatches = detail.allMatches.map((row) => (
     String(row.matchId) === matchId ? nextRow : row
   ))
+  const recentIds = new Set(detail.recentMatches.map((row) => String(row.matchId)))
   playerDetail.value = {
     ...detail,
-    recentMatches: allMatches.slice(0, 5),
+    recentMatches: allMatches.filter((row) => recentIds.has(String(row.matchId))),
     allMatches,
   }
 }
-
-async function hydrateMatchStatsInBackground(
-  current: number,
-  rows: PlayerMatchRecord[],
-  profile: PlayerProfile,
-  finishedMatchIds: Set<string>,
-) {
-  const queue = rows.filter((row) => finishedMatchIds.has(String(row.matchId)))
-  const workerCount = Math.min(4, queue.length)
-  if (!workerCount) return
-  await Promise.all(Array.from({ length: workerCount }, async () => {
-    while (queue.length) {
-      const row = queue.shift()
-      if (!row || current !== reqId) return
-      try {
-        const res = await getV4PublicMatchDetail(row.matchId)
-        if (current !== reqId) return
-        patchMatchRow(
-          String(row.matchId),
-          applyPlayerBoxScore(row, findPlayerBoxScore(res.data?.playerStats, profile)),
-        )
-      } catch {
-        // 单场失败不影响页面
-      }
-    }
-  }))
-}
-
-const selectedDivisionId = computed(() => queryDivisionId.value || playerDetail.value?.profile.divisionId || '')
 
 function setTab(tab: PlayerDetailTab) {
   router.replace({
@@ -287,23 +232,15 @@ function setTab(tab: PlayerDetailTab) {
   })
 }
 
-function selectDivision(event: Event) {
-  const divisionId = (event.target as HTMLSelectElement).value
-  router.replace({
-    query: {
-      ...route.query,
-      divisionId: divisionId || undefined,
-    },
-  })
-}
+watch(playerId, () => {
+  void loadPlayer()
+}, { immediate: true })
 
-watch(
-  [playerId, queryDivisionId],
-  () => {
-    void loadPlayer()
-  },
-  { immediate: true },
-)
+watch(queryDivisionId, () => {
+  if (loadState.value !== 'success' || !rawDetail.value) return
+  const detail = publishDetail(queryDivisionId.value)
+  if (detail) void loadPlayerMatches(detail)
+})
 </script>
 
 <template>
@@ -321,18 +258,6 @@ watch(
         <div class="player-detail-page__paper">
           <div class="player-detail-page__paper-body">
             <div class="site-shell-inner player-detail-page__paper-inner">
-              <label v-if="playerDetail.seasonStageOptions.length" class="player-event-scope">
-                <span>{{ t('publicPages.player.eventScope') }}</span>
-                <select :value="selectedDivisionId" @change="selectDivision">
-                  <option
-                    v-for="option in playerDetail.seasonStageOptions"
-                    :key="option.id"
-                    :value="option.id"
-                  >
-                    {{ option.label }}
-                  </option>
-                </select>
-              </label>
               <PlayerTabs :model-value="activeTab" @update:model-value="setTab" />
               <component :is="tabComponent" :detail="playerDetail" :player-id="playerId!" />
             </div>
@@ -348,24 +273,5 @@ watch(
 
 .player-detail-empty.is-error {
   color: #e10613;
-}
-
-.player-event-scope {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin: 0 0 16px;
-  color: #777;
-  font-size: 12px;
-
-  select {
-    min-width: 220px;
-    max-width: 100%;
-    padding: 8px 12px;
-    border: 1px solid #ccc;
-    background: #fff;
-    color: #191919;
-    font: inherit;
-  }
 }
 </style>

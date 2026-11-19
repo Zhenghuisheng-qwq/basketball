@@ -97,6 +97,10 @@ export interface PlayerMatchRecord {
   originalOpponentScore?: number
   seriesScoreText?: string
   matchSeriesId?: string
+  status?: 'scheduled' | 'finished'
+  stageId?: string
+  whenText?: string
+  sortDate?: string
   minutes: number
   points: number
   rebounds: number
@@ -147,6 +151,15 @@ export interface PlayerSeasonStageOption {
   tournamentName: string
   stageLabel: string
   games: number
+  eventTeamId?: string
+  seasonId?: string
+  divisionId?: string
+  seasonName?: string
+  divisionName?: string
+  seriesName?: string
+  teamName?: string
+  teamLogoUrl?: string
+  eventPlayerId?: string
 }
 
 export interface PlayerTeamHistory {

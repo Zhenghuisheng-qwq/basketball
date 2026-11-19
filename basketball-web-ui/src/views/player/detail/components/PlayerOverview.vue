@@ -15,11 +15,20 @@ const props = defineProps<{
 const router = useRouter()
 const { t } = useI18n()
 
+const eventLabel = computed(() => {
+  const profile = props.detail.profile
+  const season = String(profile.seasonName || '').trim()
+  const division = String(profile.divisionName || '').trim()
+  if (season && division && season !== division && !season.includes(division)) return `${season} · ${division}`
+  return season || division
+})
+
 const seasonStat = computed<PlayerCareerStatistics | null>(() => {
   const divisionId = String(props.detail.profile.divisionId || '')
-  return props.detail.careerStats.find((row) => String(row.divisionId) === divisionId)
-    || props.detail.careerStats[0]
-    || null
+  const matched = props.detail.careerStats.find((row) => String(row.divisionId) === divisionId)
+  if (matched) return matched
+  if (divisionId) return null
+  return props.detail.careerStats[0] || null
 })
 
 const seasonBoxes = computed(() => {
@@ -83,7 +92,7 @@ function goTab(tab: 'matches' | 'honors') {
       <div class="player-detail-section-head">
         <div class="player-detail-section-head__group">
           <h2 id="player-event-stats" class="player-detail-section-head__title">{{ t('publicPages.player.eventStats') }}</h2>
-          <span class="player-detail-section-head__sub">Event Stats</span>
+          <span class="player-detail-section-head__sub">{{ eventLabel || 'Event Stats' }}</span>
         </div>
       </div>
 

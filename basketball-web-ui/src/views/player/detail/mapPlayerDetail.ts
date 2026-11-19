@@ -1,13 +1,15 @@
 import type {
   PublicHonorItemResp,
   PublicMatchItemVo,
+  PublicPlayerCurrentTeamVo,
   PublicPlayerDetailVo,
   PublicPlayerSeasonStatVo,
 } from '@/api/types/public'
-import type { V4PublicMatchPlayerStatItem } from '@/api/types/v4Public'
+import type { V4PublicMatchItem, V4PublicMatchPlayerStatItem } from '@/api/types/v4Public'
 import { translate } from '@/i18n'
 import { displayText, formatDateTime, toNumber } from '@/utils/publicDisplay'
 import { v4PlatformLabel } from '@/utils/v4Display'
+import { formatTeamMatchWhen, mapV4MatchToTeamRecord } from '@/views/tournament/team/utils/mapTeamMatch'
 import type {
   PlayerCareerStatistics,
   PlayerDetailData,
@@ -235,16 +237,173 @@ export function mapPublicPlayerSeasonStats(
 }
 
 export function mapSeasonStageOptions(rows: PublicPlayerSeasonStatVo[]): PlayerSeasonStageOption[] {
-  return rows.map((row, index) => {
-    const label = buildSeasonLabel(row)
-    return {
-      id: String(row.divisionId || row.seasonId || row.stageId || index),
+  return buildPlayerEventOptions([], rows)
+}
+
+function eventOptionLabel(seasonName: string, divisionName: string, seriesName: string): string {
+  const season = displayText(seasonName || seriesName, translate('publicPages.player.publicSeason'))
+  const division = displayText(divisionName, '')
+  if (division && division !== '--' && division !== season && !season.includes(division)) {
+    return `${season} · ${division}`
+  }
+  return season
+}
+
+function optionFromStat(row: PublicPlayerSeasonStatVo, index: number): PlayerSeasonStageOption {
+  const label = buildSeasonLabel(row)
+  const divisionId = String(row.divisionId || '')
+  return {
+    id: divisionId || String(row.seasonId || row.stageId || index),
+    label,
+    tournamentName: label,
+    stageLabel: displayText(row.divisionName, translate('publicPages.player.regular')),
+    games: toNumber(row.games, 0),
+    eventTeamId: row.eventTeamId ? String(row.eventTeamId) : '',
+    seasonId: row.seasonId ? String(row.seasonId) : '',
+    divisionId,
+    seasonName: row.seasonName || '',
+    divisionName: row.divisionName || '',
+    seriesName: row.seriesName || '',
+    teamName: row.teamName || '',
+    teamLogoUrl: row.teamLogoUrl?.trim() || '',
+    eventPlayerId: row.eventPlayerId ? String(row.eventPlayerId) : '',
+  }
+}
+
+/** 参赛阵容优先，没有个人统计的赛事也保留，方便赛前筛选。 */
+export function buildPlayerEventOptions(
+  teams: PublicPlayerCurrentTeamVo[] | null | undefined,
+  rows: PublicPlayerSeasonStatVo[],
+): PlayerSeasonStageOption[] {
+  const statsByDivision = new Map<string, PublicPlayerSeasonStatVo>()
+  for (const row of rows) {
+    const divisionId = String(row.divisionId || '')
+    if (divisionId && !statsByDivision.has(divisionId)) statsByDivision.set(divisionId, row)
+  }
+  const options: PlayerSeasonStageOption[] = []
+  const seen = new Set<string>()
+  for (const team of teams || []) {
+    if (String(team.eventTeamStatus || '').toUpperCase() === 'INACTIVE') continue
+    const divisionId = String(team.divisionId || '')
+    const eventTeamId = String(team.eventTeamId || '')
+    if (!divisionId || !eventTeamId || seen.has(divisionId)) continue
+    seen.add(divisionId)
+    const stat = statsByDivision.get(divisionId)
+    const seasonName = team.seasonName || stat?.seasonName || ''
+    const divisionName = team.divisionName || stat?.divisionName || ''
+    const seriesName = team.seriesName || stat?.seriesName || ''
+    const label = eventOptionLabel(seasonName, divisionName, seriesName)
+    options.push({
+      id: divisionId,
       label,
       tournamentName: label,
-      stageLabel: displayText(row.divisionName, translate('publicPages.player.regular')),
-      games: toNumber(row.games, 0),
-    }
+      stageLabel: displayText(divisionName, translate('publicPages.player.regular')),
+      games: toNumber(stat?.games, 0),
+      eventTeamId,
+      seasonId: String(team.seasonId || stat?.seasonId || ''),
+      divisionId,
+      seasonName,
+      divisionName,
+      seriesName,
+      teamName: team.teamName || stat?.teamName || '',
+      teamLogoUrl: team.logoUrl?.trim() || stat?.teamLogoUrl?.trim() || '',
+      eventPlayerId: stat?.eventPlayerId ? String(stat.eventPlayerId) : '',
+    })
+  }
+  rows.forEach((row, index) => {
+    const divisionId = String(row.divisionId || '')
+    if (divisionId && seen.has(divisionId)) return
+    const option = optionFromStat(row, index)
+    if (!option.id || seen.has(option.id)) return
+    seen.add(option.id)
+    options.push(option)
   })
+  return options
+}
+
+export function resolvePlayerEventDivision(
+  divisionQuery: string,
+  options: PlayerSeasonStageOption[],
+): string {
+  const query = String(divisionQuery || '').trim()
+  if (query && options.some((item) => item.id === query)) return query
+  return options.find((item) => item.games > 0)?.id || options[0]?.id || ''
+}
+
+export function mapV4ItemToPlayerMatch(
+  item: V4PublicMatchItem,
+  event: {
+    eventTeamId: string
+    teamName: string
+    teamLogoUrl?: string
+    seriesName?: string
+    seasonName?: string
+  },
+): PlayerMatchRecord | null {
+  const matchStatus = String(item.matchStatus || '').toUpperCase()
+  const seriesStatus = String(item.seriesStatus || '').toUpperCase()
+  const played = matchStatus === 'FINISHED' || matchStatus === 'FORFEITED' || matchStatus === 'FORFEIT'
+  const seriesSkipped = Boolean(item.matchSeriesId) && seriesStatus === 'COMPLETED' && !played
+  if (seriesSkipped) return null
+  const mapped = mapV4MatchToTeamRecord(item, event.eventTeamId)
+  const scheduled = mapped.status === 'scheduled'
+  const result: PlayerMatchRecord['result'] = mapped.result === 'win'
+    ? 'WIN'
+    : mapped.result === 'loss'
+      ? 'LOSS'
+      : 'UNDECIDED'
+  const dq = String(item.resultType || '').toUpperCase() === 'EVENT_DISQUALIFICATION'
+  return {
+    id: mapped.id,
+    matchId: mapped.id,
+    date: mapped.date,
+    whenText: formatTeamMatchWhen(mapped),
+    sortDate: mapped.date || '',
+    tournamentName: event.seriesName || event.seasonName || translate('publicPages.player.publicEvent'),
+    stageName: [
+      mapped.stage === 'playoffs' && mapped.stageHeadline && mapped.stageHeadline !== translate('publicPages.team.playoffs')
+        ? mapped.stageHeadline
+        : '',
+      mapped.playoffGame || '',
+    ].filter(Boolean).join(' · ')
+      || mapped.stageHeadline
+      || mapped.competition
+      || '--',
+    stageId: item.stageId ? String(item.stageId) : '',
+    status: scheduled ? 'scheduled' : 'finished',
+    teamName: event.teamName,
+    teamId: event.eventTeamId,
+    teamLogoUrl: event.teamLogoUrl || '',
+    opponentName: mapped.opponentName || translate('publicPages.player.opponent'),
+    opponentId: mapped.opponentId,
+    opponentLogoUrl: mapped.opponentLogoUrl || '',
+    result,
+    resultLabel: scheduled
+      ? translate('publicPages.player.notStarted')
+      : dq
+        ? (result === 'WIN' ? translate('publicPages.player.opponentDqLoss') : translate('publicPages.player.teamDqLoss'))
+        : mapped.resultLabel,
+    teamScore: mapped.teamScore ?? 0,
+    opponentScore: mapped.opponentScore ?? 0,
+    originalTeamScore: mapped.originalTeamScore,
+    originalOpponentScore: mapped.originalOpponentScore,
+    seriesScoreText: mapped.seriesScoreText,
+    matchSeriesId: mapped.matchSeriesId,
+    minutes: 0,
+    points: 0,
+    rebounds: 0,
+    assists: 0,
+    steals: 0,
+    blocks: 0,
+    turnovers: 0,
+    fouls: 0,
+    fieldGoalsMade: null,
+    fieldGoalsAttempted: null,
+    threePointsMade: null,
+    threePointsAttempted: null,
+    freeThrowsMade: null,
+    freeThrowsAttempted: null,
+  }
 }
 
 function seasonPeriodLabel(row: Pick<PublicPlayerSeasonStatVo, 'seasonName' | 'seriesName'>): string {

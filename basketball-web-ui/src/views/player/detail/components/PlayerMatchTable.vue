@@ -55,10 +55,16 @@ function formatLine(row: PlayerMatchRecord): string {
 }
 
 function scoreView(row: PlayerMatchRecord): { left: string; right: string; text: string } {
+  if (row.status === 'scheduled') return { left: '', right: '', text: 'VS' }
   const text = scoreText(row)
   const matched = String(text).match(/^(\d+)\s*[:：\-]\s*(\d+)$/)
   if (matched) return { left: matched[1], right: matched[2], text: '' }
   return { left: '', right: '', text }
+}
+
+function statText(row: PlayerMatchRecord, value: number): string {
+  if (row.status === 'scheduled') return '--'
+  return String(value)
 }
 
 function formatShot(made: number | null | undefined, attempted: number | null | undefined): string {
@@ -130,7 +136,7 @@ function opponentTeam(row: PlayerMatchRecord) {
       :key="row.id"
       class="player-recent-match-grid player-recent-match-row"
     >
-      <span>{{ row.date }}</span>
+      <span>{{ row.whenText || row.date }}</span>
 
       <div class="player-recent-match-opponent">
         <TeamLogo :team="opponentTeam(row)" size="xs" />
@@ -207,7 +213,7 @@ function opponentTeam(row: PlayerMatchRecord) {
       </thead>
       <tbody>
         <tr v-for="row in rows" :key="row.id">
-          <td class="col-date">{{ row.date }}</td>
+          <td class="col-date">{{ row.whenText || row.date }}</td>
           <td class="col-opponent">
             <span class="player-detail-opponent">
               <TeamLogo :team="opponentTeam(row)" size="xs" />
@@ -226,13 +232,13 @@ function opponentTeam(row: PlayerMatchRecord) {
             </span>
           </td>
           <td class="col-stage">{{ row.stageName }}</td>
-          <td class="col-minutes">{{ row.minutes }}</td>
-          <td class="col-stat">{{ row.points }}</td>
-          <td class="col-stat">{{ row.rebounds }}</td>
-          <td class="col-stat">{{ row.assists }}</td>
-          <td class="col-stat">{{ row.steals }}</td>
-          <td class="col-stat">{{ row.blocks }}</td>
-          <td class="col-stat">{{ row.turnovers }}</td>
+          <td class="col-minutes">{{ statText(row, row.minutes) }}</td>
+          <td class="col-stat">{{ statText(row, row.points) }}</td>
+          <td class="col-stat">{{ statText(row, row.rebounds) }}</td>
+          <td class="col-stat">{{ statText(row, row.assists) }}</td>
+          <td class="col-stat">{{ statText(row, row.steals) }}</td>
+          <td class="col-stat">{{ statText(row, row.blocks) }}</td>
+          <td class="col-stat">{{ statText(row, row.turnovers) }}</td>
           <td class="col-shooting">{{ formatShot(row.fieldGoalsMade, row.fieldGoalsAttempted) }}</td>
           <td class="col-shooting">{{ formatShot(row.threePointsMade, row.threePointsAttempted) }}</td>
           <td class="col-shooting">{{ formatShot(row.freeThrowsMade, row.freeThrowsAttempted) }}</td>

@@ -29,8 +29,9 @@ import {
   findPlayerBoxScore,
   mapPublicPlayerHonors,
   mapPublicPlayerProfile,
+  buildPlayerEventOptions,
   mapPublicPlayerSeasonStats,
-  mapSeasonStageOptions,
+  resolvePlayerEventDivision,
 } from '@/views/player/detail/mapPlayerDetail'
 import type { PlayerDetailData, PlayerMatchRecord, PlayerProfile } from '@/views/player/detail/types'
 import { mapV4MatchToTeamRecord } from '@/views/tournament/team/utils/mapTeamMatch'
@@ -80,12 +81,6 @@ function officialStat(row: PublicPlayerSeasonStatVo) {
   return row.hasOfficialStat !== false && row.games != null
 }
 
-function resolveDivision(rows: PublicPlayerSeasonStatVo[], query: string) {
-  const ids = rows.map((row) => String(row.divisionId || '')).filter(Boolean)
-  if (query && ids.includes(query)) return query
-  return ids[0] || ''
-}
-
 async function loadAccount() {
   if (!accountStore.currentAccount) {
     await accountStore.loadOverview()
@@ -114,8 +109,10 @@ async function loadPerformance() {
     return
   }
   const seasonRows = statRes.data ?? []
-  const preferredDivision = resolveDivision(seasonRows, queryDivisionId.value)
-  const selected = seasonRows.find((row) => String(row.divisionId || '') === preferredDivision) || seasonRows[0]
+  const options = buildPlayerEventOptions(rawDetail.currentTeams, seasonRows)
+  const preferredDivision = resolvePlayerEventDivision(queryDivisionId.value, options)
+  const selected = seasonRows.find((row) => String(row.divisionId || '') === preferredDivision)
+  const option = options.find((item) => item.id === preferredDivision)
   const profile = mapPublicPlayerProfile(rawDetail, { divisionId: preferredDivision })
   selectedStatus.value = ''
   selectedEndTime.value = ''
@@ -132,12 +129,23 @@ async function loadPerformance() {
     profile.eventTeamId = selected.eventTeamId ? String(selected.eventTeamId) : ''
     profile.currentTeamId = profile.eventTeamId
     profile.eventPlayerId = selected.eventPlayerId ? String(selected.eventPlayerId) : ''
+  } else if (option) {
+    profile.divisionId = option.id
+    profile.seasonId = option.seasonId || ''
+    profile.seasonName = option.seasonName || ''
+    profile.divisionName = option.divisionName || ''
+    profile.seriesName = option.seriesName || profile.seriesName
+    profile.currentTeamName = option.teamName || t('accountShell.performancePage.noTeamSnapshot')
+    profile.currentTeamLogoUrl = option.teamLogoUrl || ''
+    profile.eventTeamId = option.eventTeamId || ''
+    profile.currentTeamId = profile.eventTeamId
+    profile.eventPlayerId = option.eventPlayerId || ''
   }
   const officialRows = seasonRows.filter(officialStat)
   const detail = buildEmptyPlayerDetail(profile)
   detail.profile = profile
   detail.careerStats = mapPublicPlayerSeasonStats(officialRows)
-  detail.seasonStageOptions = mapSeasonStageOptions(seasonRows)
+  detail.seasonStageOptions = options
   detail.teamHistory = buildPlayerTeamHistory(profile, seasonRows)
   detail.nameHistory = buildPlayerNameHistory(profile, officialRows)
   detail.honors = mapPublicPlayerHonors(honorRes.data?.records ?? [])
@@ -363,8 +371,8 @@ watch(queryDivisionId, () => {
 
       <PlayerTabs :model-value="activeTab" @update:model-value="setTab" />
       <PlayerOverview v-if="activeTab === 'overview'" :detail="playerDetail" blank-without-games />
-      <PlayerMatches v-else-if="activeTab === 'matches'" :detail="playerDetail" :player-id="playerId" />
-      <PlayerData v-else-if="activeTab === 'data'" :detail="playerDetail" />
+      <PlayerMatches v-else-if="activeTab === 'matches'" :detail="playerDetail" :player-id="playerId" :scope-query="false" />
+      <PlayerData v-else-if="activeTab === 'data'" :detail="playerDetail" :scope-query="false" />
       <PlayerHonors v-else-if="activeTab === 'honors'" :detail="playerDetail" />
       <PlayerCareer v-else :detail="playerDetail" cumulative />
     </template>

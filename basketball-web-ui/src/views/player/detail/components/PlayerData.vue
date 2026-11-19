@@ -6,9 +6,12 @@ import TeamLogo from '@/components/team/TeamLogo.vue'
 import { normalizeDataMode, type PlayerDataMode } from '@/utils/playerNavigate'
 import type { PlayerCareerStatistics, PlayerDetailData } from '../types'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   detail: PlayerDetailData
-}>()
+  scopeQuery?: boolean
+}>(), {
+  scopeQuery: true,
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -18,7 +21,7 @@ const allStages = 'all'
 const dataMode = ref<PlayerDataMode>(normalizeDataMode(route.query.dataMode))
 const statMode = ref<'average' | 'total'>('average')
 const seasonFilter = ref(allStages)
-const selectedStageId = ref(props.detail.seasonStageOptions[0]?.id ?? '')
+const selectedStageId = ref(String(props.detail.profile.divisionId || props.detail.seasonStageOptions[0]?.id || ''))
 const dropdownOpen = ref(false)
 const dropdownRef = ref<HTMLElement | null>(null)
 
@@ -160,6 +163,13 @@ function setDataMode(mode: PlayerDataMode) {
 function selectStage(id: string) {
   selectedStageId.value = id
   dropdownOpen.value = false
+  if (!props.scopeQuery || !id || String(route.query.divisionId || '') === id) return
+  router.replace({
+    query: {
+      ...route.query,
+      divisionId: id,
+    },
+  })
 }
 
 function toggleDropdown() {
