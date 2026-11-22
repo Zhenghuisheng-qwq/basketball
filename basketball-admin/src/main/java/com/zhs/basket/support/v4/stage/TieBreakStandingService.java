@@ -336,8 +336,10 @@ public class TieBreakStandingService {
         StandingAgg loser = aggMap.computeIfAbsent(loserId, StandingAgg::new);
         winner.winCount++;
         winner.standingPoints += forfeitWinPoints;
+        winner.pointFor += ForfeitStandingMargin.POINT_MARGIN;
         loser.loseCount++;
         loser.standingPoints += forfeitLossPoints;
+        loser.pointAgainst += ForfeitStandingMargin.POINT_MARGIN;
     }
 
     private Map<Long, BasketStanding> loadPreviousManualRanks(Long divisionId, Long stageId, Long groupScopeKey) {

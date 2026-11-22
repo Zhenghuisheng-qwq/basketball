@@ -31,6 +31,7 @@ public class BasketV4MatchListVo {
     private String remark;
     private String replayUrl;
     private Long stageId;
+    private Long groupId;
     private Long seriesId;
     private Integer seriesGameNo;
     private String seriesCode;

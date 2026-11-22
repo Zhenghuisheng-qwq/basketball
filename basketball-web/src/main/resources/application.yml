@@ -126,6 +126,16 @@ member:
     # 完整编排（认证审核/授队长/建队/入队）见：
     # node scripts/seed-cnpa-full-pipeline.mjs
 
+# 结算截图识别。百炼 OpenAI 兼容接口。识别固定温度 0，输出上限要盖住整张技术统计。
+cnpa:
+  stats-vision:
+    enabled: true
+    base-url: ${CNPA_STATS_VISION_BASE_URL:https://ws-sauyaoq4apm7zyhc.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
+    api-key: ${CNPA_STATS_VISION_API_KEY:sk-e7b6b1a9be6d45cd9384882d6264d65b}
+    model: ${CNPA_STATS_VISION_MODEL:qwen3.7-plus}
+    timeout-seconds: 120
+    max-tokens: 4096
+
 # 球队业务配置
 team:
   invitation:

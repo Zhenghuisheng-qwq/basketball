@@ -7,6 +7,7 @@ import type {
   V4MatchSubmissionResubmitReq,
   V4MatchSubmissionSaveReq,
   V4MyMatchItem,
+  V4StatsScreenshotResult,
 } from '@/api/types/v4MatchSubmission'
 
 export function getV4MyMatches(params?: {
@@ -24,6 +25,19 @@ export function getV4MatchSubmissionEligiblePlayers(matchId: string, submitEvent
   return request.get<any, ApiResult<V4MatchSubmissionEligiblePlayer[]>>(
     `/basket/v4/player/match-submission/${matchId}/eligible-players`,
     { params: submitEventTeamId ? { submitEventTeamId } : undefined },
+  )
+}
+
+export function recognizeV4MatchScreenshot(matchId: string, file: File, submitEventTeamId?: string) {
+  const formData = new FormData()
+  formData.append('file', file)
+  return request.post<any, ApiResult<V4StatsScreenshotResult>>(
+    `/basket/v4/player/match-submission/${matchId}/recognize-screenshot`,
+    formData,
+    {
+      params: submitEventTeamId ? { submitEventTeamId } : undefined,
+      timeout: 120000,
+    },
   )
 }
 

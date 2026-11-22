@@ -12,6 +12,7 @@ import type { PlayerMatchTaskItem } from '@/api/matchData'
 import type { AvailableEvent, MyApplication, ParticipatingEvent } from '@/types/accountEvents'
 import type { EventTeam, EventTournament, RosterMember, TransferRecord } from '@/types/eventTeam'
 import { translate } from '@/i18n'
+import { businessDateTime } from '@/utils/businessDateTime'
 import { resolveSeasonRosterLimits } from '@/constants/rosterRules'
 import { OPEN_APPLICATION_STATUS_LABELS } from '@/types/account'
 
@@ -186,9 +187,12 @@ export function formatPlatformList(platforms?: string[]) {
   return platforms.join(' / ')
 }
 
-export function formatDateTimeShort(value?: string) {
-  if (!value) return '-'
-  return value.replace('T', ' ').slice(0, 16)
+export function formatDateTimeShort(value?: string | number | null) {
+  if (value == null || value === '') return '-'
+  const parsed = businessDateTime(value)
+  if (!parsed?.date) return String(value).replace('T', ' ').slice(0, 16)
+  if (!parsed.time || parsed.time === '--') return parsed.date
+  return `${parsed.date} ${parsed.time}`
 }
 
 export function formatEventStandardDisplay(season: {

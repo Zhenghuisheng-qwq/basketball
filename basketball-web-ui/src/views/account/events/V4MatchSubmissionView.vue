@@ -9,6 +9,7 @@ import AccountPanel from '@/components/account/AccountPanel.vue'
 import FullMatchGameEditor from '@/components/account/events/FullMatchGameEditor.vue'
 import {
   getV4MatchSubmissionDetail,
+  recognizeV4MatchScreenshot,
   resubmitV4MatchSubmission,
   saveV4MatchSubmissionDraft,
   submitV4MatchSubmission,
@@ -25,6 +26,7 @@ import { v4SubmissionStatusLabel } from '@/utils/v4AccountEventsMappers'
 import { v4BestOfLabel, v4MatchSeriesStatusLabel, v4PlatformLabel } from '@/utils/v4Display'
 import { formatDateTimeShort } from '@/utils/participationMappers'
 import { requiresPeriodScores, validateGame } from '@/utils/fullMatchSubmissionRules'
+import { periodsFromRecognition, rowsFromRecognition } from '@/utils/statsScreenshot'
 import type { V4MatchSubmissionPeriodScore } from '@/api/types/v4SeriesSubmission'
 
 const MAX_SCREENSHOTS = 6
@@ -46,6 +48,7 @@ const loading = ref(false)
 const saving = ref(false)
 const submitting = ref(false)
 const uploading = ref(false)
+const recognizing = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 const detail = ref<V4MatchSubmissionDetail | null>(null)
 
@@ -311,6 +314,41 @@ async function handleResubmit() {
   }
 }
 
+async function recognizeScreenshot(file: File) {
+  if (!canEdit.value || skipped.value || recognizing.value) return
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error(t('accountEvents.common.imageRequired'))
+    return
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    ElMessage.error(t('accountEvents.common.screenshotTooLarge'))
+    return
+  }
+  recognizing.value = true
+  try {
+    const res = await recognizeV4MatchScreenshot(matchId.value, file, submitEventTeamId.value || undefined)
+    const data = res.data
+    fullForm.value.homeStats = rowsFromRecognition(data?.homePlayers)
+    fullForm.value.awayStats = rowsFromRecognition(data?.awayPlayers)
+    fullForm.value.periods = periodsFromRecognition(fullForm.value.periods, data, detail.value?.gameMode)
+    if (form.value.materialFileIds.length < MAX_SCREENSHOTS) {
+      const uploaded = await uploadAccountFile(file, 'MATCH_DATA_SCREENSHOT')
+      const fileId = String(uploaded.data?.fileId || '')
+      if (fileId) form.value.materialFileIds.push(fileId)
+    }
+    const unmatched = data?.unmatchedCount || 0
+    if (unmatched > 0) {
+      ElMessage.warning(t('accountEvents.editor.recognizedUnmatched', { count: unmatched }))
+    } else {
+      ElMessage.success(t('accountEvents.editor.recognizedOk'))
+    }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.uploadFailed'))
+  } finally {
+    recognizing.value = false
+  }
+}
+
 function triggerUpload() {
   if (!canEdit.value || form.value.materialFileIds.length >= MAX_SCREENSHOTS) return
   fileInput.value?.click()
@@ -421,9 +459,11 @@ onMounted(() => {
           :material-file-ids="form.materialFileIds"
           :game-mode="detail.gameMode"
           :readonly="!canEdit || skipped"
+          :recognizing="recognizing"
           @update:home-stats="fullForm.homeStats = $event"
           @update:away-stats="fullForm.awayStats = $event"
           @update:periods="fullForm.periods = $event"
+          @recognize="recognizeScreenshot"
           @upload="triggerUpload"
           @remove-material="removeScreenshot"
           @preview="openPreview($event)"

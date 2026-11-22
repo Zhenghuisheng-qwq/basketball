@@ -63,9 +63,10 @@ function fromBusinessWallClock(value: string): BusinessDateTime | null {
  * 带偏移的时间按 Asia/Shanghai 换算。
  * 没有偏移的日期时间已经是业务墙钟，原样读取，不再加 8 小时。
  */
-export function businessDateTime(value?: string | null): BusinessDateTime | null {
-  const raw = String(value || '').trim()
+export function businessDateTime(value?: string | number | null): BusinessDateTime | null {
+  const raw = String(value ?? '').trim()
   if (!raw) return null
+  if (/^\d{12,}$/.test(raw)) return fromZonedInstant(new Date(Number(raw)).toISOString())
   if (OFFSET_TAIL.test(raw)) return fromZonedInstant(raw)
   return fromBusinessWallClock(raw)
 }

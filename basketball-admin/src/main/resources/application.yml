@@ -107,10 +107,18 @@ spring:
           writetimeout: 15000
 
 # 邮件通知发件人。未单独配置时回退到 spring.mail.username
+# 结算截图识别走百炼。识别固定温度 0，输出上限要盖住整张技术统计。
 cnpa:
   mail:
     from: 416743310@qq.com
     from-name: CNPA
+  stats-vision:
+    enabled: true
+    base-url: ${CNPA_STATS_VISION_BASE_URL:https://ws-sauyaoq4apm7zyhc.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
+    api-key: ${CNPA_STATS_VISION_API_KEY:sk-e7b6b1a9be6d45cd9384882d6264d65b}
+    model: ${CNPA_STATS_VISION_MODEL:qwen3.7-plus}
+    timeout-seconds: 120
+    max-tokens: 4096
 
 # token配置
 token:

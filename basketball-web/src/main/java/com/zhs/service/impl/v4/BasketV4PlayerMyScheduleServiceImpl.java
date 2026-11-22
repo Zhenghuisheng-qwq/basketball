@@ -13,6 +13,7 @@ import com.zhs.response.v4.V4MySchedulePageResp;
 import com.zhs.response.v4.V4MyScheduleResp;
 import com.zhs.response.v4.V4MyScheduleSummaryResp;
 import com.zhs.service.v4.IBasketV4PlayerMyScheduleService;
+import com.zhs.support.v4.MatchSubmissionWindow;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 
@@ -225,15 +226,13 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
 
         String myStatus = row.getMySubmissionStatus();
         String opponentStatus = row.getOpponentSubmissionStatus();
-        boolean matchEnded = MatchStatusEnum.FINISHED.getCode().equals(row.getMatchStatus())
-                || MatchStatusEnum.FORFEITED.getCode().equals(row.getMatchStatus());
-        boolean matchPlaying = MatchStatusEnum.PLAYING.getCode().equals(row.getMatchStatus());
+        boolean openForSubmit = MatchSubmissionWindow.openForDataSubmit(row.getMatchStatus(), row.getMatchTime(), new Date());
         boolean sharedApproved = approved(myStatus) || approved(opponentStatus);
         boolean sharedReviewing = !sharedApproved && (SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(myStatus)
                 || SubmissionStatusEnum.PENDING_REVIEW.getCode().equals(opponentStatus));
-        boolean winnerCaptain = Integer.valueOf(1).equals(row.getMyCaptain())
-                && row.getWinnerEventTeamId() != null
-                && row.getWinnerEventTeamId().equals(row.getMyEventTeamId());
+        boolean captain = Integer.valueOf(1).equals(row.getMyCaptain());
+        boolean winnerKnown = row.getWinnerEventTeamId() != null;
+        boolean winnerSide = winnerKnown && row.getWinnerEventTeamId().equals(row.getMyEventTeamId());
         boolean eventEnded = "FINISHED".equals(row.getDivisionStatus()) || "ARCHIVED".equals(row.getDivisionStatus());
 
         if (sharedApproved) {
@@ -250,19 +249,13 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
             row.setCannotSubmitReason("数据审核中，不需要重复提交");
             return;
         }
-        if (matchPlaying) {
+        if (!openForSubmit) {
             row.setUserActionType("VIEW_DETAIL");
             row.setUserActionText("查看比赛详情");
-            row.setCannotSubmitReason("比赛进行中，结束后提交数据");
+            row.setCannotSubmitReason("比赛尚未开始");
             return;
         }
-        if (!matchEnded) {
-            row.setUserActionType("VIEW_DETAIL");
-            row.setUserActionText("查看比赛详情");
-            row.setCannotSubmitReason("比赛尚未结束");
-            return;
-        }
-        if (winnerCaptain && (myStatus == null
+        if (captain && (!winnerKnown || winnerSide) && (myStatus == null
                 || SubmissionStatusEnum.DRAFT.getCode().equals(myStatus)
                 || SubmissionStatusEnum.REJECTED.getCode().equals(myStatus))) {
             row.setCanSubmit(true);
@@ -277,8 +270,10 @@ public class BasketV4PlayerMyScheduleServiceImpl implements IBasketV4PlayerMySch
             return;
         }
         row.setUserActionType("VIEW_DETAIL");
-        row.setUserActionText(eventEnded ? "待管理员处理" : "待胜方提交");
-        row.setCannotSubmitReason(eventEnded ? "当前没有补交权限" : "由胜方队长提交这一份正式数据");
+        row.setUserActionText(eventEnded ? "待管理员处理" : (winnerKnown ? "待胜方提交" : "待队长提交"));
+        row.setCannotSubmitReason(eventEnded
+                ? "当前没有补交权限"
+                : (winnerKnown ? "由胜方队长提交这一份正式数据" : "由队长提交这一份正式数据"));
     }
 
     private boolean approved(String status) {

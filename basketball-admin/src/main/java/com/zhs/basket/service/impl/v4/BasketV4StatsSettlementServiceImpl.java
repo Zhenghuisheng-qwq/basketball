@@ -8,6 +8,7 @@ import com.zhs.basket.mapper.v4.*;
 import com.zhs.basket.service.v4.IBasketV4StatsSettlementService;
 import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.settlement.OfficialMatchResultSettlementService;
+import com.zhs.basket.support.v4.stage.ForfeitStandingMargin;
 import com.zhs.basket.support.v4.stage.TieBreakStandingService;
 import com.zhs.common.exception.ServiceException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -319,8 +320,10 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         StandingAgg loser = aggMap.computeIfAbsent(loserId, id -> new StandingAgg(id, null, null));
         winner.winCount++;
         winner.standingPoints += forfeitWinPoints;
+        winner.pointFor += ForfeitStandingMargin.POINT_MARGIN;
         loser.loseCount++;
         loser.standingPoints += forfeitLossPoints;
+        loser.pointAgainst += ForfeitStandingMargin.POINT_MARGIN;
     }
 
     private void applyMatchToStanding(Map<Long, StandingAgg> aggMap, Long homeId, Long awayId,

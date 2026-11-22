@@ -1,6 +1,7 @@
 package com.zhs.web.controller.basket.v4;
 
 import com.zhs.basket.constant.BasketEventV4Perms;
+import com.zhs.basket.dto.v4.BasketAdminBoxScoreReq;
 import com.zhs.basket.dto.v4.BasketAdminOfficialResultReq;
 import com.zhs.basket.dto.v4.BasketAdminResultCorrectionReq;
 import com.zhs.basket.dto.v4.BasketManualAdvanceReq;
@@ -11,6 +12,7 @@ import com.zhs.basket.dto.v4.BasketSeriesRevokeResolutionReq;
 import com.zhs.basket.dto.v4.BasketPairingAdjustReq;
 import com.zhs.basket.dto.v4.BasketSeriesForfeitReq;
 import com.zhs.basket.dto.v4.BasketSeriesManualResolutionReq;
+import com.zhs.basket.service.impl.v4.AdminMatchBoxScoreService;
 import com.zhs.basket.service.v4.IStageExecutionExceptionApplicationService;
 import com.zhs.common.annotation.Log;
 import com.zhs.common.core.controller.BaseController;
@@ -18,10 +20,14 @@ import com.zhs.common.core.domain.AjaxResult;
 import com.zhs.common.enums.BusinessType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/basket/v4/admin/stage-exception")
@@ -29,6 +35,8 @@ public class BasketV4StageExceptionController extends BaseController {
 
     @Autowired
     private IStageExecutionExceptionApplicationService exceptionService;
+    @Autowired
+    private AdminMatchBoxScoreService boxScoreService;
 
     @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_EXCEPTION + "')")
     @Log(title = "V4 MatchForfeit", businessType = BusinessType.UPDATE)
@@ -75,6 +83,26 @@ public class BasketV4StageExceptionController extends BaseController {
     @PostMapping("/series-revoke-resolution")
     public AjaxResult revokeSeriesResolution(@RequestBody BasketSeriesRevokeResolutionReq req) {
         exceptionService.revokeSeriesResolution(req);
+        return success();
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_EXCEPTION + "')")
+    @GetMapping("/match/{matchId}/box-score-roster")
+    public AjaxResult boxScoreRoster(@PathVariable Long matchId) {
+        return success(boxScoreService.roster(matchId));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_EXCEPTION + "')")
+    @PostMapping("/match/{matchId}/recognize-screenshot")
+    public AjaxResult recognizeScreenshot(@PathVariable Long matchId, @RequestParam("file") MultipartFile file) {
+        return success(boxScoreService.recognize(matchId, file));
+    }
+
+    @PreAuthorize("@ss.hasPermi('" + BasketEventV4Perms.STAGE_EXCEPTION + "')")
+    @Log(title = "V4 AdminBoxScore", businessType = BusinessType.UPDATE)
+    @PostMapping("/match-box-score")
+    public AjaxResult enterBoxScore(@RequestBody BasketAdminBoxScoreReq req) {
+        boxScoreService.enter(req);
         return success();
     }
 

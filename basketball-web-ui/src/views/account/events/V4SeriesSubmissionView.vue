@@ -14,6 +14,8 @@ import {
   submitV4SeriesSubmission,
 } from '@/api/v4SeriesSubmission'
 import { uploadAccountFile } from '@/api/accountFile'
+import { recognizeV4MatchScreenshot } from '@/api/v4MatchSubmission'
+import { periodsFromRecognition, rowsFromRecognition } from '@/utils/statsScreenshot'
 import type { V4MatchSubmissionPlayerStat } from '@/api/types/v4MatchSubmission'
 import type { V4MatchSubmissionPeriodScore, V4SeriesSubmissionWorkspace } from '@/api/types/v4SeriesSubmission'
 import { requiresPeriodScores, seriesOptions, validateGame } from '@/utils/fullMatchSubmissionRules'
@@ -25,6 +27,7 @@ const { t } = useI18n()
 const matchSeriesId = computed(() => String(route.params.matchSeriesId || ''))
 const loading = ref(false)
 const saving = ref(false)
+const recognizing = ref(false)
 const workspace = ref<V4SeriesSubmissionWorkspace | null>(null)
 const current = ref(0)
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -215,6 +218,46 @@ async function resubmit() {
   }
 }
 
+async function recognizeScreenshot(file: File) {
+  if (!canEdit.value || !currentGame.value || !currentDraft.value || recognizing.value) return
+  if (!file.type.startsWith('image/')) {
+    ElMessage.error(t('accountEvents.common.imageRequired'))
+    return
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    ElMessage.error(t('accountEvents.common.screenshotTooLarge'))
+    return
+  }
+  recognizing.value = true
+  try {
+    const res = await recognizeV4MatchScreenshot(
+      String(currentGame.value.matchId),
+      file,
+      workspace.value?.submitEventTeamId || undefined,
+    )
+    const data = res.data
+    currentDraft.value.homeStats = rowsFromRecognition(data?.homePlayers)
+    currentDraft.value.awayStats = rowsFromRecognition(data?.awayPlayers)
+    currentDraft.value.periods = periodsFromRecognition(currentDraft.value.periods, data, workspace.value?.gameMode)
+    if (currentDraft.value.materialFileIds.length < 6) {
+      const uploaded = await uploadAccountFile(file, 'MATCH_DATA_SCREENSHOT')
+      const fileId = String(uploaded.data?.fileId || '')
+      if (fileId) currentDraft.value.materialFileIds.push(fileId)
+    }
+    markCurrentDirty()
+    const unmatched = data?.unmatchedCount || 0
+    if (unmatched > 0) {
+      ElMessage.warning(t('accountEvents.editor.recognizedUnmatched', { count: unmatched }))
+    } else {
+      ElMessage.success(t('accountEvents.editor.recognizedOk'))
+    }
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : t('accountEvents.common.uploadFailed'))
+  } finally {
+    recognizing.value = false
+  }
+}
+
 async function handleUpload(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files || [])
@@ -290,9 +333,11 @@ onMounted(() => { void loadWorkspace() })
             :material-file-ids="currentDraft.materialFileIds"
             :game-mode="workspace.gameMode"
             :readonly="!canEdit"
+            :recognizing="recognizing"
             @update:home-stats="currentDraft.homeStats = $event; markCurrentDirty()"
             @update:away-stats="currentDraft.awayStats = $event; markCurrentDirty()"
             @update:periods="currentDraft.periods = $event; markCurrentDirty()"
+            @recognize="recognizeScreenshot"
             @upload="fileInput?.click()"
             @remove-material="currentDraft.materialFileIds.splice($event, 1); markCurrentDirty()"
           />

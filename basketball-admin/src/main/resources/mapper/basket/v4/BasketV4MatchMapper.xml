@@ -48,6 +48,7 @@
         <result property="roundNo" column="round_no" />
         <result property="matchNo" column="match_no" />
         <result property="stageId" column="stage_id" />
+        <result property="groupId" column="group_id" />
         <result property="seriesId" column="series_id" />
         <result property="seriesGameNo" column="series_game_no" />
         <result property="seriesCode" column="series_code" />
@@ -83,6 +84,7 @@
             m.round_no,
             m.match_no,
             m.stage_id,
+            m.group_id,
             m.series_id,
             m.series_game_no,
             ms.series_code,
@@ -355,6 +357,7 @@
         select count(1) from basket_match
         where stage_id = #{stageId}
           and match_status in ('FINISHED', 'FORFEITED')
+          and publish_status = 'PUBLISHED'
           and <include refid="NotDeleted"/>
     </select>
 
@@ -362,6 +365,7 @@
         select count(1) from basket_match
         where stage_id = #{stageId}
           and match_status not in ('FINISHED', 'FORFEITED', 'CANCELLED')
+          and publish_status = 'PUBLISHED'
           and <include refid="NotDeleted"/>
     </select>
 
@@ -369,6 +373,7 @@
         select <include refid="BaseColumns" /> from basket_match
         where stage_id = #{stageId}
           and match_status in ('FINISHED', 'FORFEITED')
+          and publish_status = 'PUBLISHED'
           and <include refid="NotDeleted"/>
         order by round_no asc, match_time asc, id asc
     </select>

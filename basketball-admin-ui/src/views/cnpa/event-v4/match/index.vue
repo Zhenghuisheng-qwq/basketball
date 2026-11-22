@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-alert title="比赛管理：发布后的比赛执行与特殊改期。系列赛时间在「系列赛」Tab 调整；赛前整体排期请回赛事工作台。" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="比赛管理默认只列已发布比赛。未发布草稿不会出现在这张表里，需要时把发布状态改成草稿。系列赛时间在「系列赛」Tab 调整；赛前整体排期请回赛事工作台。" type="info" :closable="false" show-icon class="mb8" />
 
     <el-form :model="query" :inline="true" class="mb8">
       <el-form-item label="视图">
@@ -93,7 +93,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="280" fixed="right" align="right" class-name="match-ops-col">
+      <el-table-column label="操作" width="360" fixed="right" align="right" class-name="match-ops-col">
         <template #default="scope">
           <div class="match-ops">
           <el-button link type="primary" @click="openEdit(scope.row)">
@@ -118,6 +118,13 @@
             v-hasPermi="['basket:v4Stage:exception']"
             @click="openResult(scope.row, 'enter')"
           >管理员录入结果</el-button>
+          <el-button
+            link
+            type="success"
+            v-if="canEnterResult(scope.row)"
+            v-hasPermi="['basket:v4Stage:exception']"
+            @click="openBoxScore(scope.row)"
+          >上传详细数据</el-button>
           <el-button
             link
             type="warning"
@@ -152,16 +159,20 @@
       </el-table-column>
     </el-table>
     <pagination v-if="viewMode === 'match'" :total="total" v-model:page="query.pageNum" v-model:limit="query.pageSize" @pagination="loadList" />
+    <MatchBoxScoreDialog v-model="boxVisible" :match="boxRow" @saved="loadList" />
 
-    <el-dialog v-model="forfeitVisible" title="判定本局弃赛/判负" width="480px">
+    <el-dialog v-model="forfeitVisible" title="判定本局弃赛/判负" width="560px">
       <el-alert type="warning" :closable="false" show-icon class="mb8"
-        :title="`将对 ${forfeitRow?.homeTeamName} vs ${forfeitRow?.awayTeamName} 执行判负，胜者为对方球队。`" />
+        :title="`将对 ${forfeitRow?.homeTeamName} vs ${forfeitRow?.awayTeamName} 执行判负，胜者为对方球队。比赛记为弃权，不写真实比分。`" />
       <el-form label-width="100px">
         <el-form-item label="判负球队" required>
           <el-radio-group v-model="forfeitLoserId">
             <el-radio :value="forfeitRow?.homeEventTeamId">{{ forfeitRow?.homeTeamName }}</el-radio>
             <el-radio :value="forfeitRow?.awayEventTeamId">{{ forfeitRow?.awayTeamName }}</el-radio>
           </el-radio-group>
+        </el-form-item>
+        <el-form-item v-if="forfeitRow?.groupId && !(forfeitRow?.bestOf > 1)" label="剩余场次">
+          <el-checkbox v-model="forfeitRemaining">同时判负该队在本小组尚未开赛的场次。每场对手记 1 胜、按阶段弃权胜积分记分、净胜分 +15。已经打完的场次不动。</el-checkbox>
         </el-form-item>
         <el-form-item label="原因" required>
           <el-input v-model="forfeitReason" type="textarea" rows="3" placeholder="必填" />
@@ -296,6 +307,7 @@ import { deleteV4Match, getV4Match, listV4Match, updateV4Match } from '@/api/cnp
 import { listV4StageExecution, rescheduleV4StageSchedule } from '@/api/cnpa/event-v4/stage-execution'
 import { listV4AdminDivisionOptions, listV4AdminSeasonOptions, type V4AdminOptionVo } from '@/api/cnpa/event-v4/options'
 import MatchSeriesPanel from './MatchSeriesPanel.vue'
+import MatchBoxScoreDialog from './MatchBoxScoreDialog.vue'
 import {
   V4_MATCH_STATUS_FILTER_OPTIONS,
   V4_PUBLISH_STATUS_FILTER_OPTIONS,
@@ -309,7 +321,7 @@ import {
 const loading = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
-const query = reactive<Record<string, any>>({ pageNum: 1, pageSize: 10 })
+const query = reactive<Record<string, any>>({ pageNum: 1, pageSize: 10, publishStatus: 'PUBLISHED' })
 const editVisible = ref(false)
 const editId = ref<number>()
 const editForm = reactive({ matchTime: '', venueText: '', remark: '', replayUrl: '', publishStatus: '' })
@@ -332,6 +344,7 @@ const forfeitVisible = ref(false)
 const forfeitRow = ref<any>()
 const forfeitLoserId = ref<number>()
 const forfeitReason = ref('')
+const forfeitRemaining = ref(false)
 const revokeForfeitVisible = ref(false)
 const revokeForfeitRow = ref<any>()
 const revokeForfeitReason = ref('')
@@ -345,6 +358,13 @@ const reopenVisible = ref(false)
 const reopenSaving = ref(false)
 const reopenRow = ref<any>()
 const reopenReason = ref('')
+const boxVisible = ref(false)
+const boxRow = ref<any>()
+
+function openBoxScore(row: any) {
+  boxRow.value = row
+  boxVisible.value = true
+}
 
 watch(viewMode, () => {
   if (viewMode.value === 'series') {
@@ -615,6 +635,7 @@ function openForfeit(row: any) {
   forfeitRow.value = row
   forfeitLoserId.value = row.awayEventTeamId
   forfeitReason.value = ''
+  forfeitRemaining.value = false
   forfeitVisible.value = true
 }
 
@@ -623,13 +644,18 @@ function submitForfeit() {
     ElMessage.warning('请选择判负球队并填写原因')
     return
   }
-  ElMessageBox.confirm('确认执行判负？此操作将记录审计日志。', '二次确认', { type: 'warning' }).then(() => {
+  const remaining = forfeitRemaining.value
+  const tip = remaining
+    ? '确认判负本场，并同时判负该队在本小组尚未开赛的场次？已经打完的比赛不会改。'
+    : '确认执行判负？此操作将记录审计日志。'
+  ElMessageBox.confirm(tip, '二次确认', { type: 'warning' }).then(() => {
     forfeitV4Match({
       matchId: forfeitRow.value.id,
       loserEventTeamId: forfeitLoserId.value!,
-      reason: forfeitReason.value.trim()
+      reason: forfeitReason.value.trim(),
+      includeRemaining: remaining
     }).then(() => {
-      ElMessage.success('已判定弃赛/判负')
+      ElMessage.success(remaining ? '已判负本场及该队剩余未赛场次' : '已判定弃赛/判负')
       forfeitVisible.value = false
       loadList()
     })

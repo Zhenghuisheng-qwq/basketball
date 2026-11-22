@@ -10,6 +10,7 @@ import type { V4MyScheduleItem, V4MyScheduleSummary } from '@/api/types/v4Player
 import { useAccountStore } from '@/stores/account'
 import { v4BestOfLabel, v4MatchSeriesStatusLabel, v4MatchStatusLabel, v4PlatformLabel } from '@/utils/v4Display'
 import { v4SubmissionStatusLabel } from '@/utils/v4AccountEventsMappers'
+import { businessDateTime } from '@/utils/businessDateTime'
 import { formatDateTimeShort } from '@/utils/participationMappers'
 
 const props = defineProps<{
@@ -235,29 +236,44 @@ function cannotSubmitText(row: V4MyScheduleItem): string {
   if (isSeriesSkipped(row)) return t('accountEvents.schedule.reasonSeriesDecided')
   if (submission === 'PENDING_REVIEW') return t('accountEvents.schedule.reasonInReview')
   if (submission === 'APPROVED') return t('accountEvents.schedule.reasonApproved')
-  if (matchStatus === 'PLAYING') return t('accountEvents.schedule.reasonPlaying')
+  if (matchStatus === 'PLAYING' && !row.canSubmit) return t('accountEvents.schedule.reasonPlaying')
   if (matchStatus && !['FINISHED', 'FORFEITED', 'CANCELLED', 'PLAYING'].includes(matchStatus) && !row.canSubmit) {
-    return t('accountEvents.schedule.reasonNotEnded')
+    return localizedBlockReason(row.cannotSubmitReason) || t('accountEvents.schedule.reasonNotEnded')
   }
-  return row.cannotSubmitReason || ''
+  return localizedBlockReason(row.cannotSubmitReason)
+}
+
+function localizedBlockReason(reason?: string | null): string {
+  switch (reason || '') {
+    case '比赛尚未开始':
+      return t('accountEvents.schedule.reasonNotStarted')
+    case '由队长提交这一份正式数据':
+      return t('accountEvents.schedule.reasonCaptainOnly')
+    case '由胜方队长提交这一份正式数据':
+      return t('accountEvents.schedule.reasonWinnerCaptain')
+    case '当前没有补交权限':
+      return t('accountEvents.schedule.reasonNoMakeup')
+    case '数据审核中，不需要重复提交':
+    case '数据审核中，不能重复提交':
+      return t('accountEvents.schedule.reasonReviewing')
+    case '比赛数据已发布':
+      return t('accountEvents.schedule.reasonPublished')
+    default:
+      return reason || ''
+  }
 }
 
 function formatMatchDate(value?: string): string {
-  if (!value) return t('accountEvents.common.timeTbd')
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return t('accountEvents.common.timeTbd')
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
+  const parsed = businessDateTime(value)
+  if (!parsed?.date) return t('accountEvents.common.timeTbd')
+  const [, month, day] = parsed.date.split('-')
   return t('accountEvents.schedule.monthDay', { month, day })
 }
 
 function formatMatchClock(value?: string): string {
-  if (!value) return '--:--'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '--:--'
-  const hour = String(date.getHours()).padStart(2, '0')
-  const minute = String(date.getMinutes()).padStart(2, '0')
-  return `${hour}:${minute}`
+  const parsed = businessDateTime(value)
+  if (!parsed?.time || parsed.time === '--') return '--:--'
+  return parsed.time
 }
 
 function showScore(row: V4MyScheduleItem): boolean {
@@ -313,6 +329,13 @@ function canOpenSubmission(row: V4MyScheduleItem): boolean {
 }
 
 function goSubmit(row: V4MyScheduleItem) {
+  if (row.bestOf && row.bestOf > 1 && row.matchSeriesId) {
+    router.push({
+      name: 'AccountV4SeriesSubmission',
+      params: { matchSeriesId: row.matchSeriesId },
+    })
+    return
+  }
   if (!row.matchId || !row.myEventTeamId) return
   router.push({
     name: 'AccountV4MatchSubmission',

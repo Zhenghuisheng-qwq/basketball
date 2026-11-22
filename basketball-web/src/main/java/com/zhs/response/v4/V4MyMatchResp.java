@@ -1,5 +1,6 @@
 package com.zhs.response.v4;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Data;
 import java.util.Date;
 
@@ -26,6 +27,7 @@ public class V4MyMatchResp {
     private Integer stageMaxRoundNo;
     private String roundName;
     private String matchNo;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date matchTime;
     private Long homeEventTeamId;
     private String homeTeamName;

@@ -24,6 +24,7 @@ import com.zhs.service.support.V4MatchSeriesDisplaySupport;
 import com.zhs.service.v4.IBasketV4PublicService;
 import com.zhs.support.v4.PublicCurrentRosterSupport;
 import com.zhs.support.v4.PublicCurrentRosterSupport.CurrentTeamFace;
+import com.zhs.support.v4.StageStandingBoard;
 import com.zhs.support.v4.V4PublicMatchSeriesStatAggregator;
 import com.zhs.support.v4.V4PublicTeamArchiveAssembler;
 import jakarta.annotation.Resource;
@@ -648,6 +649,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
     private List<V4PublicStageStandingScopeResp> loadStageStandingsUncached(Long stageId) {
         V4PublicStageItemResp stage = publicStageMapper.selectStageById(stageId);
         Integer qualifyCount = resolveStageQualifyCount(stage);
+        List<V4PublicStageStandingScopeResp> seeded = loadLockedGroupSeedStandings(stageId, qualifyCount);
+        if (!seeded.isEmpty()) {
+            StageStandingBoard.overlayPlayedResults(seeded, loadPlayedStandingsByTeam(stageId));
+            attachLockedGroupHeaders(stageId, seeded);
+            return seeded;
+        }
         List<Long> scopeKeys = publicStageMapper.selectGroupScopeKeysByStageId(stageId);
         if (CollectionUtils.isEmpty(scopeKeys)) {
             scopeKeys = Collections.singletonList(0L);
@@ -668,9 +675,28 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
         }
         if (!scopes.isEmpty()) {
             attachLockedGroupHeaders(stageId, scopes);
-            return scopes;
         }
-        return loadLockedGroupSeedStandings(stageId, qualifyCount);
+        return scopes;
+    }
+
+    private Map<Long, V4PublicStandingItemResp> loadPlayedStandingsByTeam(Long stageId) {
+        Map<Long, V4PublicStandingItemResp> byTeam = new LinkedHashMap<>();
+        List<Long> scopeKeys = publicStageMapper.selectGroupScopeKeysByStageId(stageId);
+        if (scopeKeys == null) {
+            return byTeam;
+        }
+        for (Long scopeKey : scopeKeys) {
+            List<V4PublicStandingItemResp> rows = publicStageMapper.selectStandingsByStageScope(stageId, scopeKey);
+            if (rows == null) {
+                continue;
+            }
+            for (V4PublicStandingItemResp row : rows) {
+                if (row.getEventTeamId() != null) {
+                    byTeam.put(row.getEventTeamId(), row);
+                }
+            }
+        }
+        return byTeam;
     }
 
     private List<V4PublicStageStandingScopeResp> loadLockedGroupSeedStandings(Long stageId, Integer stageQualifyCount) {

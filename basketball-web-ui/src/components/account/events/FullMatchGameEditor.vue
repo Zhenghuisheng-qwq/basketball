@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { V4MatchSubmissionEligiblePlayer, V4MatchSubmissionPlayerStat } from '@/api/types/v4MatchSubmission'
 import type { V4MatchSubmissionPeriodScore } from '@/api/types/v4SeriesSubmission'
@@ -23,6 +23,7 @@ const props = defineProps<{
   periods: V4MatchSubmissionPeriodScore[]
   materialFileIds: string[]
   readonly?: boolean
+  recognizing?: boolean
   requireComplete?: boolean
   gameMode?: string | null
 }>()
@@ -32,11 +33,26 @@ const emit = defineEmits<{
   'update:awayStats': [value: V4MatchSubmissionPlayerStat[]]
   'update:periods': [value: V4MatchSubmissionPeriodScore[]]
   upload: []
+  recognize: [file: File]
   removeMaterial: [index: number]
   preview: [fileId: string]
 }>()
 
 const { t } = useI18n()
+const recognizeInput = ref<HTMLInputElement | null>(null)
+
+function openRecognize() {
+  if (props.readonly || props.recognizing) return
+  recognizeInput.value?.click()
+}
+
+function onRecognizePick(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+  input.value = ''
+  if (!file || props.readonly) return
+  emit('recognize', file)
+}
 
 const STAT_COLS = [
   ['points', 'PTS'],
@@ -253,6 +269,7 @@ function fieldErr(side: 'home' | 'away', index: number) {
                     </option>
                   </select>
                   <small v-if="findPlayer(side, row.eventPlayerId)?.isCaptain" class="fm-cap">{{ t('accountEvents.common.captain') }}</small>
+                  <small v-else-if="row.recognizedName && !row.eventPlayerId" class="fm-cap is-miss">{{ t('accountEvents.editor.unmatchedHint', { name: row.recognizedName }) }}</small>
                 </td>
                 <td v-for="col in STAT_COLS" :key="col[0]">
                   <input
@@ -298,7 +315,13 @@ function fieldErr(side: 'home' | 'away', index: number) {
     <section class="fm-shots">
       <div class="fm-sec-head">
         <strong>{{ t('accountEvents.editor.screenshots') }}</strong>
-        <button v-if="!readonly" type="button" class="account-btn-secondary" @click="emit('upload')">{{ t('accountEvents.editor.upload') }}</button>
+        <span v-if="!readonly" class="fm-shot-actions">
+          <button type="button" class="account-btn-primary" :disabled="recognizing" @click="openRecognize">
+            {{ recognizing ? t('accountEvents.editor.recognizing') : t('accountEvents.editor.recognize') }}
+          </button>
+          <button type="button" class="account-btn-secondary" @click="emit('upload')">{{ t('accountEvents.editor.upload') }}</button>
+        </span>
+        <input ref="recognizeInput" class="fm-file" type="file" accept="image/png,image/jpeg,image/webp" @change="onRecognizePick" />
       </div>
       <p class="fm-shots__hint">{{ t('accountEvents.editor.screenshotHint') }}</p>
       <div class="fm-shots__grid">
@@ -366,6 +389,15 @@ function fieldErr(side: 'home' | 'away', index: number) {
   margin-bottom: 10px;
   strong { font-size: 15px; }
   small { color: #6f6862; }
+}
+.fm-shot-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.fm-file {
+  display: none;
 }
 
 .fm-period__grid {
@@ -526,6 +558,7 @@ function fieldErr(side: 'home' | 'away', index: number) {
   margin-top: 4px;
   color: #b90000;
   font-size: 11px;
+  &.is-miss { color: #9a6700; }
 }
 .fm-del {
   border: 0;

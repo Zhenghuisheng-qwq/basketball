@@ -24,6 +24,7 @@ import com.zhs.basket.support.v4.AdminOfficialResultCapability;
 import com.zhs.basket.support.v4.schedule.PairingResolutionGuard;
 import com.zhs.basket.support.v4.schedule.WinnerOfSeriesAdvanceSupport;
 import com.zhs.basket.support.v4.settlement.OfficialMatchResultCommand;
+import com.zhs.basket.support.v4.stage.TeamRemainingForfeitSelector;
 import com.zhs.basket.support.v4.V4PublicReadCachePublisher;
 import com.zhs.basket.support.v4.settlement.OfficialMatchResultSettlementService;
 import com.zhs.basket.enums.v4.OfficialResultSource;
@@ -147,6 +148,29 @@ public class StageExecutionExceptionApplicationServiceImpl implements IStageExec
                         AuditFieldInput.of("loserEventTeamId", "判负方", null, loser),
                         AuditFieldInput.of("matchStatus", "比赛状态", match.getMatchStatus(), MatchStatusEnum.FORFEITED.getCode())
                 ));
+        if (Boolean.TRUE.equals(req.getIncludeRemaining())) {
+            List<BasketV4Match> rest = TeamRemainingForfeitSelector.remaining(
+                    matchMapper.selectByStageId(match.getStageId()),
+                    match.getId(),
+                    match.getGroupId(),
+                    loser);
+            for (BasketV4Match other : rest) {
+                BasketV4Match fresh = matchMapper.selectByIdForUpdate(other.getId());
+                if (fresh == null
+                        || !MatchStatusEnum.SCHEDULED.getCode().equals(fresh.getMatchStatus())
+                        || !AdminOfficialResultCapability.canForfeitMatch(fresh)
+                        || fresh.getGroupId() == null
+                        || !fresh.getGroupId().equals(match.getGroupId())
+                        || (!loser.equals(fresh.getHomeEventTeamId()) && !loser.equals(fresh.getAwayEventTeamId()))) {
+                    continue;
+                }
+                BasketMatchForfeitReq child = new BasketMatchForfeitReq();
+                child.setMatchId(fresh.getId());
+                child.setLoserEventTeamId(loser);
+                child.setReason(req.getReason());
+                forfeitMatch(child);
+            }
+        }
     }
 
     @Override

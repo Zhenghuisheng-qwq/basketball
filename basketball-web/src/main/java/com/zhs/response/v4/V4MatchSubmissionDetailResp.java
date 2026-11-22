@@ -1,5 +1,6 @@
 package com.zhs.response.v4;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
 import lombok.Data;
@@ -11,6 +12,7 @@ public class V4MatchSubmissionDetailResp {
     private Long matchId;
     private String matchNo;
     private Integer roundNo;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date matchTime;
     private String seasonTitle;
     private String divisionName;
@@ -32,8 +34,10 @@ public class V4MatchSubmissionDetailResp {
     private Integer homeScore;
     private Integer awayScore;
     private String submitRemark;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date submitTime;
     private String auditUserName;
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date auditTime;
     private String auditRemark;
     private String rejectReason;

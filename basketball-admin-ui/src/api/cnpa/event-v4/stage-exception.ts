@@ -4,6 +4,7 @@ export interface MatchForfeitReq {
   matchId: number
   loserEventTeamId: number
   reason: string
+  includeRemaining?: boolean
 }
 
 export interface SeriesForfeitReq {
@@ -67,6 +68,77 @@ export interface SeriesManualResolutionReq {
   winnerEventTeamId: number
   decisionType: string
   reason: string
+}
+
+export interface BoxScorePlayer {
+  eventPlayerId?: number
+  playerName?: string
+  gameId?: string
+  jerseyNo?: string
+  isCaptain?: number
+  recognizedName?: string
+  matched?: boolean
+  points?: number
+  rebound?: number
+  assist?: number
+  steal?: number
+  block?: number
+  turnover?: number
+  foul?: number
+  fieldGoalMade?: number
+  fieldGoalAttempt?: number
+  threePointMade?: number
+  threePointAttempt?: number
+  freeThrowMade?: number
+  freeThrowAttempt?: number
+}
+
+export interface BoxScoreRoster {
+  matchId: number
+  homeTeamName?: string
+  awayTeamName?: string
+  homeEventTeamId?: number
+  awayEventTeamId?: number
+  gameMode?: string
+  periodRequired?: boolean
+  homePlayers?: BoxScorePlayer[]
+  awayPlayers?: BoxScorePlayer[]
+}
+
+export interface BoxScoreResult {
+  homeScore?: number
+  awayScore?: number
+  unmatchedCount?: number
+  warnings?: string[]
+  periods?: Array<{ periodNo: number; homeScore?: number; awayScore?: number }>
+  homePlayers?: BoxScorePlayer[]
+  awayPlayers?: BoxScorePlayer[]
+}
+
+export function getV4MatchBoxScoreRoster(matchId: number) {
+  return request({ url: `/basket/v4/admin/stage-exception/match/${matchId}/box-score-roster`, method: 'get' })
+}
+
+export function recognizeV4AdminScreenshot(matchId: number, file: File) {
+  const data = new FormData()
+  data.append('file', file)
+  return request({
+    url: `/basket/v4/admin/stage-exception/match/${matchId}/recognize-screenshot`,
+    method: 'post',
+    data,
+    timeout: 120000,
+    headers: { repeatSubmit: false }
+  })
+}
+
+export function enterV4MatchBoxScore(data: {
+  matchId: number
+  reason: string
+  homePlayers: BoxScorePlayer[]
+  awayPlayers: BoxScorePlayer[]
+  periods?: Array<{ periodNo: number; homeScore?: number; awayScore?: number }>
+}) {
+  return request({ url: '/basket/v4/admin/stage-exception/match-box-score', method: 'post', data, timeout: 60000 })
 }
 
 export function enterV4OfficialResult(data: AdminOfficialResultReq) {

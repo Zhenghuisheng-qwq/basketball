@@ -20,6 +20,7 @@ export interface V4MatchSubmissionPlayerStat {
   eventTeamId?: string
   eventPlayerId: string
   playerName?: string
+  recognizedName?: string
   points?: number
   rebound?: number
   assist?: number
@@ -34,6 +35,35 @@ export interface V4MatchSubmissionPlayerStat {
   freeThrowMade?: number
   freeThrowAttempt?: number
   minutes?: number
+}
+
+export interface V4StatsScreenshotPlayer {
+  eventPlayerId?: string | number | null
+  recognizedName?: string
+  matched?: boolean
+  points?: number
+  rebound?: number
+  assist?: number
+  steal?: number
+  block?: number
+  turnover?: number
+  foul?: number
+  fieldGoalMade?: number
+  fieldGoalAttempt?: number
+  threePointMade?: number
+  threePointAttempt?: number
+  freeThrowMade?: number
+  freeThrowAttempt?: number
+}
+
+export interface V4StatsScreenshotResult {
+  homeScore?: number
+  awayScore?: number
+  periods?: Array<{ periodNo: number; homeScore?: number; awayScore?: number }>
+  homePlayers?: V4StatsScreenshotPlayer[]
+  awayPlayers?: V4StatsScreenshotPlayer[]
+  unmatchedCount?: number
+  warnings?: string[]
 }
 
 export interface V4MatchSubmissionEligiblePlayer {
