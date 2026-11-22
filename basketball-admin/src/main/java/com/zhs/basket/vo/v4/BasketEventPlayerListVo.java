@@ -11,6 +11,7 @@ public class BasketEventPlayerListVo {
     private Long eventTeamId;
     private String teamNameSnapshot;
     private Long sourcePlayerId;
+    private Long platformIdentityId;
     private String playerNameSnapshot;
     private String gameIdSnapshot;
     private String platformCode;

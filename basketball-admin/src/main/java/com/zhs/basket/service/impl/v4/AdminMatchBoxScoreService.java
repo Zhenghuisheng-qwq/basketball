@@ -1,5 +1,6 @@
 package com.zhs.basket.service.impl.v4;
 
+import com.zhs.basket.domain.BasketPlayerPlatformAccount;
 import com.zhs.basket.domain.v4.BasketDivision;
 import com.zhs.basket.domain.v4.BasketEventPlayer;
 import com.zhs.basket.domain.v4.BasketEventTeam;
@@ -21,6 +22,8 @@ import com.zhs.basket.mapper.v4.BasketV4MatchMapper;
 import com.zhs.basket.req.AuditFieldInput;
 import com.zhs.basket.support.BasketBusinessAuditWriter;
 import com.zhs.basket.support.v4.AdminOfficialResultCapability;
+import com.zhs.basket.support.v4.CurrentEventGameId;
+import com.zhs.basket.support.v4.EventGameIdSnapshotSync;
 import com.zhs.basket.support.v4.StatsScreenshotRecognizer;
 import com.zhs.basket.support.v4.StatsScreenshotRecognizer.PlayerRef;
 import com.zhs.basket.support.v4.StatsScreenshotRecognizer.SideRoster;
@@ -30,6 +33,7 @@ import com.zhs.basket.support.v4.settlement.OfficialMatchResultSettlementService
 import com.zhs.basket.vo.v4.AdminMatchBoxScoreRosterVo;
 import com.zhs.common.exception.ServiceException;
 import com.zhs.common.utils.SecurityUtils;
+import com.zhs.common.utils.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -38,6 +42,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -59,6 +64,7 @@ public class AdminMatchBoxScoreService {
     private final OfficialMatchResultSettlementService settlementService;
     private final StatsScreenshotRecognizer recognizer;
     private final BasketBusinessAuditWriter auditWriter;
+    private final EventGameIdSnapshotSync eventGameIdSnapshotSync;
 
     public AdminMatchBoxScoreService(BasketV4MatchMapper matchMapper,
                                      BasketDivisionMapper divisionMapper,
@@ -70,7 +76,8 @@ public class AdminMatchBoxScoreService {
                                      BasketMatchSubmissionPeriodScoreMapper periodScoreMapper,
                                      OfficialMatchResultSettlementService settlementService,
                                      StatsScreenshotRecognizer recognizer,
-                                     BasketBusinessAuditWriter auditWriter) {
+                                     BasketBusinessAuditWriter auditWriter,
+                                     EventGameIdSnapshotSync eventGameIdSnapshotSync) {
         this.matchMapper = matchMapper;
         this.divisionMapper = divisionMapper;
         this.eventTeamMapper = eventTeamMapper;
@@ -82,6 +89,7 @@ public class AdminMatchBoxScoreService {
         this.settlementService = settlementService;
         this.recognizer = recognizer;
         this.auditWriter = auditWriter;
+        this.eventGameIdSnapshotSync = eventGameIdSnapshotSync;
     }
 
     public AdminMatchBoxScoreRosterVo roster(Long matchId) {
@@ -95,8 +103,14 @@ public class AdminMatchBoxScoreService {
         vo.setAwayTeamName(teamName(match.getAwayEventTeamId()));
         vo.setGameMode(division == null ? null : division.getGameMode());
         vo.setPeriodRequired(requiresPeriods(vo.getGameMode()));
-        vo.setHomePlayers(toRoster(match.getHomeEventTeamId()));
-        vo.setAwayPlayers(toRoster(match.getAwayEventTeamId()));
+        List<BasketEventPlayer> home = activePlayers(match.getHomeEventTeamId());
+        List<BasketEventPlayer> away = activePlayers(match.getAwayEventTeamId());
+        Set<Long> playerIds = new HashSet<>();
+        collectSourcePlayerIds(home, playerIds);
+        collectSourcePlayerIds(away, playerIds);
+        Map<Long, List<BasketPlayerPlatformAccount>> accounts = eventGameIdSnapshotSync.loadAccounts(playerIds);
+        vo.setHomePlayers(toRoster(home, accounts));
+        vo.setAwayPlayers(toRoster(away, accounts));
         return vo;
     }
 
@@ -133,18 +147,21 @@ public class AdminMatchBoxScoreService {
         BasketV4Match match = requireEnterableMatch(req.getMatchId(), true);
         BasketDivision division = divisionMapper.selectById(match.getDivisionId());
         boolean periodsRequired = requiresPeriods(division == null ? null : division.getGameMode());
-        List<AdminMatchBoxScoreRosterVo.Player> homeRoster = toRoster(match.getHomeEventTeamId());
-        List<AdminMatchBoxScoreRosterVo.Player> awayRoster = toRoster(match.getAwayEventTeamId());
+        List<AdminMatchBoxScoreRosterVo.Player> homeRoster = rosterOf(match.getHomeEventTeamId());
+        List<AdminMatchBoxScoreRosterVo.Player> awayRoster = rosterOf(match.getAwayEventTeamId());
         String homeName = teamName(match.getHomeEventTeamId());
         String awayName = teamName(match.getAwayEventTeamId());
         List<BasketAdminBoxScoreReq.PlayerRow> homeRows = usedRows(req.getHomePlayers());
         List<BasketAdminBoxScoreReq.PlayerRow> awayRows = usedRows(req.getAwayPlayers());
         validateSide(homeName, homeRows, idsOf(homeRoster));
         validateSide(awayName, awayRows, idsOf(awayRoster));
-        int homeScore = sumPoints(homeRows);
-        int awayScore = sumPoints(awayRows);
+        int homeScore = req.getHomeScore() != null ? req.getHomeScore() : sumPoints(homeRows);
+        int awayScore = req.getAwayScore() != null ? req.getAwayScore() : sumPoints(awayRows);
+        if (homeScore < 0 || awayScore < 0) {
+            throw new ServiceException("比分不能为负数");
+        }
         if (homeScore == awayScore) {
-            throw new ServiceException("双方得分相同，不能结算胜负。请先改球员得分");
+            throw new ServiceException("双方得分相同，不能结算胜负。请先改比分");
         }
         if (periodsRequired) {
             validatePeriods(req.getPeriods(), homeScore, awayScore);
@@ -299,8 +316,15 @@ public class AdminMatchBoxScoreService {
         }
     }
 
-    private List<AdminMatchBoxScoreRosterVo.Player> toRoster(Long eventTeamId) {
-        List<AdminMatchBoxScoreRosterVo.Player> rows = new ArrayList<>();
+    private List<AdminMatchBoxScoreRosterVo.Player> rosterOf(Long eventTeamId) {
+        List<BasketEventPlayer> players = activePlayers(eventTeamId);
+        Set<Long> playerIds = new HashSet<>();
+        collectSourcePlayerIds(players, playerIds);
+        return toRoster(players, eventGameIdSnapshotSync.loadAccounts(playerIds));
+    }
+
+    private List<BasketEventPlayer> activePlayers(Long eventTeamId) {
+        List<BasketEventPlayer> rows = new ArrayList<>();
         if (eventTeamId == null) {
             return rows;
         }
@@ -312,10 +336,31 @@ public class AdminMatchBoxScoreService {
             if (status != null && !status.isBlank() && !"ACTIVE".equalsIgnoreCase(status)) {
                 continue;
             }
+            rows.add(player);
+        }
+        return rows;
+    }
+
+    private void collectSourcePlayerIds(List<BasketEventPlayer> players, Set<Long> playerIds) {
+        for (BasketEventPlayer player : players) {
+            if (player.getSourcePlayerId() != null) {
+                playerIds.add(player.getSourcePlayerId());
+            }
+        }
+    }
+
+    private List<AdminMatchBoxScoreRosterVo.Player> toRoster(List<BasketEventPlayer> players,
+                                                             Map<Long, List<BasketPlayerPlatformAccount>> accounts) {
+        List<AdminMatchBoxScoreRosterVo.Player> rows = new ArrayList<>();
+        for (BasketEventPlayer player : players) {
             AdminMatchBoxScoreRosterVo.Player item = new AdminMatchBoxScoreRosterVo.Player();
             item.setEventPlayerId(player.getId());
             item.setPlayerName(player.getPlayerNameSnapshot());
-            item.setGameId(player.getGameIdSnapshot());
+            String current = CurrentEventGameId.resolve(
+                    player.getPlatformIdentityId(),
+                    player.getPlatformCode(),
+                    player.getSourcePlayerId() == null ? null : accounts.get(player.getSourcePlayerId()));
+            item.setGameId(StringUtils.hasText(current) ? current : player.getGameIdSnapshot());
             item.setJerseyNo(player.getJerseyNo());
             item.setIsCaptain(player.getIsCaptain());
             rows.add(item);
@@ -384,10 +429,6 @@ public class AdminMatchBoxScoreService {
             if (tpa > fga) {
                 throw new ServiceException(prefix + "：3PA 大于 FGA");
             }
-            int expected = (fgm - tpm) * 2 + tpm * 3 + ftm;
-            if (pts != expected) {
-                throw new ServiceException(prefix + "：PTS " + pts + " 与 (FGM-3PM)×2+3PM×3+FTM=" + expected + " 不一致");
-            }
         }
     }
 
@@ -415,7 +456,7 @@ public class AdminMatchBoxScoreService {
             throw new ServiceException("请填写节比分，四节合计要等于双方总分");
         }
         if (home != homeScore || away != awayScore) {
-            throw new ServiceException("节比分合计和球员得分不一致");
+            throw new ServiceException("节比分合计和比赛比分不一致，请改节比分或上面的比分");
         }
     }
 

@@ -134,6 +134,8 @@ export function recognizeV4AdminScreenshot(matchId: number, file: File) {
 export function enterV4MatchBoxScore(data: {
   matchId: number
   reason: string
+  homeScore: number
+  awayScore: number
   homePlayers: BoxScorePlayer[]
   awayPlayers: BoxScorePlayer[]
   periods?: Array<{ periodNo: number; homeScore?: number; awayScore?: number }>

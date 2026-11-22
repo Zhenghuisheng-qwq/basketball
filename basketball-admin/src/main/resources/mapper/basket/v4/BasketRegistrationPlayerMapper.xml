@@ -125,6 +125,24 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <update id="syncGameIdByPlatformAccount">
+        update basket_registration_player
+        set game_id_snapshot = #{gameId},
+            update_time = now()
+        where is_delete = 0
+          and player_id = #{playerId}
+          and (
+            platform_identity_id = #{platformAccountId}
+            or upper(trim(platform_code)) = #{platform}
+            or (#{platform} = 'PS' and upper(trim(platform_code)) in ('PS5', 'PSN'))
+            or (
+              upper(trim(platform_code)) = 'PS_XBOX'
+              and #{platform} in ('PS', 'XBOX')
+              and (platform_identity_id is null or platform_identity_id = #{platformAccountId})
+            )
+          )
+    </update>
+
     <select id="selectCurrentMembersOutsideRoster" resultType="com.zhs.basket.vo.v4.RegistrationGapMemberVo">
         select m.player_id as playerId,
                p.player_no as playerNo,

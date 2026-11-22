@@ -8,6 +8,9 @@ import java.util.List;
 public class BasketAdminBoxScoreReq {
     private Long matchId;
     private String reason;
+    /** 手填的正式比分。识别和球员合计不一致时以这里为准。 */
+    private Integer homeScore;
+    private Integer awayScore;
     private List<PlayerRow> homePlayers;
     private List<PlayerRow> awayPlayers;
     private List<PeriodRow> periods;

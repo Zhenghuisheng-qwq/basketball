@@ -15,6 +15,7 @@ import com.zhs.basket.support.BatchAuditSupport;
 import com.zhs.basket.vo.BatchAuditResultVo;
 import com.zhs.basket.service.IBasketPlayerPlatformChangeService;
 import com.zhs.basket.support.BasketAdminMessageService;
+import com.zhs.basket.support.v4.EventGameIdSnapshotSync;
 import com.zhs.basket.support.NoticeParams;
 import com.zhs.basket.support.PlatformIdentityHistoryWriter;
 import com.zhs.basket.vo.PlayerPlatformChangeDetailVo;
@@ -40,6 +41,7 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
     @Autowired private BasketPlayerPlatformAccountMapper platformAccountMapper;
     @Autowired private BasketAdminMessageService messageService;
     @Autowired private PlatformIdentityHistoryWriter platformIdentityHistoryWriter;
+    @Autowired private EventGameIdSnapshotSync eventGameIdSnapshotSync;
 
     @Override
     public List<PlayerPlatformChangeListVo> selectList(PlayerPlatformChangeQuery query) {
@@ -72,6 +74,9 @@ public class BasketPlayerPlatformChangeServiceImpl implements IBasketPlayerPlatf
             throw new ServiceException("平台身份更新失败");
         }
         platformIdentityHistoryWriter.writeApprovedPlatformChange(request, account, oldDisplayGameId, reviewerId, now);
+        if (PlatformChangeTypeEnum.CHANGE_GAME_ID == PlatformChangeTypeEnum.fromCode(request.getChangeType())) {
+            eventGameIdSnapshotSync.syncApprovedChange(account);
+        }
         int rows = changeRequestMapper.updateStatusIfMatch(id,
                 Collections.singletonList(PlatformChangeStatusEnum.PENDING.getCode()),
                 PlatformChangeStatusEnum.APPROVED.getCode(), reviewerId,

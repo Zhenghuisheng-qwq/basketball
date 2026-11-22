@@ -15,15 +15,19 @@
         <strong>{{ roster?.homeTeamName || match?.homeTeamName || '主队' }}</strong>
       </div>
       <div class="box-board__score">
-        <b>{{ sides[0].points }}</b>
+        <el-input-number v-model="homeScore" :min="0" :max="200" :controls="false" @focus="markScoreFocused(true)" @blur="markScoreFocused(false)" @change="onScoreEdit" />
         <em>:</em>
-        <b>{{ sides[1].points }}</b>
+        <el-input-number v-model="awayScore" :min="0" :max="200" :controls="false" @focus="markScoreFocused(true)" @blur="markScoreFocused(false)" @change="onScoreEdit" />
       </div>
       <div class="is-away">
         <span>AWAY</span>
         <strong>{{ roster?.awayTeamName || match?.awayTeamName || '客队' }}</strong>
       </div>
-      <p>根据双方球员 PTS 自动计算</p>
+      <p>
+        比分可直接改。有节次时按节次合计，没有节次才按球员 PTS。投篮公式少算的分不要写回 PTS。
+        球员合计 {{ playerHome }} : {{ playerAway }}
+        <template v-if="playerGap">。{{ playerGap }}</template>
+      </p>
     </section>
     <div class="box-toolbar">
       <el-button type="primary" :loading="recognizing" @click="fileInput?.click()">识别截图并填入</el-button>
@@ -43,6 +47,7 @@
     <section v-for="side in sides" :key="side.key" class="box-side">
       <header>
         <strong>{{ side.name }} · 球员数据</strong>
+        <span>PTS 合计 {{ side.points }}</span>
         <el-button link type="primary" @click="addRow(side.key)">添加球员</el-button>
       </header>
       <div class="box-table-wrap">
@@ -110,7 +115,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   enterV4MatchBoxScore,
@@ -127,16 +132,37 @@ const roster = ref<BoxScoreRoster | null>(null)
 const homeRows = ref<BoxScorePlayer[]>([])
 const awayRows = ref<BoxScorePlayer[]>([])
 const periods = ref<Array<{ periodNo: number; homeScore: number; awayScore: number }>>([])
+const homeScore = ref(0)
+const awayScore = ref(0)
+const scoreTouched = ref(false)
 const reason = ref('')
 const warning = ref('')
 const recognizing = ref(false)
 const saving = ref(false)
 const fileInput = ref<HTMLInputElement | null>(null)
 
+const playerHome = computed(() => sum(homeRows.value))
+const playerAway = computed(() => sum(awayRows.value))
+const periodHome = computed(() => periods.value.reduce((total, row) => total + (Number(row.homeScore) || 0), 0))
+const periodAway = computed(() => periods.value.reduce((total, row) => total + (Number(row.awayScore) || 0), 0))
+const periodsActive = computed(() => roster.value?.periodRequired !== false && periods.value.some((row) => (Number(row.homeScore) || 0) + (Number(row.awayScore) || 0) > 0))
+const playerGap = computed(() => {
+  if (!periodsActive.value) return ''
+  const bits: string[] = []
+  if (periodHome.value !== playerHome.value) bits.push(`主队节次 ${periodHome.value}，球员合计 ${playerHome.value}`)
+  if (periodAway.value !== playerAway.value) bits.push(`客队节次 ${periodAway.value}，球员合计 ${playerAway.value}`)
+  return bits.length ? `${bits.join('；')}。比分按节次。少了人就点「添加球员」，不要为了和投篮公式一致去改低 PTS` : ''
+})
 const sides = computed(() => [
-  { key: 'home' as const, name: roster.value?.homeTeamName || props.match?.homeTeamName || '主队', rows: homeRows.value, points: sum(homeRows.value) },
-  { key: 'away' as const, name: roster.value?.awayTeamName || props.match?.awayTeamName || '客队', rows: awayRows.value, points: sum(awayRows.value) },
+  { key: 'home' as const, name: roster.value?.homeTeamName || props.match?.homeTeamName || '主队', rows: homeRows.value, points: playerHome.value },
+  { key: 'away' as const, name: roster.value?.awayTeamName || props.match?.awayTeamName || '客队', rows: awayRows.value, points: playerAway.value },
 ])
+
+watch([playerHome, playerAway, periodHome, periodAway, periodsActive], () => {
+  if (scoreTouched.value) return
+  if (periodsActive.value) setScores(periodHome.value, periodAway.value)
+  else setScores(playerHome.value, playerAway.value)
+})
 
 watch(() => props.modelValue, (open) => {
   if (open) void load()
@@ -150,7 +176,37 @@ function emptyRow(): BoxScorePlayer {
 }
 
 function sum(rows: BoxScorePlayer[]) {
-  return rows.reduce((total, row) => total + (row.points || 0), 0)
+  return rows.reduce((total, row) => total + (Number(row.points) || 0), 0)
+}
+
+let applyingAutoScore = false
+let scoreFieldFocused = false
+
+function setScores(home, away) {
+  const nextHome = Number(home) || 0
+  const nextAway = Number(away) || 0
+  if (homeScore.value === nextHome && awayScore.value === nextAway) return
+  applyingAutoScore = true
+  homeScore.value = nextHome
+  awayScore.value = nextAway
+  nextTick(() => {
+    applyingAutoScore = false
+  })
+}
+
+function applyAutoScore() {
+  if (scoreTouched.value) return
+  if (periodsActive.value) setScores(periodHome.value, periodAway.value)
+  else setScores(playerHome.value, playerAway.value)
+}
+
+function markScoreFocused(focused: boolean) {
+  scoreFieldFocused = focused
+}
+
+function onScoreEdit() {
+  if (applyingAutoScore || !scoreFieldFocused) return
+  scoreTouched.value = true
 }
 
 function playerLabel(player: BoxScorePlayer) {
@@ -180,13 +236,15 @@ function removeRow(side: 'home' | 'away', index: number) {
 }
 
 function formula(row: BoxScorePlayer) {
+  const pts = row.points || 0
   const fgm = row.fieldGoalMade || 0
   const tpm = row.threePointMade || 0
   const ftm = row.freeThrowMade || 0
-  const expected = (fgm - tpm) * 2 + tpm * 3 + ftm
-  if ((row.points || 0) === 0 && fgm === 0 && ftm === 0) return ''
-  if ((row.points || 0) !== expected) return `PTS 应按公式等于 ${expected}`
-  return ''
+  if (pts === 0 && fgm === 0 && tpm === 0 && ftm === 0) return ''
+  const fgIncludesThree = (fgm - tpm) * 2 + tpm * 3 + ftm
+  const fgIsTwos = fgm * 2 + tpm * 3 + ftm
+  if (pts === fgIncludesThree || pts === fgIsTwos) return ''
+  return '投篮数据和 PTS 对不上。比分按 PTS 和节次，不要把 PTS 改成公式算出来的数'
 }
 
 function fromRecognition(players?: BoxScorePlayer[]) {
@@ -202,6 +260,9 @@ function fromRecognition(players?: BoxScorePlayer[]) {
 async function load() {
   warning.value = ''
   reason.value = ''
+  scoreTouched.value = false
+  homeScore.value = 0
+  awayScore.value = 0
   roster.value = null
   homeRows.value = [emptyRow()]
   awayRows.value = [emptyRow()]
@@ -235,6 +296,8 @@ async function onFile(event: Event) {
         awayScore: incoming.get(index + 1)?.awayScore ?? 0,
       }))
     }
+    scoreTouched.value = false
+    applyAutoScore()
     const unmatched = data?.unmatchedCount || 0
     warning.value = unmatched > 0 ? `还有 ${unmatched} 个游戏 ID 没对上名单，请在下拉框里改` : ''
     ElMessage.success(unmatched > 0 ? warning.value : '已按游戏 ID 填入，对上的不用再改')
@@ -263,16 +326,25 @@ async function submit() {
     ElMessage.warning('还有球员没对上名单')
     return
   }
-  if ([...home, ...away].some((row) => formula(row))) {
-    ElMessage.warning('有球员的 PTS 和投篮数据对不上，请先改')
+  const notes = ['确认后会直接形成这场的正式结果，并重算积分和统计。']
+  if (homeScore.value !== playerHome.value || awayScore.value !== playerAway.value) {
+    notes.push(`写入比分 ${homeScore.value}:${awayScore.value}，球员合计是 ${playerHome.value}:${playerAway.value}。`)
+  }
+  if (roster.value?.periodRequired !== false && (homeScore.value !== periodHome.value || awayScore.value !== periodAway.value)) {
+    ElMessage.warning(`节次合计是 ${periodHome.value}:${periodAway.value}，和上面的比分不一致，请改节比分或比分`)
     return
   }
-  await ElMessageBox.confirm('确认后会直接形成这场的正式结果，并重算积分和统计。', '写入正式结果', { type: 'warning' })
+  if ([...home, ...away].some((row) => formula(row))) {
+    notes.push('有球员的 PTS 和投篮数据对不上，仍按当前填写写入。')
+  }
+  await ElMessageBox.confirm(notes.join('\n'), '写入正式结果', { type: 'warning' })
   saving.value = true
   try {
     await enterV4MatchBoxScore({
       matchId: props.match.id,
       reason: reason.value.trim(),
+      homeScore: homeScore.value,
+      awayScore: awayScore.value,
       homePlayers: home,
       awayPlayers: away,
       periods: roster.value?.periodRequired ? periods.value : [],
@@ -302,16 +374,20 @@ async function submit() {
 .box-board span { display: block; color: #9a9188; font-size: 11px; letter-spacing: .08em; }
 .box-board strong { font-size: 18px; }
 .box-board .is-away { text-align: right; }
-.box-board__score { display: flex; align-items: baseline; gap: 10px; }
-.box-board__score b { font-size: 40px; line-height: 1; }
-.box-board__score em { color: #b90000; font-style: normal; font-weight: 800; }
+.box-board__score { display: flex; align-items: center; gap: 8px; }
+.box-board__score :deep(.el-input-number) { width: 88px; }
+.box-board__score :deep(.el-input__wrapper) { background: transparent; box-shadow: 0 0 0 1px #5c564f inset; }
+.box-board__score :deep(.el-input__inner) { color: #f4efe8; font-size: 32px; font-weight: 700; height: 44px; }
+.box-board__score em { color: #b90000; font-style: normal; font-weight: 800; font-size: 32px; }
 .box-board p { grid-column: 1 / -1; margin: 0; text-align: center; color: #8d8680; font-size: 12px; }
 .box-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
 .box-warn { color: #9a6700; }
 .box-periods { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
 .box-q { display: flex; align-items: center; gap: 6px; }
 .box-side { margin-bottom: 16px; }
-.box-side header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.box-side header { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+.box-side header span { color: #9a6700; font-size: 13px; }
+.box-side header .el-button { margin-left: auto; }
 .box-table-wrap { overflow-x: auto; }
 .box-table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .box-table th, .box-table td { padding: 6px 4px; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }

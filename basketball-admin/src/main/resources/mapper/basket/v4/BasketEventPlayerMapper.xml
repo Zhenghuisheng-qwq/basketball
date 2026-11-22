@@ -32,6 +32,7 @@
         <result property="eventTeamId" column="event_team_id" />
         <result property="teamNameSnapshot" column="team_name_snapshot" />
         <result property="sourcePlayerId" column="source_player_id" />
+        <result property="platformIdentityId" column="platform_identity_id" />
         <result property="playerNameSnapshot" column="player_name_snapshot" />
         <result property="gameIdSnapshot" column="game_id_snapshot" />
         <result property="platformCode" column="platform_code" />
@@ -64,6 +65,7 @@
             ep.event_team_id,
             et.team_name_snapshot,
             ep.source_player_id,
+            ep.platform_identity_id,
             coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), ''), ep.player_name_snapshot) as player_name_snapshot,
             ep.game_id_snapshot,
             ep.platform_code,
@@ -200,5 +202,23 @@
           and is_delete = 0
           and event_team_id is not null
     </select>
+
+    <update id="syncGameIdByPlatformAccount">
+        update basket_event_player
+        set game_id_snapshot = #{gameId},
+            update_time = now()
+        where is_delete = 0
+          and source_player_id = #{playerId}
+          and (
+            platform_identity_id = #{platformAccountId}
+            or upper(trim(platform_code)) = #{platform}
+            or (#{platform} = 'PS' and upper(trim(platform_code)) in ('PS5', 'PSN'))
+            or (
+              upper(trim(platform_code)) = 'PS_XBOX'
+              and #{platform} in ('PS', 'XBOX')
+              and (platform_identity_id is null or platform_identity_id = #{platformAccountId})
+            )
+          )
+    </update>
 
 </mapper>

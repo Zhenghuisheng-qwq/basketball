@@ -38,4 +38,9 @@ public interface BasketEventPlayerMapper {
     int restoreWithoutSnapshot(BasketEventPlayer entity);
 
     java.util.List<Long> selectEventTeamIdsBySourcePlayer(@Param("sourcePlayerId") Long sourcePlayerId);
+
+    int syncGameIdByPlatformAccount(@Param("playerId") Long playerId,
+                                    @Param("platformAccountId") Long platformAccountId,
+                                    @Param("platform") String platform,
+                                    @Param("gameId") String gameId);
 }

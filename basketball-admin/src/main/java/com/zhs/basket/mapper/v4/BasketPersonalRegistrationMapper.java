@@ -31,4 +31,9 @@ public interface BasketPersonalRegistrationMapper {
     int softDelete(@Param("id") Long id);
 
     int updateActiveUniqueKey(@Param("id") Long id, @Param("activeUniqueKey") String activeUniqueKey);
+
+    int syncGameAccountByPlatformAccount(@Param("playerId") Long playerId,
+                                         @Param("platformAccountId") Long platformAccountId,
+                                         @Param("platform") String platform,
+                                         @Param("gameId") String gameId);
 }

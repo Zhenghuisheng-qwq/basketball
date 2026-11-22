@@ -38,4 +38,9 @@ public interface BasketRegistrationPlayerMapper {
     int countActivePlayerInDivision(@Param("divisionId") Long divisionId,
                                     @Param("playerId") Long playerId,
                                     @Param("excludeRegistrationId") Long excludeRegistrationId);
+
+    int syncGameIdByPlatformAccount(@Param("playerId") Long playerId,
+                                    @Param("platformAccountId") Long platformAccountId,
+                                    @Param("platform") String platform,
+                                    @Param("gameId") String gameId);
 }

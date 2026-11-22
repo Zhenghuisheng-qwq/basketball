@@ -161,4 +161,22 @@
         where id = #{id} and is_delete = 0
     </update>
 
+    <update id="syncGameAccountByPlatformAccount">
+        update basket_personal_registration
+        set game_account_id = #{gameId},
+            update_time = now()
+        where is_delete = 0
+          and player_id = #{playerId}
+          and (
+            player_platform_id = #{platformAccountId}
+            or upper(trim(actual_platform_code)) = #{platform}
+            or (#{platform} = 'PS' and upper(trim(actual_platform_code)) in ('PS5', 'PSN'))
+            or (
+              upper(trim(actual_platform_code)) = 'PS_XBOX'
+              and #{platform} in ('PS', 'XBOX')
+              and (player_platform_id is null or player_platform_id = #{platformAccountId})
+            )
+          )
+    </update>
+
 </mapper>
