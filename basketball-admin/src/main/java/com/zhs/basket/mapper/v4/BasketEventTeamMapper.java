@@ -35,4 +35,6 @@ public interface BasketEventTeamMapper {
     int updateById(BasketEventTeam entity);
 
     int softDelete(@Param("id") Long id);
+
+    int syncLogoBySourceTeam(@Param("sourceTeamId") Long sourceTeamId, @Param("logoFileId") Long logoFileId);
 }

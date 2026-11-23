@@ -6,6 +6,7 @@ import com.zhs.basket.enums.TeamAuditStatusEnum;
 import com.zhs.basket.enums.TeamProfileChangeAuditStatusEnum;
 import com.zhs.basket.mapper.BasketTeamMapper;
 import com.zhs.basket.mapper.BasketTeamProfileChangeMapper;
+import com.zhs.basket.mapper.v4.BasketEventTeamMapper;
 import com.zhs.basket.query.TeamProfileChangeQuery;
 import com.zhs.basket.req.TeamProfileChangeApproveReq;
 import com.zhs.basket.req.TeamProfileChangeRejectReq;
@@ -47,6 +48,8 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
     private BasketAdminMessageService messageService;
     @Autowired
     private CurrentDisplayCacheEvictor currentDisplayCacheEvictor;
+    @Autowired
+    private BasketEventTeamMapper eventTeamMapper;
 
     @Override
     public List<TeamProfileChangeListVo> selectList(TeamProfileChangeQuery query) {
@@ -100,6 +103,9 @@ public class BasketTeamProfileChangeServiceImpl implements IBasketTeamProfileCha
         }
         if (profileRows != 1) {
             throw new ServiceException("更新正式球队资料失败");
+        }
+        if (change.getNewLogoFileId() != null) {
+            eventTeamMapper.syncLogoBySourceTeam(team.getId(), change.getNewLogoFileId());
         }
 
         Date now = new Date();

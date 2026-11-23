@@ -15,7 +15,7 @@ public class StatsVisionProperties {
     private boolean enabled = true;
 
     /** 不含 /chat/completions 的根地址。 */
-    private String baseUrl = "https://ws-sauyaoq4apm7zyhc.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
+    private String baseUrl = "https://ws-1193xii38fitm2dy.cn-beijing.maas.aliyuncs.com/compatible-mode/v1";
 
     private String apiKey = "";
 

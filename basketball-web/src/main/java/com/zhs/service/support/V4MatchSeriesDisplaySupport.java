@@ -251,6 +251,8 @@ public class V4MatchSeriesDisplaySupport {
                 item.setAwayTeamLogoUrl(urlMap.get(away.getTeamLogoFileId()));
                 fillScheduleTeamIdentity(item, away, false);
             }
+            PublicCurrentRosterSupport.applyScheduleHomeLogo(item, currentFaces.get(item.getHomeEventTeamId()));
+            PublicCurrentRosterSupport.applyScheduleAwayLogo(item, currentFaces.get(item.getAwayEventTeamId()));
             if (PublicCurrentRosterSupport.useCurrentIdentity(item.getStatus())) {
                 PublicCurrentRosterSupport.applyScheduleHome(item, currentFaces.get(item.getHomeEventTeamId()));
                 PublicCurrentRosterSupport.applyScheduleAway(item, currentFaces.get(item.getAwayEventTeamId()));
@@ -520,6 +522,10 @@ public class V4MatchSeriesDisplaySupport {
         BasketEventTeam winner = map.get(series.getWinnerEventTeamId());
         if (winner != null) {
             vo.setWinnerTeamName(winner.getTeamNameSnapshot());
+        }
+        if (currentFaces != null) {
+            PublicCurrentRosterSupport.applySeriesHomeLogo(vo, currentFaces.get(series.getHomeEventTeamId()));
+            PublicCurrentRosterSupport.applySeriesAwayLogo(vo, currentFaces.get(series.getAwayEventTeamId()));
         }
         if (PublicCurrentRosterSupport.useCurrentIdentity(series.getSeriesStatus()) && currentFaces != null) {
             PublicCurrentRosterSupport.applySeriesHome(vo, currentFaces.get(series.getHomeEventTeamId()));

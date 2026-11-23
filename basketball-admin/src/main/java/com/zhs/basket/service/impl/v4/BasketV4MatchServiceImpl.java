@@ -29,6 +29,7 @@ public class BasketV4MatchServiceImpl implements IBasketV4MatchService {
 
     @Override
     public List<BasketV4MatchListVo> selectList(BasketV4MatchQuery query) {
+        normalizeDateFilter(query);
         List<BasketV4MatchListVo> rows = matchMapper.selectVoList(query);
         if (rows != null) {
             for (BasketV4MatchListVo row : rows) {
@@ -51,6 +52,28 @@ public class BasketV4MatchServiceImpl implements IBasketV4MatchService {
         }
         fillRuntimeAdjust(rows.get(0));
         return rows.get(0);
+    }
+
+    private void normalizeDateFilter(BasketV4MatchQuery query) {
+        if (query == null) {
+            return;
+        }
+        query.setMatchDateBegin(cleanMatchDay(query.getMatchDateBegin()));
+        query.setMatchDateEnd(cleanMatchDay(query.getMatchDateEnd()));
+    }
+
+    private String cleanMatchDay(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String day = value.trim();
+        if (day.length() >= 10) {
+            day = day.substring(0, 10);
+        }
+        if (!day.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            throw new ServiceException("比赛日期格式应为 yyyy-MM-dd");
+        }
+        return day;
     }
 
     private void fillRuntimeAdjust(BasketV4MatchListVo row) {

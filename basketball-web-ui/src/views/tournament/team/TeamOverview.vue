@@ -344,6 +344,9 @@ function goMatchPage(page: number) {
               <template v-if="match.status === 'scheduled'">
                 <span class="match-table__score is-vs">VS</span>
               </template>
+              <template v-else-if="match.resultLabel && match.teamScore == null && match.opponentScore == null">
+                <span class="match-table__score">{{ match.resultLabel }}</span>
+              </template>
               <template v-else>
                 <span class="match-table__score">
                   <span class="score-number" :class="{ 'is-winner': match.result === 'win' }">

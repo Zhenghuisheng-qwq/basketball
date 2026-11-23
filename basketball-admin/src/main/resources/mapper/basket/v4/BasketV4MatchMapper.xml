@@ -72,6 +72,13 @@
 
     <sql id="NotDeleted">is_delete = 0</sql>
 
+    <sql id="EffectiveMatchTime">
+        coalesce(m.match_time, case
+            when ms.scheduled_date is not null and ms.scheduled_start_time is not null
+            then timestamp(ms.scheduled_date, ms.scheduled_start_time)
+            else null end)
+    </sql>
+
     <sql id="VoSelect">
         select
             m.id,
@@ -89,10 +96,7 @@
             m.series_game_no,
             ms.series_code,
             ms.best_of,
-            coalesce(m.match_time, case
-                when ms.scheduled_date is not null and ms.scheduled_start_time is not null
-                then timestamp(ms.scheduled_date, ms.scheduled_start_time)
-                else null end) as match_time,
+            <include refid="EffectiveMatchTime"/> as match_time,
             m.home_event_team_id,
             ht.team_name_snapshot as home_team_name,
             m.away_event_team_id,
@@ -148,11 +152,14 @@
         <if test="teamName != null and teamName != ''">
             and (ht.team_name_snapshot like concat('%', #{teamName}, '%') or at.team_name_snapshot like concat('%', #{teamName}, '%'))
         </if>
+        <if test="matchDateBegin != null and matchDateBegin != ''">
+            and <include refid="EffectiveMatchTime"/> &gt;= concat(#{matchDateBegin}, ' 00:00:00')
+        </if>
+        <if test="matchDateEnd != null and matchDateEnd != ''">
+            and <include refid="EffectiveMatchTime"/> &lt; date_add(#{matchDateEnd}, interval 1 day)
+        </if>
         order by m.round_no asc,
-            coalesce(m.match_time, case
-                when ms.scheduled_date is not null and ms.scheduled_start_time is not null
-                then timestamp(ms.scheduled_date, ms.scheduled_start_time)
-                else null end) asc,
+            <include refid="EffectiveMatchTime"/> asc,
             ifnull(m.series_game_no, 1) asc,
             m.id asc
     </select>

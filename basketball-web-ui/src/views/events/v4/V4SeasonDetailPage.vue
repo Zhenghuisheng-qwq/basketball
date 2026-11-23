@@ -515,7 +515,11 @@ onMounted(() => {
                   >
                     <div class="v4-match-row__team"><span>Game {{ game.seriesGameNo }}</span></div>
                     <div class="v4-match-row__center">
-                      <div class="v4-match-row__score">{{ formatScore(game.homeScore, game.awayScore, game.matchStatus) }}</div>
+                      <div class="v4-match-row__score">{{ formatScore(game.homeScore, game.awayScore, game.matchStatus, {
+                        homeLabel: game.homeResultLabel,
+                        awayLabel: game.awayResultLabel,
+                        resultType: game.resultType,
+                      }) }}</div>
                       <div class="v4-match-row__status">{{ v4MatchStatusLabel(game.matchStatus) }}</div>
                     </div>
                     <div class="v4-match-row__team v4-match-row__team--away"><span>{{ displayText(game.awayTeamName) }}</span></div>

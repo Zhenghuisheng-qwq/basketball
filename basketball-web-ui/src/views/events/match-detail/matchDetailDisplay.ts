@@ -9,14 +9,16 @@ import type {
 import type { Team } from '@/views/events/types/events'
 import { translate } from '@/i18n'
 import { businessDateTime } from '@/utils/businessDateTime'
-import { formatSeriesSetScore, v4MatchStatusLabel } from '@/utils/v4Display'
+import { formatSeriesSetScore, isOfficialForfeitResult, v4MatchStatusLabel } from '@/utils/v4Display'
 
 export const SERIES_TOTAL_TAB = 'SERIES_TOTAL'
 
 export type ScorePair = {
-  kind: 'vs' | 'score'
+  kind: 'vs' | 'score' | 'forfeit'
   left: number | null
   right: number | null
+  leftLabel?: string
+  rightLabel?: string
 }
 
 export type PeriodColumn = {
@@ -102,6 +104,17 @@ export function teamFromMatchSide(match: V4PublicMatchDetail, side: 'home' | 'aw
 
 export function matchBasketballScore(match: V4PublicMatchDetail | null | undefined): ScorePair {
   if (!match) return { kind: 'vs', left: null, right: null }
+  if (isOfficialForfeitResult(match.matchStatus, match.resultType)) {
+    const scored = isPresent(match.awayScore) && isPresent(match.homeScore)
+      && (Number(match.awayScore) > 0 || Number(match.homeScore) > 0)
+    if (scored) {
+      return { kind: 'score', left: Number(match.awayScore), right: Number(match.homeScore) }
+    }
+    const fallback = translate('match.forfeit')
+    const leftLabel = String(match.awayResultLabel || '').trim() || fallback
+    const rightLabel = String(match.homeResultLabel || '').trim() || fallback
+    return { kind: 'forfeit', left: null, right: null, leftLabel, rightLabel }
+  }
   if (isPresent(match.awayScore) && isPresent(match.homeScore)) {
     return { kind: 'score', left: Number(match.awayScore), right: Number(match.homeScore) }
   }

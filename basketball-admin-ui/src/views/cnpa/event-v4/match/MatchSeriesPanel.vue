@@ -1,7 +1,7 @@
 <template>
   <div v-loading="loading" class="match-series-panel">
-    <el-empty v-if="!loading && !seriesList.length" description="当前范围暂无 BO3/BO5/BO7 系列赛" />
-    <el-table v-else :data="seriesList" border row-key="id">
+    <el-empty v-if="!loading && !visibleSeries.length" :description="emptyText" />
+    <el-table v-else :data="visibleSeries" border row-key="id">
       <el-table-column type="expand">
         <template #default="scope">
           <div class="series-games">
@@ -9,7 +9,8 @@
               <span class="series-game-row__label">Game {{ game.seriesGameNo }} / {{ scope.row.bestOf }}</span>
               <span class="series-game-row__teams">{{ scope.row.homeTeamName || '待定' }} vs {{ scope.row.awayTeamName || '待定' }}</span>
               <span v-if="game.skipped" class="series-game-row__skip">{{ game.skippedReason || '无需进行' }}</span>
-              <span v-else-if="game.homeScore != null" class="series-game-row__score">{{ formatV4MatchScore(game.homeScore, game.awayScore) }}</span>
+              <span v-else-if="game.homeScore != null && game.awayScore != null" class="series-game-row__score">{{ formatV4MatchScore(game.homeScore, game.awayScore) }}</span>
+              <span v-else-if="String(game.matchStatus || '').toUpperCase() === 'FORFEITED'" class="series-game-row__score">弃权</span>
               <span v-else class="series-game-row__pending">{{ game.matchStatusName || '待比赛' }}</span>
               <el-tag size="small">{{ game.matchStatusName }}</el-tag>
               <el-button link type="primary" size="small" @click="$emit('openMatch', game.matchId)">详情</el-button>
@@ -207,18 +208,30 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { forfeitV4Series, resolveV4SeriesManually, revokeV4SeriesResolution } from '@/api/cnpa/event-v4/stage-exception'
 import { rescheduleV4StageSchedule } from '@/api/cnpa/event-v4/stage-execution'
 import { listV4MatchSeriesByDivision, listV4MatchSeriesByStage, type BasketMatchSeriesDetailVo } from '@/api/cnpa/event-v4/match-series'
 import { formatV4MatchScore, v4SeriesStatusLabel, v4SeriesStatusTagType } from '@/utils/v4AdminDisplay'
 
-const props = defineProps<{ stageId?: number; divisionId?: number }>()
+const props = defineProps<{ stageId?: number; divisionId?: number; dateBegin?: string; dateEnd?: string }>()
 defineEmits<{ openMatch: [matchId?: number] }>()
 
 const loading = ref(false)
 const seriesList = ref<BasketMatchSeriesDetailVo[]>([])
+const visibleSeries = computed(() => seriesList.value.filter((series) => {
+  const day = String(series.scheduledDate || '')
+  if (!props.dateBegin && !props.dateEnd) return true
+  if (!day) return false
+  if (props.dateBegin && day < props.dateBegin) return false
+  if (props.dateEnd && day > props.dateEnd) return false
+  return true
+}))
+const emptyText = computed(() => {
+  if ((props.dateBegin || props.dateEnd) && seriesList.value.length) return '该日期范围内暂无系列赛'
+  return '当前范围暂无 BO3/BO5/BO7 系列赛'
+})
 const forfeitVisible = ref(false)
 const forfeitSeries = ref<BasketMatchSeriesDetailVo>()
 const forfeitTeamId = ref<number>()

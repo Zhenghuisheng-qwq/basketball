@@ -30,11 +30,11 @@
             m.home_event_team_id as homeEventTeamId,
             ht.team_name_snapshot as homeTeamName,
             ht.team_short_name as homeTeamShortName,
-            ht.team_logo_file_id as homeTeamLogoFileId,
+            coalesce(hsrc.logo_file_id, ht.team_logo_file_id) as homeTeamLogoFileId,
             m.away_event_team_id as awayEventTeamId,
             at.team_name_snapshot as awayTeamName,
             at.team_short_name as awayTeamShortName,
-            at.team_logo_file_id as awayTeamLogoFileId,
+            coalesce(asrc.logo_file_id, at.team_logo_file_id) as awayTeamLogoFileId,
             case when ep_home.id is not null or et_cap_home.id is not null then m.home_event_team_id
                  when ep_away.id is not null or et_cap_away.id is not null then m.away_event_team_id
                  else null end as myEventTeamId,
@@ -75,7 +75,9 @@
         left join basket_division_stage ds on ds.id = m.stage_id and ds.is_delete = 0
         left join basket_division_group dg on dg.id = m.group_id and dg.is_delete = 0
         left join basket_event_team ht on ht.id = m.home_event_team_id and ht.is_delete = 0
+        left join basket_team hsrc on hsrc.id = ht.source_team_id and hsrc.is_delete = 0
         left join basket_event_team at on at.id = m.away_event_team_id and at.is_delete = 0
+        left join basket_team asrc on asrc.id = at.source_team_id and asrc.is_delete = 0
         left join basket_match_series ms on ms.id = m.series_id and ms.is_delete = 0
         left join basket_event_player ep_home on ep_home.event_team_id = m.home_event_team_id and ep_home.is_delete = 0
             and (ep_home.member_id = #{memberId} or ep_home.source_player_id = #{playerId})

@@ -281,6 +281,10 @@ function showScore(row: V4MyScheduleItem): boolean {
 }
 
 function formatCenterScore(row: V4MyScheduleItem): string {
+  const status = (row.matchStatus || '').toUpperCase()
+  if ((status === 'FORFEITED' || status === 'FORFEIT') && row.homeScore == null && row.awayScore == null) {
+    return t('match.forfeit')
+  }
   const home = row.homeScore ?? 0
   const away = row.awayScore ?? 0
   return `${home} : ${away}`

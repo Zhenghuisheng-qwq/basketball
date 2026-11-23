@@ -57,8 +57,17 @@ function secondaryLine(team: Team): string {
     </TeamEntryLink>
 
     <div class="match-scoreboard__center">
-      <div class="match-scoreboard__score" :aria-label="t('eventsPage.aria.score')">
-        <template v-if="score.kind === 'score'">
+      <div
+        class="match-scoreboard__score"
+        :class="{ 'is-forfeit': score.kind === 'forfeit' }"
+        :aria-label="t('eventsPage.aria.score')"
+      >
+        <template v-if="score.kind === 'forfeit'">
+          <span>{{ score.leftLabel }}</span>
+          <span class="match-scoreboard__colon">/</span>
+          <span>{{ score.rightLabel }}</span>
+        </template>
+        <template v-else-if="score.kind === 'score'">
           <span
             :class="{
               'is-winner': isWinner(leftTeam, winnerEventTeamId),
@@ -174,6 +183,12 @@ function secondaryLine(team: Team): string {
   font-weight: 900;
   letter-spacing: 1px;
   white-space: nowrap;
+}
+
+.match-scoreboard__score.is-forfeit {
+  gap: 10px;
+  font-size: clamp(22px, 3vw, 36px);
+  letter-spacing: 0.06em;
 }
 
 .match-scoreboard__score .is-winner {

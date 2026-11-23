@@ -47,6 +47,12 @@ function toneLabel(game: V4PublicMatchSeriesGame): string {
   return ''
 }
 
+function blankForfeit(game: V4PublicMatchSeriesGame): boolean {
+  const status = String(game.matchStatus || '').toUpperCase()
+  if (status !== 'FORFEITED' && status !== 'FORFEIT') return false
+  return !isPresent(game.awayScore) && !isPresent(game.homeScore)
+}
+
 function leftScore(game: V4PublicMatchSeriesGame): number | null {
   return isPresent(game.awayScore) ? Number(game.awayScore) : null
 }
@@ -111,7 +117,10 @@ function replayHref(game: V4PublicMatchSeriesGame): string {
       >
         <strong class="series-progress__game">G{{ game.seriesGameNo }}</strong>
         <p class="series-progress__score">
-          <template v-if="gameTone(game) === 'completed' || gameTone(game) === 'live'">
+          <template v-if="blankForfeit(game)">
+            <span class="series-progress__forfeit">{{ t('match.forfeit') }}</span>
+          </template>
+          <template v-else-if="gameTone(game) === 'completed' || gameTone(game) === 'live'">
             <span :class="{ 'is-win': winnerTeam(game)?.teamId === leftTeam.teamId }">{{ formatExactScore(leftScore(game)) }}</span>
             <span class="series-progress__colon">:</span>
             <span :class="{ 'is-win': winnerTeam(game)?.teamId === rightTeam.teamId }">{{ formatExactScore(rightScore(game)) }}</span>
@@ -221,6 +230,11 @@ function replayHref(game: V4PublicMatchSeriesGame): string {
   font-weight: 800;
   line-height: 1;
   white-space: nowrap;
+}
+
+.series-progress__forfeit {
+  font-size: 16px;
+  letter-spacing: 0.08em;
 }
 
 .series-progress__colon {

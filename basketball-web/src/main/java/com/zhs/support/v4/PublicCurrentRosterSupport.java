@@ -160,6 +160,13 @@ public class PublicCurrentRosterSupport {
         applyLogo(face, vo::setTeamLogoFileId, vo::setTeamLogoUrl);
     }
 
+    public static void applyItemLogo(V4PublicEventTeamItemResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        applyLogo(face, vo::setTeamLogoFileId, vo::setTeamLogoUrl);
+    }
+
     public static void applyMatchHome(V4PublicMatchItemResp vo, CurrentTeamFace face) {
         if (vo == null || face == null) {
             return;
@@ -176,6 +183,20 @@ public class PublicCurrentRosterSupport {
         }
         if (face.teamName() != null) {
             vo.setAwayTeamName(face.teamName());
+        }
+        applyLogo(face, vo::setAwayTeamLogoFileId, vo::setAwayTeamLogoUrl);
+    }
+
+    public static void applyMatchHomeLogo(V4PublicMatchItemResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        applyLogo(face, vo::setHomeTeamLogoFileId, vo::setHomeTeamLogoUrl);
+    }
+
+    public static void applyMatchAwayLogo(V4PublicMatchItemResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
         }
         applyLogo(face, vo::setAwayTeamLogoFileId, vo::setAwayTeamLogoUrl);
     }
@@ -208,6 +229,20 @@ public class PublicCurrentRosterSupport {
         applyLogo(face, item::setAwayTeamLogoFileId, item::setAwayTeamLogoUrl);
     }
 
+    public static void applyScheduleHomeLogo(V4PublicScheduleItemResp item, CurrentTeamFace face) {
+        if (item == null || face == null) {
+            return;
+        }
+        applyLogo(face, item::setHomeTeamLogoFileId, item::setHomeTeamLogoUrl);
+    }
+
+    public static void applyScheduleAwayLogo(V4PublicScheduleItemResp item, CurrentTeamFace face) {
+        if (item == null || face == null) {
+            return;
+        }
+        applyLogo(face, item::setAwayTeamLogoFileId, item::setAwayTeamLogoUrl);
+    }
+
     public static void applySeriesHome(V4PublicMatchSeriesDetailResp vo, CurrentTeamFace face) {
         if (vo == null || face == null) {
             return;
@@ -230,6 +265,20 @@ public class PublicCurrentRosterSupport {
         }
         if (face.shortName() != null) {
             vo.setAwayTeamShortName(face.shortName());
+        }
+        applyLogo(face, vo::setAwayTeamLogoFileId, vo::setAwayTeamLogoUrl);
+    }
+
+    public static void applySeriesHomeLogo(V4PublicMatchSeriesDetailResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
+        }
+        applyLogo(face, vo::setHomeTeamLogoFileId, vo::setHomeTeamLogoUrl);
+    }
+
+    public static void applySeriesAwayLogo(V4PublicMatchSeriesDetailResp vo, CurrentTeamFace face) {
+        if (vo == null || face == null) {
+            return;
         }
         applyLogo(face, vo::setAwayTeamLogoFileId, vo::setAwayTeamLogoUrl);
     }
@@ -292,7 +341,7 @@ public class PublicCurrentRosterSupport {
             if (!StringUtils.hasText(resp.getTeamShortName()) && face.shortName() != null) {
                 resp.setTeamShortName(face.shortName());
             }
-            if (resp.getTeamLogoFileId() == null && face.logoFileId() != null) {
+            if (face.logoFileId() != null) {
                 resp.setTeamLogoFileId(face.logoFileId());
                 resp.setTeamLogoUrl(face.logoUrl());
             }

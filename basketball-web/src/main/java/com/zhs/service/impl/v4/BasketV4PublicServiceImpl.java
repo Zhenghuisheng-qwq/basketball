@@ -538,8 +538,14 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                     .get(match.getSeriesId());
             seriesStatus = parent == null ? null : parent.getSeriesStatus();
         }
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
+        if (resp.getHomeTeam() != null && home != null) {
+            PublicCurrentRosterSupport.applyItemLogo(resp.getHomeTeam(), faces.get(home.getId()));
+        }
+        if (resp.getAwayTeam() != null && away != null) {
+            PublicCurrentRosterSupport.applyItemLogo(resp.getAwayTeam(), faces.get(away.getId()));
+        }
         if (PublicCurrentRosterSupport.useCurrentIdentity(match.getMatchStatus(), seriesStatus)) {
-            Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teamMap.values());
             if (resp.getHomeTeam() != null && home != null) {
                 PublicCurrentRosterSupport.applyItem(resp.getHomeTeam(), faces.get(home.getId()));
             }
@@ -1757,6 +1763,12 @@ public class BasketV4PublicServiceImpl implements IBasketV4PublicService {
                 vo.setAwayTeamName(null);
             }
             com.zhs.support.v4.EventTeamPublicDisplaySupport.fillMatch(vo, match, home, away);
+            if (home != null) {
+                PublicCurrentRosterSupport.applyMatchHomeLogo(vo, currentFaces.get(home.getId()));
+            }
+            if (away != null) {
+                PublicCurrentRosterSupport.applyMatchAwayLogo(vo, currentFaces.get(away.getId()));
+            }
             if (PublicCurrentRosterSupport.useCurrentIdentity(match.getMatchStatus(), vo.getSeriesStatus())) {
                 if (home != null) {
                     PublicCurrentRosterSupport.applyMatchHome(vo, currentFaces.get(home.getId()));

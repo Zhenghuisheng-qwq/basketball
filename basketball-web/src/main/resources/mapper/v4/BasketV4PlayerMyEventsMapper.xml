@@ -18,7 +18,7 @@
             et.id as eventTeamId,
             et.team_name_snapshot as eventTeamName,
             et.team_name_snapshot as teamName,
-            et.team_logo_file_id as teamLogoFileId,
+            coalesce(src.logo_file_id, et.team_logo_file_id) as teamLogoFileId,
             case when ep.is_captain = 1 then 'CAPTAIN' else 'PLAYER' end as roleInTeam,
             et.event_team_status as eventTeamStatus,
             d.division_status as divisionStatus,
@@ -143,6 +143,7 @@
               limit 1) as finalSeriesWinnerTeamId
         from basket_event_player ep
         inner join basket_event_team et on et.id = ep.event_team_id and et.is_delete = 0
+        left join basket_team src on src.id = et.source_team_id and src.is_delete = 0
         inner join basket_division d on d.id = et.division_id and d.is_delete = 0
         inner join basket_season se on se.id = et.season_id and se.is_delete = 0
         inner join basket_series s on s.id = se.series_id and s.is_delete = 0

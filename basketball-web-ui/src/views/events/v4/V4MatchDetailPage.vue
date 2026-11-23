@@ -23,7 +23,6 @@ import PeriodScoreBoard from '../match-detail/PeriodScoreBoard.vue'
 import BoxScorePanel from '../match-detail/BoxScorePanel.vue'
 import { isSafeHttpUrl } from '../utils/scheduleRowDisplay'
 import { iconAssets } from '@/constants/iconAssets'
-import { usePublicPageHero, visibleHeroImage } from '@/composables/usePublicPageHero'
 import {
   SERIES_TOTAL_TAB,
   formatMatchWhen,
@@ -54,23 +53,7 @@ const loading = ref(true)
 const error = ref('')
 const series = ref<V4PublicMatchSeriesDetail | null>(null)
 const match = ref<V4PublicMatchDetail | null>(null)
-const heroBg = iconAssets['score/detail_top_background.png']
-const heroSeasonId = computed(() => String(series.value?.seasonId || match.value?.seasonId || route.query.seasonId || ''))
-const pageHero = usePublicPageHero('EVENT_SEASON', heroSeasonId)
-const heroSrc = computed(() => visibleHeroImage(
-  pageHero.settled.value,
-  pageHero.configured.value,
-  pageHero.imageUrl.value,
-  heroBg,
-))
-const heroStyle = computed(() => (
-  pageHero.configured.value ? { objectPosition: pageHero.objectPosition.value } : undefined
-))
-const heroShadeStyle = computed(() => {
-  if (!pageHero.configured.value || pageHero.fullImage.value) return undefined
-  const mask = pageHero.maskOpacity.value / 100
-  return { background: `linear-gradient(180deg, rgba(0, 0, 0, ${mask}) 0%, rgba(5, 5, 5, 0.85) 100%)` }
-})
+const heroSrc = iconAssets['score/detail_top_background.png']
 const matchCache = ref<Record<string, V4PublicMatchDetail>>({})
 const selectedTeamId = ref('')
 const activeTab = ref(SERIES_TOTAL_TAB)
@@ -131,6 +114,9 @@ const winnerEventTeamId = computed(() => {
 
 const statusText = computed(() => {
   if (seriesMode.value) {
+    if (String(series.value?.resolutionType || '').toUpperCase() === 'FORFEIT') {
+      return t('match.forfeit')
+    }
     return v4SeriesHeroStatusLabel(series.value?.seriesStatus)
   }
   return v4MatchStatusLabel(match.value?.matchStatus)
@@ -446,11 +432,10 @@ watch([seriesId, matchId, () => route.name], () => {
             v-if="heroSrc"
             class="match-detail-hero__image"
             :src="heroSrc"
-            :alt="pageHero.altText.value"
-            :style="heroStyle"
+            :alt="t('eventsPage.schedule.detail')"
             draggable="false"
           />
-          <div class="match-detail-hero__shade" :style="heroShadeStyle" aria-hidden="true" />
+          <div class="match-detail-hero__shade" aria-hidden="true" />
           <div class="match-detail-hero__body">
         <nav class="match-detail-crumb">
           <router-link :to="accountContest ? { name: 'AccountPerformance' } : '/events'">{{ t('events.title') }}</router-link>

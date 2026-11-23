@@ -125,6 +125,9 @@ function roundText(item: V4PublicScheduleItem): string {
               {{ scoreView(item).right }}
             </span>
           </div>
+          <span v-if="scoreView(item).kind === 'forfeit'" class="score-forfeit-note">
+            {{ scoreView(item).caption || t('match.forfeit') }}
+          </span>
         </template>
         <div v-else-if="scoreView(item).kind === 'forfeit'" class="score score--forfeit">
           {{ [scoreView(item).leftLabel, scoreView(item).rightLabel].filter(Boolean).join(' / ') || scoreView(item).caption || t('match.forfeit') }}
@@ -192,7 +195,7 @@ function roundText(item: V4PublicScheduleItem): string {
   --schedule-columns:
     minmax(72px, 0.9fr)
     minmax(140px, 1.35fr)
-    minmax(84px, 0.85fr)
+    minmax(112px, 0.95fr)
     minmax(140px, 1.35fr)
     minmax(88px, 1.15fr)
     minmax(48px, 0.65fr)
@@ -267,6 +270,11 @@ function roundText(item: V4PublicScheduleItem): string {
   align-items: center;
   justify-content: center;
   text-align: center;
+}
+
+.score-cell {
+  flex-direction: column;
+  gap: 2px;
 }
 
 .action-cell {
@@ -370,7 +378,20 @@ function roundText(item: V4PublicScheduleItem): string {
 }
 
 .score--forfeit {
-  font-size: 14px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: 0;
+  white-space: normal;
+}
+
+.score-forfeit-note {
+  display: block;
+  margin-top: 2px;
+  color: #8a1f1f;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.2;
 }
 
 .score-vs {

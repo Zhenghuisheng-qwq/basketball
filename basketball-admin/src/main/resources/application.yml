@@ -114,8 +114,8 @@ cnpa:
     from-name: CNPA
   stats-vision:
     enabled: true
-    base-url: ${CNPA_STATS_VISION_BASE_URL:https://ws-sauyaoq4apm7zyhc.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
-    api-key: ${CNPA_STATS_VISION_API_KEY:sk-e7b6b1a9be6d45cd9384882d6264d65b}
+    base-url: ${CNPA_STATS_VISION_BASE_URL:https://ws-1193xii38fitm2dy.cn-beijing.maas.aliyuncs.com/compatible-mode/v1}
+    api-key: ${CNPA_STATS_VISION_API_KEY:sk-ws-H.XMLLDYE.BUgi.MEUCIQC2QQxe7s8E5WnAPKu9Vl9zzYXQzorcF3VBziJ65F3E1QIgPdEYGszEZROSKUsb9A1Ivq6gyPIggdSXZAe8Vgk36A8}
     model: ${CNPA_STATS_VISION_MODEL:qwen3.7-plus}
     timeout-seconds: 120
     max-tokens: 4096

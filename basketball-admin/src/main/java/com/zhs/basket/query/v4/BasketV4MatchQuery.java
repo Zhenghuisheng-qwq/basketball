@@ -15,4 +15,8 @@ public class BasketV4MatchQuery {
     private String teamName;
     private Long stageId;
     private Long seriesId;
+    /** 比赛日期起，含当天。系列赛单场没有独立时间时按系列赛开赛时间。 */
+    private String matchDateBegin;
+    /** 比赛日期止，含当天。 */
+    private String matchDateEnd;
 }

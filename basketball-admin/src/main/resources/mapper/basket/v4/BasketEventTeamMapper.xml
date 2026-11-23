@@ -66,7 +66,7 @@
             et.registration_id,
             et.source_team_id,
             et.team_name_snapshot,
-            et.team_logo_file_id,
+            coalesce(src.logo_file_id, et.team_logo_file_id) as team_logo_file_id,
             et.team_short_name,
             et.captain_player_id,
             coalesce(nullif(trim(mp.nickname), ''), nullif(trim(p.game_nickname), '')) as captain_player_name,
@@ -74,6 +74,7 @@
             et.event_team_status,
             et.create_time
         from basket_event_team et
+        left join basket_team src on src.id = et.source_team_id and src.is_delete = 0
         left join basket_season se on se.id = et.season_id and se.is_delete = 0
         left join basket_division d on d.id = et.division_id and d.is_delete = 0
         left join basket_player_profile p on p.id = et.captain_player_id and p.is_delete = 0
@@ -155,6 +156,14 @@
             update_time = now()
         </set>
         where id = #{id} and is_delete = 0
+    </update>
+
+    <update id="syncLogoBySourceTeam">
+        update basket_event_team
+        set team_logo_file_id = #{logoFileId},
+            update_time = now()
+        where is_delete = 0
+          and source_team_id = #{sourceTeamId}
     </update>
 
     <update id="softDelete">

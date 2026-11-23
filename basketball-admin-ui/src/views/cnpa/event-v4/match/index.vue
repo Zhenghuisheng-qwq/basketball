@@ -1,6 +1,6 @@
 <template>
   <div class="app-container">
-    <el-alert title="比赛管理默认只列已发布比赛。未发布草稿不会出现在这张表里，需要时把发布状态改成草稿。系列赛时间在「系列赛」Tab 调整；赛前整体排期请回赛事工作台。" type="info" :closable="false" show-icon class="mb8" />
+    <el-alert title="比赛管理默认只列已发布比赛。比赛日期可筛今天、明天或本周；系列赛单场没有单独开赛时间时，按系列赛排期日期筛选。系列赛时间在「系列赛」里调整。" type="info" :closable="false" show-icon class="mb8" />
 
     <el-form :model="query" :inline="true" class="mb8">
       <el-form-item label="视图">
@@ -19,11 +19,24 @@
           <el-option v-for="item in divisionOptions" :key="item.id" :label="formatDivisionLabel(item)" :value="item.id" />
         </el-select>
       </el-form-item>
-      <el-form-item label="批次">
-        <el-input-number v-model="query.scheduleBatchId" :min="1" controls-position="right" />
+      <el-form-item label="比赛日期">
+        <el-date-picker
+          v-model="matchDateRange"
+          type="daterange"
+          value-format="YYYY-MM-DD"
+          range-separator="至"
+          start-placeholder="开始日期"
+          end-placeholder="结束日期"
+          :shortcuts="dateShortcuts"
+          style="width: 280px"
+          @change="search"
+        />
       </el-form-item>
       <el-form-item label="轮次">
         <el-input-number v-model="query.roundNo" :min="1" controls-position="right" />
+      </el-form-item>
+      <el-form-item label="批次">
+        <el-input-number v-model="query.scheduleBatchId" :min="1" controls-position="right" />
       </el-form-item>
       <el-form-item label="发布状态">
         <el-select v-model="query.publishStatus" clearable style="width:120px">
@@ -36,7 +49,7 @@
         </el-select>
       </el-form-item>
       <el-form-item label="球队名称">
-        <el-input v-model="query.teamName" clearable placeholder="主/客队名称" />
+        <el-input v-model="query.teamName" clearable placeholder="主/客队名称" style="width: 160px" @keyup.enter="search" />
       </el-form-item>
       <el-form-item v-if="viewMode === 'series'" label="阶段">
         <el-select v-model="seriesStageId" clearable filterable placeholder="选择阶段" style="width: 200px" :disabled="!query.divisionId">
@@ -44,7 +57,8 @@
         </el-select>
       </el-form-item>
       <el-form-item>
-        <el-button type="primary" icon="Search" @click="loadList">搜索</el-button>
+        <el-button type="primary" icon="Search" @click="search">搜索</el-button>
+        <el-button icon="Refresh" @click="resetQuery">重置</el-button>
       </el-form-item>
     </el-form>
 
@@ -53,6 +67,8 @@
       ref="seriesPanelRef"
       :stage-id="seriesStageId"
       :division-id="query.divisionId"
+      :date-begin="query.matchDateBegin"
+      :date-end="query.matchDateEnd"
       @open-match="openEditById"
     />
 
@@ -72,9 +88,9 @@
       <el-table-column label="比赛时间" prop="matchTime" width="160" />
       <el-table-column label="主队" prop="homeTeamName" min-width="100" />
       <el-table-column label="客队" prop="awayTeamName" min-width="100" />
-      <el-table-column label="比分" width="100" align="center">
+      <el-table-column label="比分" width="120" align="center">
         <template #default="scope">
-          <span v-if="scope.row.matchStatus === 'FORFEITED'">判负</span>
+          <span v-if="scope.row.matchStatus === 'FORFEITED'">{{ forfeitScoreText(scope.row) }}</span>
           <span v-else>{{ formatV4MatchScore(scope.row.homeScore, scope.row.awayScore) }}</span>
         </template>
       </el-table-column>
@@ -321,7 +337,13 @@ import {
 const loading = ref(false)
 const list = ref<any[]>([])
 const total = ref(0)
-const query = reactive<Record<string, any>>({ pageNum: 1, pageSize: 10, publishStatus: 'PUBLISHED' })
+const query = reactive<Record<string, any>>({ pageNum: 1, pageSize: 20, publishStatus: 'PUBLISHED' })
+const matchDateRange = ref<string[]>([])
+const dateShortcuts = [
+  { text: '今天', value: () => dayRange(0, 0) },
+  { text: '明天', value: () => dayRange(1, 1) },
+  { text: '本周', value: () => weekRange() }
+]
 const editVisible = ref(false)
 const editId = ref<number>()
 const editForm = reactive({ matchTime: '', venueText: '', remark: '', replayUrl: '', publishStatus: '' })
@@ -408,7 +430,57 @@ function onSeasonChange(seasonId?: number) {
   loadDivisions(seasonId)
 }
 
+function dayRange(startOffset: number, endOffset: number): [Date, Date] {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  start.setDate(start.getDate() + startOffset)
+  const end = new Date(start)
+  end.setDate(start.getDate() + (endOffset - startOffset))
+  return [start, end]
+}
+
+function weekRange(): [Date, Date] {
+  const start = new Date()
+  start.setHours(0, 0, 0, 0)
+  const weekday = start.getDay() || 7
+  start.setDate(start.getDate() - weekday + 1)
+  const end = new Date(start)
+  end.setDate(start.getDate() + 6)
+  return [start, end]
+}
+
+function applyDateQuery() {
+  query.matchDateBegin = matchDateRange.value?.[0] || undefined
+  query.matchDateEnd = matchDateRange.value?.[1] || undefined
+}
+
+function search() {
+  query.pageNum = 1
+  applyDateQuery()
+  loadList()
+}
+
+function resetQuery() {
+  query.seasonId = undefined
+  query.divisionId = undefined
+  query.scheduleBatchId = undefined
+  query.roundNo = undefined
+  query.publishStatus = 'PUBLISHED'
+  query.matchStatus = undefined
+  query.teamName = undefined
+  matchDateRange.value = []
+  search()
+}
+
+function forfeitScoreText(row: any): string {
+  const winner = row?.winnerEventTeamId
+  if (winner && winner === row.homeEventTeamId) return '主胜 / 客负'
+  if (winner && winner === row.awayEventTeamId) return '客胜 / 主负'
+  return '弃权'
+}
+
 function loadList() {
+  applyDateQuery()
   if (viewMode.value === 'series') {
     seriesPanelRef.value?.reload()
     return
