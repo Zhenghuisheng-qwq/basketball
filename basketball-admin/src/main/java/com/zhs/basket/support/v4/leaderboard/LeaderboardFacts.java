@@ -17,6 +17,8 @@ public final class LeaderboardFacts {
         private Long seriesId;
         private Long homeEventTeamId;
         private Long awayEventTeamId;
+        private Long winnerEventTeamId;
+        private Long loserEventTeamId;
         private String matchStatus;
         private String publishStatus;
         private Date matchTime;

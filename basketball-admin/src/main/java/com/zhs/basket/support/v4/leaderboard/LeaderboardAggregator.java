@@ -14,7 +14,8 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 从单场正式记录汇总资格输入。弃赛、取消和轮空不产生技术局。
+ * 从单场正式记录汇总资格输入。弃赛、取消和轮空不产生技术局，也不计入得分。
+ * 已发布的弃赛在胜负双方都明确时，只补官方胜场和负场。
  * 同一个系列赛的多局只贡献一个 seriesId。
  */
 public final class LeaderboardAggregator {
@@ -142,6 +143,7 @@ public final class LeaderboardAggregator {
                 team.fulfilled++;
             }
         }
+        applyForfeitResult(team, teamId, match);
         if (!technical || !team.matches.add(match.getId())) {
             return;
         }
@@ -178,6 +180,22 @@ public final class LeaderboardAggregator {
             } else {
                 team.losses++;
             }
+        }
+    }
+
+    private static void applyForfeitResult(MutableTeam team, Long teamId, LeaderboardFacts.MatchFact match) {
+        if (!"FORFEITED".equals(match.getMatchStatus()) || teamId == null) {
+            return;
+        }
+        Long winnerId = match.getWinnerEventTeamId();
+        Long loserId = match.getLoserEventTeamId();
+        if (winnerId == null || loserId == null || winnerId.equals(loserId)) {
+            return;
+        }
+        if (teamId.equals(winnerId)) {
+            team.wins++;
+        } else if (teamId.equals(loserId)) {
+            team.losses++;
         }
     }
 

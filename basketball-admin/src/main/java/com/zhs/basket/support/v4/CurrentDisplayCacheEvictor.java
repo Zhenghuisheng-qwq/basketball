@@ -1,6 +1,7 @@
 package com.zhs.basket.support.v4;
 
 import com.zhs.basket.domain.BasketPlayerProfile;
+import com.zhs.basket.domain.v4.BasketEventPlayer;
 import com.zhs.basket.domain.v4.BasketEventTeam;
 import com.zhs.basket.mapper.BasketPlayerProfileMapper;
 import com.zhs.basket.mapper.v4.BasketEventPlayerMapper;
@@ -85,5 +86,14 @@ public class CurrentDisplayCacheEvictor {
             return;
         }
         cachePublisher.teamMutation(eventTeamId, divisionId, seasonId);
+        List<BasketEventPlayer> players = eventPlayerMapper.selectByEventTeamId(eventTeamId);
+        if (players == null) {
+            return;
+        }
+        for (BasketEventPlayer player : players) {
+            if (player != null && player.getSourcePlayerId() != null) {
+                cachePublisher.playerMutation(player.getSourcePlayerId());
+            }
+        }
     }
 }

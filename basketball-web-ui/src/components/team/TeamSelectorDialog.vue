@@ -13,7 +13,9 @@ import { v4PlatformLabel } from '@/utils/v4Display'
 import {
   mapV4EventTeamToBase,
   mapV4StandingToTeamBase,
+  preferStandingRow,
 } from '@/views/tournament/team/utils/mapV4PublicTeam'
+import type { V4PublicStandingItem } from '@/api/types/v4Public'
 import type { TeamBase, TeamStage } from '@/types/team'
 
 const props = withDefaults(
@@ -99,9 +101,11 @@ async function loadTeams() {
     ])
     if (current !== reqId) return
 
-    const standingMap = new Map(
-      (standingRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
-    )
+    const standingMap = new Map<string, V4PublicStandingItem>()
+    for (const row of standingRes.data ?? []) {
+      const key = String(row.eventTeamId)
+      standingMap.set(key, preferStandingRow(standingMap.get(key), row))
+    }
     const statMap = new Map(
       (statRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
     )
@@ -110,8 +114,8 @@ async function loadTeams() {
       const standing = standingMap.get(String(team.eventTeamId))
       const stat = statMap.get(String(team.eventTeamId))
       return mapV4EventTeamToBase(team, {
-        wins: stat?.winCount ?? standing?.winCount,
-        losses: stat?.loseCount ?? standing?.loseCount,
+        wins: standing?.winCount ?? stat?.winCount,
+        losses: standing?.loseCount ?? stat?.loseCount,
         ranking: standing?.rankNo,
         seasonName,
         divisionLabel,

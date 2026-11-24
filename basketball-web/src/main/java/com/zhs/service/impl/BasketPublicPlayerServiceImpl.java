@@ -54,6 +54,7 @@ import com.zhs.service.support.BasketPublicConstants;
 import com.zhs.service.support.BasketPublicHonorSupport;
 import com.zhs.service.support.BasketPublicSupport;
 import com.zhs.support.v4.PublicCurrentRosterSupport;
+import com.zhs.support.v4.PublicCurrentRosterSupport.CurrentTeamFace;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -240,6 +241,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         Map<Long, BasketSeries> seriesMap = publicSupport.loadSeriesMap(seriesIds);
         Set<Long> logoIds = eventTeamMap.values().stream().map(BasketEventTeam::getTeamLogoFileId).filter(Objects::nonNull).collect(Collectors.toSet());
         Map<Long, String> logoMap = publicSupport.loadAccessUrlMap(logoIds);
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(eventTeamMap.values());
 
         List<PublicPlayerCurrentTeamVo> rows = new ArrayList<>();
         Set<Long> seenTeams = new java.util.HashSet<>();
@@ -259,6 +261,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             item.setTeamName(team.getTeamNameSnapshot());
             item.setShortName(team.getTeamShortName());
             item.setLogoUrl(logoMap.get(team.getTeamLogoFileId()));
+            preferCurrentTeamFace(team, faces, item::setTeamName, item::setLogoUrl);
             item.setDivisionId(division.getId());
             item.setDivisionName(division.getDivisionName());
             item.setPlatformCode(division.getPlatformCode());
@@ -437,10 +440,12 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
         Set<Long> avatarIds = eventPlayers.stream().map(BasketEventPlayer::getAvatarFileId).filter(Objects::nonNull).collect(Collectors.toSet());
         logoIds.addAll(avatarIds);
         Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(logoIds);
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(eventTeamMap.values());
 
         Map<Long, String> profileAvatarMap = publicSupport.loadPlayerAvatarUrlMap(Collections.singletonList(player));
         Map<Long, OfficialShootingTotals> shootingByEventPlayer = loadOfficialShootingTotals(eventPlayerIds, seasonId);
         Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(eventPlayerMap.values());
+        Map<Long, String> currentAvatars = currentRosterSupport.loadCurrentAvatarUrls(eventPlayerMap.values());
 
         List<PublicPlayerSeasonStatVo> rows = new ArrayList<>();
         for (BasketPlayerStat stat : stats) {
@@ -479,6 +484,7 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
             if (eventTeam != null) {
                 vo.setTeamName(eventTeam.getTeamNameSnapshot());
                 vo.setTeamLogoUrl(urlMap.get(eventTeam.getTeamLogoFileId()));
+                preferCurrentTeamFace(eventTeam, faces, vo::setTeamName, vo::setTeamLogoUrl);
             }
             vo.setPlayerId(playerId);
             vo.setSourcePlayerId(playerId);
@@ -489,8 +495,8 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
                     : (eventPlayer.getPlayerNameSnapshot() != null
                     ? eventPlayer.getPlayerNameSnapshot()
                     : publicSupport.resolveDisplayName(player)));
-            String avatar = urlMap.get(eventPlayer.getAvatarFileId());
-            if (avatar == null) {
+            String avatar = currentAvatars.get(eventPlayer.getId());
+            if (!org.springframework.util.StringUtils.hasText(avatar)) {
                 avatar = com.zhs.support.MemberAvatarSupport.resolve(profileAvatarMap.get(player.getId()));
             }
             vo.setAvatarUrl(avatar);
@@ -643,6 +649,9 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
                 .map(BasketEventTeam::getTeamLogoFileId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet())));
+        List<BasketEventTeam> faceTeams = new ArrayList<>(eventTeamMap.values());
+        faceTeams.addAll(divisionTeams);
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(faceTeams);
         String displayName = publicSupport.resolveDisplayName(player);
         for (ParticipationSeed seed : seeds.values()) {
             BasketDivision division = divisionMap.get(seed.divisionId);
@@ -686,9 +695,28 @@ public class BasketPublicPlayerServiceImpl implements IBasketPublicPlayerService
                 vo.setTeamId(eventTeam.getId());
                 vo.setTeamName(eventTeam.getTeamNameSnapshot());
                 vo.setTeamLogoUrl(logoMap.get(eventTeam.getTeamLogoFileId()));
+                preferCurrentTeamFace(eventTeam, faces, vo::setTeamName, vo::setTeamLogoUrl);
             }
             rows.add(vo);
             seasonMap.put(season.getId(), season);
+        }
+    }
+
+    private static void preferCurrentTeamFace(BasketEventTeam team, Map<Long, CurrentTeamFace> faces,
+                                              java.util.function.Consumer<String> name,
+                                              java.util.function.Consumer<String> logo) {
+        if (team == null || faces == null) {
+            return;
+        }
+        CurrentTeamFace face = faces.get(team.getId());
+        if (face == null) {
+            return;
+        }
+        if (org.springframework.util.StringUtils.hasText(face.teamName())) {
+            name.accept(face.teamName());
+        }
+        if (org.springframework.util.StringUtils.hasText(face.logoUrl())) {
+            logo.accept(face.logoUrl());
         }
     }
 

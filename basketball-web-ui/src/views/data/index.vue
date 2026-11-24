@@ -8,9 +8,12 @@ import {
   getV4PublicLeaderboard,
   getV4PublicSeasonList,
   getV4PublicStageList,
+  getV4PublicStanding,
 } from '@/api/v4Public'
-import type { V4PublicLeaderboardRow, V4PublicStageItem } from '@/api/types/v4Public'
+import type { V4PublicLeaderboardRow, V4PublicStageItem, V4PublicStandingItem } from '@/api/types/v4Public'
 import { displayText, localizedText, toNumber } from '@/utils/publicDisplay'
+import { teamRecordGames } from '@/utils/teamRecordGames'
+import { preferStandingRow } from '@/views/tournament/team/utils/mapV4PublicTeam'
 import { v4PlatformLabel, v4SeriesLabel } from '@/utils/v4Display'
 import DataHero from './components/DataHero.vue'
 import DataTypeTabs from './components/DataTypeTabs.vue'
@@ -59,11 +62,23 @@ function teamShootingPct(made?: number | null, attempt?: number | null): number 
   return (toNumber(made, 0) / attempts) * 100
 }
 
-function mapTeamRow(item: V4PublicLeaderboardRow): TeamStatistics {
+function standingForTeam(
+  rows: V4PublicStandingItem[],
+  eventTeamId: string,
+  scope: string,
+): V4PublicStandingItem | undefined {
+  const mine = rows.filter((row) => String(row.eventTeamId) === eventTeamId)
+  const stageId = scope.startsWith('STAGE:') ? scope.slice('STAGE:'.length) : ''
+  const pool = stageId ? mine.filter((row) => String(row.stageId || '') === stageId) : mine
+  return pool.reduce<V4PublicStandingItem | undefined>((best, row) => preferStandingRow(best, row), undefined)
+}
+
+function mapTeamRow(item: V4PublicLeaderboardRow, standing?: V4PublicStandingItem): TeamStatistics {
   const name = displayText(item.teamName, t('publicPages.data.unknownTeam'))
-  const games = toNumber(item.games, 0)
-  const wins = toNumber(item.wins, 0)
-  const losses = toNumber(item.losses, 0)
+  const played = toNumber(item.games, 0)
+  const wins = standing ? toNumber(standing.winCount, 0) : toNumber(item.wins, 0)
+  const losses = standing ? toNumber(standing.loseCount, 0) : toNumber(item.losses, 0)
+  const games = teamRecordGames(played, wins, losses)
   return {
     id: String(item.eventTeamId),
     rank: toNumber(item.rank, 0),
@@ -303,23 +318,33 @@ async function loadTable(soft = false) {
       await loadScopes(divisionId)
       if (current !== reqId) return
     }
-    const res = await getV4PublicLeaderboard({
-      divisionId,
-      scope: selectedScope.value,
-      tab: activeDataType.value,
-      mode: leaderboardMode(),
-      sortBy: apiSortBy(activeDataType.value, sortKey.value),
-      sortDir: sortDir.value,
-      page: currentPage.value,
-      keyword: appliedKeyword.value.trim() || undefined,
-    })
+    const teamTab = activeDataType.value === 'team'
+    const [res, standingRes] = await Promise.all([
+      getV4PublicLeaderboard({
+        divisionId,
+        scope: selectedScope.value,
+        tab: activeDataType.value,
+        mode: leaderboardMode(),
+        sortBy: apiSortBy(activeDataType.value, sortKey.value),
+        sortDir: sortDir.value,
+        page: currentPage.value,
+        keyword: appliedKeyword.value.trim() || undefined,
+      }),
+      teamTab
+        ? getV4PublicStanding(divisionId).catch(() => ({ data: [] as V4PublicStandingItem[] }))
+        : Promise.resolve({ data: [] as V4PublicStandingItem[] }),
+    ])
     if (current !== reqId) return
     const board = res.data
+    const standings = standingRes.data ?? []
+    const scope = selectedScope.value
     emptyReason.value = board?.emptyReason || ''
     stale.value = Boolean(board?.stale)
     serverTotal.value = toNumber(board?.totalEligible, 0)
     const rows = board?.rows ?? []
-    allRows.value = rows.map((item) => activeDataType.value === 'team' ? mapTeamRow(item) : mapPlayerRow(item))
+    allRows.value = rows.map((item) => activeDataType.value === 'team'
+      ? mapTeamRow(item, standingForTeam(standings, String(item.eventTeamId), scope))
+      : mapPlayerRow(item))
   } catch (err) {
     if (current !== reqId) return
     allRows.value = []

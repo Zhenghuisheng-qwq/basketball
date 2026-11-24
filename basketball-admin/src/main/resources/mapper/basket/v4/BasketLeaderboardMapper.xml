@@ -264,6 +264,7 @@
     <select id="selectPublishedMatches" resultType="com.zhs.basket.support.v4.leaderboard.LeaderboardFacts$MatchFact">
         select id, stage_id as stageId, round_no as roundNo, series_id as seriesId,
                home_event_team_id as homeEventTeamId, away_event_team_id as awayEventTeamId,
+               winner_event_team_id as winnerEventTeamId, loser_event_team_id as loserEventTeamId,
                match_status as matchStatus, publish_status as publishStatus, match_time as matchTime
         from basket_match
         where division_id = #{divisionId} and is_delete = 0 and publish_status = 'PUBLISHED'

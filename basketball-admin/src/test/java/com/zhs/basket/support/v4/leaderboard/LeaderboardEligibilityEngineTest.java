@@ -52,7 +52,26 @@ class LeaderboardEligibilityEngineTest {
         LeaderboardSubject team = team(subjects, 100L);
         assertEquals(0, team.getValidGames());
         assertEquals(0, team.getPoints());
+        assertEquals(0, team.getWins());
         assertEquals(new BigDecimal("1.0000"), team.getDueFixtureRate());
+    }
+
+    @Test
+    void forfeitRecordsOfficialWinAndLossWithoutTechnicalGame() {
+        LeaderboardFacts.MatchFact forfeited = match(8L, 10L, 1, null, "FORFEITED");
+        forfeited.setWinnerEventTeamId(100L);
+        forfeited.setLoserEventTeamId(200L);
+        List<LeaderboardSubject> subjects = LeaderboardAggregator.aggregate(
+                List.of(forfeited), List.of(), List.of(), Set.of(10L), new Date());
+        LeaderboardSubject winner = team(subjects, 100L);
+        LeaderboardSubject loser = team(subjects, 200L);
+        assertEquals(0, winner.getValidGames());
+        assertEquals(0, winner.getPoints());
+        assertEquals(1, winner.getWins());
+        assertEquals(0, winner.getLosses());
+        assertEquals(0, loser.getValidGames());
+        assertEquals(0, loser.getWins());
+        assertEquals(1, loser.getLosses());
     }
 
     @Test

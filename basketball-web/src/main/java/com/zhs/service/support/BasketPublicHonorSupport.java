@@ -537,7 +537,9 @@ public class BasketPublicHonorSupport {
                 if (StringUtils.hasText(eventTeam.getTeamNameSnapshot())) {
                     vo.setTeamName(eventTeam.getTeamNameSnapshot());
                 }
-                if (eventTeam.getTeamLogoFileId() != null && StringUtils.hasText(urlMap.get(eventTeam.getTeamLogoFileId()))) {
+                if (!StringUtils.hasText(vo.getTeamLogoUrl())
+                        && eventTeam.getTeamLogoFileId() != null
+                        && StringUtils.hasText(urlMap.get(eventTeam.getTeamLogoFileId()))) {
                     vo.setTeamLogoUrl(urlMap.get(eventTeam.getTeamLogoFileId()));
                 }
             }

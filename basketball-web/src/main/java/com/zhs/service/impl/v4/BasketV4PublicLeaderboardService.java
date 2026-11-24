@@ -20,8 +20,11 @@ import com.zhs.model.v4.BasketLeaderboardSnapshot;
 import com.zhs.response.publicapi.PublicHomePlayerLeaderVo;
 import com.zhs.response.v4.publicapi.V4PublicLeaderboardResp;
 import com.zhs.service.support.BasketPublicSupport;
+import com.zhs.support.v4.PublicCurrentRosterSupport;
+import com.zhs.support.v4.PublicCurrentRosterSupport.CurrentTeamFace;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -55,6 +58,8 @@ public class BasketV4PublicLeaderboardService {
     private BasketEventPlayerDao eventPlayerDao;
     @Resource
     private BasketPublicSupport publicSupport;
+    @Resource
+    private PublicCurrentRosterSupport currentRosterSupport;
     @Resource
     private ObjectMapper objectMapper;
 
@@ -183,6 +188,9 @@ public class BasketV4PublicLeaderboardService {
             }
         }
         Map<Long, String> urls = publicSupport.loadAccessUrlMap(fileIds);
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teams.values());
+        Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(players.values());
+        Map<Long, String> currentAvatars = currentRosterSupport.loadCurrentAvatarUrls(players.values());
         List<V4PublicLeaderboardResp.Row> rows = new ArrayList<>();
         for (BasketLeaderboardEntry entry : entries) {
             V4PublicLeaderboardResp.Row row = new V4PublicLeaderboardResp.Row();
@@ -214,6 +222,13 @@ public class BasketV4PublicLeaderboardService {
             if (team != null) {
                 row.setTeamName(team.getTeamNameSnapshot());
                 row.setTeamLogoUrl(urls.get(team.getTeamLogoFileId()));
+                CurrentTeamFace face = faces.get(team.getId());
+                if (face != null && StringUtils.hasText(face.teamName())) {
+                    row.setTeamName(face.teamName());
+                }
+                if (face != null && StringUtils.hasText(face.logoUrl())) {
+                    row.setTeamLogoUrl(face.logoUrl());
+                }
             }
             BasketEventPlayer player = players.get(entry.getEventPlayerId());
             if (player != null) {
@@ -221,6 +236,14 @@ public class BasketV4PublicLeaderboardService {
                 row.setSourcePlayerId(player.getSourcePlayerId());
                 row.setPosition(player.getPosition());
                 row.setAvatarUrl(urls.get(player.getAvatarFileId()));
+                String currentName = currentNames.get(player.getId());
+                if (StringUtils.hasText(currentName)) {
+                    row.setPlayerName(currentName);
+                }
+                String avatarUrl = currentAvatars.get(player.getId());
+                if (StringUtils.hasText(avatarUrl)) {
+                    row.setAvatarUrl(avatarUrl);
+                }
             }
             rows.add(row);
         }
@@ -240,12 +263,21 @@ public class BasketV4PublicLeaderboardService {
         }
         Map<Long, BasketEventTeam> teams = loadTeams(teamIds);
         Map<Long, BasketEventPlayer> players = loadPlayers(playerIds);
+        Map<Long, CurrentTeamFace> faces = currentRosterSupport.loadCurrentFaces(teams.values());
+        Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(players.values());
         List<BasketLeaderboardEntry> filtered = new ArrayList<>();
         for (BasketLeaderboardEntry entry : ranked) {
             BasketEventTeam team = teams.get(entry.getEventTeamId());
             BasketEventPlayer player = players.get(entry.getEventPlayerId());
+            CurrentTeamFace face = team == null ? null : faces.get(team.getId());
             String teamName = team == null || team.getTeamNameSnapshot() == null ? "" : team.getTeamNameSnapshot().toLowerCase();
+            if (face != null && StringUtils.hasText(face.teamName())) {
+                teamName = teamName + " " + face.teamName().toLowerCase();
+            }
             String playerName = player == null || player.getPlayerNameSnapshot() == null ? "" : player.getPlayerNameSnapshot().toLowerCase();
+            if (player != null && StringUtils.hasText(currentNames.get(player.getId()))) {
+                playerName = playerName + " " + currentNames.get(player.getId()).toLowerCase();
+            }
             String playerId = player == null || player.getSourcePlayerId() == null ? "" : String.valueOf(player.getSourcePlayerId());
             if (teamName.contains(keyword) || playerName.contains(keyword) || playerId.contains(keyword)
                     || String.valueOf(entry.getEventTeamId()).contains(keyword)) {
