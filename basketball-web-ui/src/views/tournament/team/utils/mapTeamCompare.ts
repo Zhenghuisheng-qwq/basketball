@@ -1,6 +1,7 @@
 import type { V4PublicTeamStatItem } from '@/api/types/v4Public'
 import { translate } from '@/i18n'
 import { toNumber } from '@/utils/publicDisplay'
+import { boxScoreGames, teamRecordGames } from '@/utils/teamRecordGames'
 import type { TeamCompareBarStat, TeamCompareData } from '@/types/team'
 
 function normalizeWinRate(wins: number, games: number): number {
@@ -8,19 +9,29 @@ function normalizeWinRate(wins: number, games: number): number {
   return (wins / games) * 100
 }
 
-function statOverview(stat?: V4PublicTeamStatItem | null) {
-  const games = toNumber(stat?.matchCount, 0)
+function statGameSplit(stat?: V4PublicTeamStatItem | null) {
   const wins = toNumber(stat?.winCount, 0)
+  const losses = toNumber(stat?.loseCount, 0)
+  return {
+    wins,
+    losses,
+    recordGames: teamRecordGames(stat?.matchCount, wins, losses),
+    boxGames: boxScoreGames(stat?.matchCount, wins, losses),
+  }
+}
+
+function statOverview(stat?: V4PublicTeamStatItem | null) {
+  const split = statGameSplit(stat)
   const avgPoints = toNumber(stat?.avgPointsFor, 0)
   const avgPointsAgainst = toNumber(stat?.avgPointsAgainst, 0)
   return {
-    winRate: normalizeWinRate(wins, games),
+    winRate: normalizeWinRate(split.wins, split.recordGames),
     avgPoints,
     avgPointsAgainst,
     avgPointDiff: avgPoints - avgPointsAgainst,
-    games,
-    wins,
-    losses: toNumber(stat?.loseCount, 0),
+    games: split.recordGames,
+    wins: split.wins,
+    losses: split.losses,
   }
 }
 
@@ -49,8 +60,8 @@ export function buildTeamCompareFromV4Stats(
   left?: V4PublicTeamStatItem | null,
   right?: V4PublicTeamStatItem | null,
 ): TeamCompareData {
-  const leftGames = toNumber(left?.matchCount, 0)
-  const rightGames = toNumber(right?.matchCount, 0)
+  const leftGames = statGameSplit(left).boxGames
+  const rightGames = statGameSplit(right).boxGames
 
   return {
     overview: statOverview(left),

@@ -35,7 +35,7 @@ function upper(value?: string | null): string {
 function forfeitSideLabel(winnerId?: string | number | null, sideId?: string | number | null): string | undefined {
   if (winnerId == null || sideId == null || String(winnerId) === '') return undefined
   return String(winnerId) === String(sideId)
-    ? translate('eventsPage.match.forfeitWin')
+    ? translate('eventsPage.schedule.forfeitWin')
     : translate('match.forfeitLoss')
 }
 

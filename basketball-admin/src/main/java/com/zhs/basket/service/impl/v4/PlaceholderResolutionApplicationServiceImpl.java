@@ -205,6 +205,27 @@ public class PlaceholderResolutionApplicationServiceImpl implements IPlaceholder
         return pairingExecutionApplicationService.getCurrent(stage.getId());
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public StagePairingExecutionVo resolveAfterQualificationConfirm(Long knockoutStageId) {
+        if (knockoutStageId == null) {
+            return null;
+        }
+        BasketDivisionStage stage = stageMapper.selectById(knockoutStageId);
+        if (stage == null) {
+            return null;
+        }
+        BasketStagePairingExecution execution = executionMapper.selectCurrentByStageId(stage.getId());
+        if (execution == null || !PairingExecutionStatusEnum.CONFIRMED.getCode().equals(execution.getStatus())) {
+            return null;
+        }
+        List<BasketStagePairingEntry> entries = entryMapper.selectByExecutionId(execution.getId());
+        if (!StructureParticipantStatus.hasUnresolvedPlaceholders(entries)) {
+            return null;
+        }
+        return resolve(knockoutStageId);
+    }
+
     private void applyResolvedTeamsToSeries(BasketDivisionStage stage, List<BasketStagePairingEntry> entries) {
         List<BasketMatchSeries> seriesList = matchSeriesMapper.selectByStageId(stage.getId());
         Map<String, BasketMatchSeries> byRoundSlot = new HashMap<>();

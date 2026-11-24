@@ -27,6 +27,7 @@ import type {
 } from '@/api/types/v4Public'
 import SafeImage from '@/components/common/SafeImage.vue'
 import { displayText, formatDateTime, formatDecimal, initials, localizedText } from '@/utils/publicDisplay'
+import { teamRecordGames } from '@/utils/teamRecordGames'
 import {
   formatScore,
   formatSeriesSetScore,
@@ -681,7 +682,7 @@ onMounted(() => {
                   <tbody>
                     <tr v-for="row in teamStats" :key="row.eventTeamId">
                       <td>{{ displayText(row.teamName) }}</td>
-                      <td>{{ row.matchCount ?? 0 }}</td>
+                      <td>{{ teamRecordGames(row.matchCount, row.winCount, row.loseCount) }}</td>
                       <td>{{ row.winCount ?? 0 }}</td>
                       <td>{{ row.loseCount ?? 0 }}</td>
                       <td>{{ formatDecimal(row.avgPointsFor) }}</td>

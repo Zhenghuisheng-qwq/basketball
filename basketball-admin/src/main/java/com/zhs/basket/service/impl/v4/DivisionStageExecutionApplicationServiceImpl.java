@@ -13,6 +13,7 @@ import com.zhs.basket.service.v4.IStagePairingExecutionApplicationService;
 import com.zhs.basket.support.v4.bracket.GroupRankPlacementSupport;
 import com.zhs.basket.support.v4.stage.SingleEliminationStageScheduleStrategy;
 import com.zhs.basket.service.v4.IDivisionStageExecutionApplicationService;
+import com.zhs.basket.service.v4.IPlaceholderResolutionApplicationService;
 import com.zhs.basket.service.v4.IStagePublishApplicationService;
 import com.zhs.basket.support.v4.stage.PlayoffBracketSupport;
 import com.zhs.basket.support.v4.ByeQualificationService;
@@ -115,6 +116,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
     @Autowired
     @Lazy
     private IDivisionStageExecutionApplicationService self;
+    @Autowired
+    @Lazy
+    private IPlaceholderResolutionApplicationService placeholderResolutionService;
 
     @Override
     public List<BasketDivisionStageExecutionListVo> listStages(Long divisionId) {
@@ -577,6 +581,9 @@ public class DivisionStageExecutionApplicationServiceImpl implements IDivisionSt
                 nextStage.setExecutionStatus(StageExecutionStatusEnum.READY.getCode());
                 nextStage.setUpdateTime(now);
                 stageMapper.updateExecutionStatus(nextStage);
+            }
+            if (GroupRankPlacementSupport.usesGroupRankPlacement(nextStage, stage)) {
+                placeholderResolutionService.resolveAfterQualificationConfirm(nextStage.getId());
             }
         }
         publicReadCachePublisher.scheduleMutation(stage.getDivisionId(), null, stageId);

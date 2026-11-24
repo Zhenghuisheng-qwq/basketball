@@ -120,7 +120,7 @@
       <el-alert class="mb8" type="info" :closable="false" show-icon
         :title="pairingAlertTitle" />
       <el-alert v-if="pairingVo?.hasUnresolvedPlaceholders" class="mb8" type="warning" :closable="false" show-icon
-        title="淘汰结构已固定。小组赛未结束或晋级未确认前，签位仍是占位来源，等待小组赛结果。" />
+        title="淘汰结构已固定。请先在小组赛阶段做晋级预览并确认晋级，首轮会按名次写入真实球队。首轮之后仍显示上一轮胜者，要等该轮打完。" />
       <div class="mb8">
         <el-button size="small" @click="loadPairingWorkspace">刷新</el-button>
         <el-button size="small" type="primary" v-if="pairingStage?.seedRule === 'ADMIN_SEED'" @click="saveSeeds">保存种子</el-button>
@@ -537,9 +537,9 @@ function handleQualPreview(row: BasketDivisionStageExecutionVo) {
 }
 
 function handleQualConfirm(row: BasketDivisionStageExecutionVo) {
-  ElMessageBox.confirm('确认晋级结果？将初始化下一阶段参赛队伍', '提示').then(() => {
+  ElMessageBox.confirm('确认晋级结果？淘汰赛若已发布占位签表，首轮会按小组名次写入真实球队。首轮之后仍显示上一轮胜者，要等该轮打完。', '提示').then(() => {
     confirmV4StageQualification(row.stageId).then(() => {
-      ElMessage.success('晋级已确认')
+      ElMessage.success('晋级已确认。淘汰赛签表若已发布，首轮占位已写成对应球队')
       loadStageList()
     })
   })

@@ -452,6 +452,7 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
             agg.block += nvl(row.getBlock());
             agg.turnover += nvl(row.getTurnover());
         }
+        applyForfeitsToTeamStat(aggMap, divisionId);
         teamStatMapper.deleteByDivisionId(divisionId);
         Date now = new Date();
         for (TeamStatAgg agg : aggMap.values()) {
@@ -475,6 +476,27 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
             row.setUpdateTime(now);
             row.setIsDelete(NOT_DELETED);
             teamStatMapper.insert(row);
+        }
+    }
+
+    /**
+     * 弃权记入胜负，和积分榜一致。
+     * 不增加出战场次，也不写入虚构得分，场均篮板助攻仍只按实际交手计算。
+     */
+    private void applyForfeitsToTeamStat(Map<Long, TeamStatAgg> aggMap, Long divisionId) {
+        List<BasketV4Match> matches = matchMapper.selectFinishedPublishedByDivisionId(divisionId);
+        for (BasketV4Match match : matches) {
+            if (!MatchStatusEnum.FORFEITED.getCode().equals(match.getMatchStatus())) {
+                continue;
+            }
+            Long winnerId = match.getWinnerEventTeamId();
+            Long loserId = match.getLoserEventTeamId();
+            if (winnerId == null || loserId == null) {
+                continue;
+            }
+            ForfeitStandingMargin.applyOfficialResult(
+                    aggMap.computeIfAbsent(winnerId, TeamStatAgg::new),
+                    aggMap.computeIfAbsent(loserId, TeamStatAgg::new));
         }
     }
 
@@ -673,7 +695,7 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
         Long getEventTeamId() { return eventTeamId; }
     }
 
-    private static class TeamStatAgg {
+    private static class TeamStatAgg implements ForfeitStandingMargin.OfficialResult {
         private final Long eventTeamId;
         private int matchCount;
         private int winCount;
@@ -688,6 +710,16 @@ public class BasketV4StatsSettlementServiceImpl implements IBasketV4StatsSettlem
 
         TeamStatAgg(Long eventTeamId) {
             this.eventTeamId = eventTeamId;
+        }
+
+        @Override
+        public void addOfficialWin() {
+            winCount++;
+        }
+
+        @Override
+        public void addOfficialLoss() {
+            loseCount++;
         }
     }
 

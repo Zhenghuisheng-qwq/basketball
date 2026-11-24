@@ -29,6 +29,7 @@ import {
   mapV4StandingToRank,
   mapV4TeamDetailToPublic,
   mapV4TeamStatToSeasonStat,
+  preferStandingRow,
 } from '../utils/mapV4PublicTeam'
 import { resolveEventTeamDivisionId } from '../utils/resolveTeamDivision'
 import {
@@ -244,9 +245,10 @@ export function usePublicTeamPage() {
       }
 
       const standingRows = standingRes.data ?? []
-      const teamStanding = standingRows.find(
-        (row) => String(row.eventTeamId) === String(id),
-      )
+      const teamStanding = standingRows.reduce<typeof standingRows[number] | undefined>((picked, row) => {
+        if (String(row.eventTeamId) !== String(id)) return picked
+        return preferStandingRow(picked, row)
+      }, undefined)
       const teamStatRow = (teamStatRes.data ?? []).find(
         (row) => String(row.eventTeamId) === String(id),
       )
@@ -272,12 +274,12 @@ export function usePublicTeamPage() {
           })]
         : []
       ranking.value = teamStanding ? [mapV4StandingToRank(teamStanding, seasonId.value)] : []
-      if (teamStatRow) {
-        standingWins.value = toNumber(teamStatRow.winCount, 0)
-        standingLosses.value = toNumber(teamStatRow.loseCount, 0)
+      if (teamStanding) {
+        standingWins.value = toNumber(teamStanding.winCount, 0)
+        standingLosses.value = toNumber(teamStanding.loseCount, 0)
       } else {
-        standingWins.value = toNumber(teamStanding?.winCount, 0)
-        standingLosses.value = toNumber(teamStanding?.loseCount, 0)
+        standingWins.value = toNumber(teamStatRow?.winCount, 0)
+        standingLosses.value = toNumber(teamStatRow?.loseCount, 0)
       }
       state.value = 'success'
     } catch (err) {

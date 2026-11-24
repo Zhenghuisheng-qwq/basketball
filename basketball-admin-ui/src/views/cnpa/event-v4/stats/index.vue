@@ -105,7 +105,9 @@
       <el-tab-pane label="球队统计" name="team">
         <el-table :data="teamStatList" border size="small">
           <el-table-column label="球队" prop="teamName" />
-          <el-table-column label="场次" prop="matchCount" width="70" align="center" />
+          <el-table-column label="场次" width="70" align="center">
+            <template #default="s">{{ teamRecordGames(s.row) }}</template>
+          </el-table-column>
           <el-table-column label="胜" prop="winCount" width="60" align="center" />
           <el-table-column label="负" prop="loseCount" width="60" align="center" />
           <el-table-column label="场均得分" prop="avgPointsFor" width="90" align="center" />
@@ -349,6 +351,14 @@ const manualRankUndecidedRule = computed(() => {
   const undecided = reasons.filter(r => !r.isDecisive).pop()
   return undecided?.reasonText || pending[0]?.decisiveReasonText || ''
 })
+
+function teamRecordGames(row: { matchCount?: number | null; winCount?: number | null; loseCount?: number | null }) {
+  const played = Number(row.matchCount ?? 0)
+  const wins = Number(row.winCount ?? 0)
+  const losses = Number(row.loseCount ?? 0)
+  const safe = (value: number) => (Number.isFinite(value) ? value : 0)
+  return Math.max(safe(played), safe(wins) + safe(losses))
+}
 
 function formatDivisionLabel(item: V4AdminOptionVo) {
   return item.platformCode ? `${item.label}（${item.platformCode}）` : item.label

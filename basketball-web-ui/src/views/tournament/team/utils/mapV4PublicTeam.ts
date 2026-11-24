@@ -15,6 +15,7 @@ import type {
 import { translate } from '@/i18n'
 import { displayText, toNumber } from '@/utils/publicDisplay'
 import { calculateAverage } from '@/utils/statAverage'
+import { boxScoreGames, teamRecordGames } from '@/utils/teamRecordGames'
 import { v4PlatformLabel } from '@/utils/v4Display'
 import type { TeamBase, TeamStage } from '@/types/team'
 
@@ -67,6 +68,22 @@ export function mapV4TeamDetailToPublic(
   }
 }
 
+export function standingDecidedGames(row?: { winCount?: number | null; loseCount?: number | null } | null): number {
+  return toNumber(row?.winCount, 0) + toNumber(row?.loseCount, 0)
+}
+
+/** 同一球队有多条积分榜时，用已赛场次更多的那条，名次只在场次相同时比较。 */
+export function preferStandingRow<T extends {
+  winCount?: number | null
+  loseCount?: number | null
+  rankNo?: number | null
+}>(current: T | undefined, next: T): T {
+  if (!current) return next
+  const gameDiff = standingDecidedGames(next) - standingDecidedGames(current)
+  if (gameDiff !== 0) return gameDiff > 0 ? next : current
+  return toNumber(next.rankNo, 9999) < toNumber(current.rankNo, 9999) ? next : current
+}
+
 export function mapV4TeamStatToSeasonStat(
   item: V4PublicTeamStatItem,
   extras?: {
@@ -74,29 +91,30 @@ export function mapV4TeamStatToSeasonStat(
     divisionId?: string
   },
 ): PublicTeamSeasonStatVo {
-  const games = toNumber(item.matchCount, 0)
   const wins = toNumber(item.winCount, 0)
   const losses = toNumber(item.loseCount, 0)
+  const recordGames = teamRecordGames(item.matchCount, wins, losses)
+  const boxGames = boxScoreGames(item.matchCount, wins, losses)
 
   return {
     seasonId: extras?.seasonId,
     teamId: String(item.eventTeamId),
     teamName: item.teamName,
     teamLogoUrl: item.teamLogoUrl,
-    games,
+    games: recordGames,
     wins,
     losses,
     pointsFor: item.pointsFor,
     pointsAgainst: item.pointsAgainst,
-    avgPoints: item.avgPointsFor ?? calculateAverage(item.pointsFor, games),
-    avgPointsAgainst: item.avgPointsAgainst ?? calculateAverage(item.pointsAgainst, games),
-    avgRebounds: calculateAverage(item.rebound, games),
-    avgAssists: calculateAverage(item.assist, games),
-    avgSteals: calculateAverage(item.steal, games),
-    avgBlocks: calculateAverage(item.block, games),
-    avgTurnovers: calculateAverage(item.turnover, games),
-    avgFouls: item.foul != null ? calculateAverage(item.foul, games) : undefined,
-    winRate: calculateAverage(wins, games),
+    avgPoints: item.avgPointsFor ?? calculateAverage(item.pointsFor, boxGames),
+    avgPointsAgainst: item.avgPointsAgainst ?? calculateAverage(item.pointsAgainst, boxGames),
+    avgRebounds: calculateAverage(item.rebound, boxGames),
+    avgAssists: calculateAverage(item.assist, boxGames),
+    avgSteals: calculateAverage(item.steal, boxGames),
+    avgBlocks: calculateAverage(item.block, boxGames),
+    avgTurnovers: calculateAverage(item.turnover, boxGames),
+    avgFouls: item.foul != null ? calculateAverage(item.foul, boxGames) : undefined,
+    winRate: calculateAverage(wins, recordGames),
   }
 }
 

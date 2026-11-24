@@ -22,6 +22,7 @@ import { placeholderTeamBase } from '@/utils/publicTeamMap'
 import {
   mapV4EventTeamToBase,
   mapV4StandingToTeamBase,
+  preferStandingRow,
 } from './utils/mapV4PublicTeam'
 import {
   buildTeamCompareFromV4Stats,
@@ -293,9 +294,11 @@ async function loadTeamsForDivision(divisionId: string, currentReq = ++teamsReqI
     ])
     if (currentReq !== teamsReqId) return
 
-    const standingMap = new Map(
-      (standingRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
-    )
+    const standingMap = new Map<string, NonNullable<typeof standingRes.data>[number]>()
+    for (const row of standingRes.data ?? []) {
+      const key = String(row.eventTeamId)
+      standingMap.set(key, preferStandingRow(standingMap.get(key), row))
+    }
     const statMap = new Map(
       (statRes.data ?? []).map((row) => [String(row.eventTeamId), row]),
     )
@@ -304,8 +307,8 @@ async function loadTeamsForDivision(divisionId: string, currentReq = ++teamsReqI
       const standing = standingMap.get(String(team.eventTeamId))
       const stat = statMap.get(String(team.eventTeamId))
       return mapV4EventTeamToBase(team, {
-        wins: stat?.winCount ?? standing?.winCount,
-        losses: stat?.loseCount ?? standing?.loseCount,
+        wins: standing?.winCount ?? stat?.winCount,
+        losses: standing?.loseCount ?? stat?.loseCount,
         ranking: standing?.rankNo,
         seasonName,
         divisionLabel,

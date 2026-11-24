@@ -77,7 +77,7 @@ export function mapV4MatchToTeamRecord(
     resultLabel: dq
       ? (result === 'win' ? translate('publicPages.team.dqWin') : translate('publicPages.team.dqLoss'))
       : forfeited
-        ? (result === 'win' ? translate('eventsPage.match.forfeitWin') : translate('match.forfeitLoss'))
+        ? (result === 'win' ? translate('eventsPage.schedule.forfeitWin') : translate('match.forfeitLoss'))
         : undefined,
     originalTeamScore: originalTeamScore ?? undefined,
     originalOpponentScore: originalOpponentScore ?? undefined,

@@ -9,4 +9,18 @@ public final class ForfeitStandingMargin {
 
     private ForfeitStandingMargin() {
     }
+
+    /**
+     * 球队技术统计只补官方胜负。出战场次和得分仍来自实际交手，净胜分以积分榜为准。
+     */
+    public static void applyOfficialResult(OfficialResult winner, OfficialResult loser) {
+        winner.addOfficialWin();
+        loser.addOfficialLoss();
+    }
+
+    public interface OfficialResult {
+        void addOfficialWin();
+
+        void addOfficialLoss();
+    }
 }

@@ -39,6 +39,8 @@ import com.zhs.service.support.HomeRealtimeFocusSupport;
 import com.zhs.service.support.V4CurrentSeasonSelector;
 import com.zhs.service.support.V4MatchSeriesDisplaySupport;
 import com.zhs.service.v4.IBasketV4PublicService;
+import com.zhs.support.v4.PublicCurrentRosterSupport;
+import com.zhs.support.v4.PublicCurrentRosterSupport.CurrentTeamFace;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
@@ -91,7 +93,7 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
     @Resource
     private V4MatchSeriesDisplaySupport matchSeriesDisplaySupport;
     @Resource
-    private com.zhs.support.v4.PublicCurrentRosterSupport currentRosterSupport;
+    private PublicCurrentRosterSupport currentRosterSupport;
     @Resource
     private com.zhs.service.impl.v4.BasketV4PublicLeaderboardService leaderboardService;
 
@@ -329,19 +331,16 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
         }
         Map<Long, BasketEventPlayer> playerMap = loadEventPlayerMap(playerIds);
         Map<Long, BasketEventTeam> teamMap = loadEventTeamMap(teamIds);
-        Set<Long> fileIds = new HashSet<>();
-        for (BasketEventPlayer player : playerMap.values()) {
-            if (player.getAvatarFileId() != null) {
-                fileIds.add(player.getAvatarFileId());
-            }
-        }
+        Set<Long> snapshotLogoIds = new HashSet<>();
         for (BasketEventTeam team : teamMap.values()) {
             if (team.getTeamLogoFileId() != null) {
-                fileIds.add(team.getTeamLogoFileId());
+                snapshotLogoIds.add(team.getTeamLogoFileId());
             }
         }
-        Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(fileIds);
+        Map<Long, String> snapshotLogoUrls = publicSupport.loadAccessUrlMap(snapshotLogoIds);
         Map<Long, String> currentNames = currentRosterSupport.loadCurrentNames(playerMap.values());
+        Map<Long, String> currentAvatars = currentRosterSupport.loadCurrentAvatarUrls(playerMap.values());
+        Map<Long, CurrentTeamFace> currentFaces = currentRosterSupport.loadCurrentFaces(teamMap.values());
         for (PublicHomePlayerLeaderVo leader : present) {
             BasketEventPlayer player = playerMap.get(leader.getEventPlayerId());
             if (player != null) {
@@ -349,19 +348,25 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
                     leader.setSourcePlayerId(player.getSourcePlayerId());
                 }
                 String currentName = currentNames.get(player.getId());
-                if (org.springframework.util.StringUtils.hasText(currentName)) {
+                if (StringUtils.hasText(currentName)) {
                     leader.setPlayerName(currentName);
                 } else if (!StringUtils.hasText(leader.getPlayerName())) {
                     leader.setPlayerName(player.getPlayerNameSnapshot());
                 }
-                leader.setAvatarUrl(urlMap.get(player.getAvatarFileId()));
+                String avatarUrl = currentAvatars.get(player.getId());
+                if (StringUtils.hasText(avatarUrl)) {
+                    leader.setAvatarUrl(avatarUrl);
+                }
             }
             BasketEventTeam team = teamMap.get(leader.getEventTeamId());
-            if (team != null) {
-                if (!StringUtils.hasText(leader.getTeamName())) {
-                    leader.setTeamName(team.getTeamNameSnapshot());
-                }
-                leader.setTeamLogoUrl(urlMap.get(team.getTeamLogoFileId()));
+            CurrentTeamFace face = currentFaces.get(leader.getEventTeamId());
+            if (team != null && !StringUtils.hasText(leader.getTeamName())) {
+                leader.setTeamName(team.getTeamNameSnapshot());
+            }
+            if (face != null && StringUtils.hasText(face.logoUrl())) {
+                leader.setTeamLogoUrl(face.logoUrl());
+            } else if (team != null) {
+                leader.setTeamLogoUrl(snapshotLogoUrls.get(team.getTeamLogoFileId()));
             }
         }
     }
@@ -376,6 +381,11 @@ public class BasketPublicHomeServiceImpl implements IBasketPublicHomeService {
         }
         if (!StringUtils.hasText(focusTeam.getTeamName())) {
             focusTeam.setTeamName(team.getTeamNameSnapshot());
+        }
+        CurrentTeamFace face = currentRosterSupport.loadCurrentFaces(Collections.singletonList(team)).get(team.getId());
+        if (face != null && StringUtils.hasText(face.logoUrl())) {
+            focusTeam.setTeamLogoUrl(face.logoUrl());
+            return;
         }
         if (!StringUtils.hasText(focusTeam.getTeamLogoUrl()) && team.getTeamLogoFileId() != null) {
             Map<Long, String> urlMap = publicSupport.loadAccessUrlMap(Collections.singleton(team.getTeamLogoFileId()));
